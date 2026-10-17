@@ -90,7 +90,8 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 | Layer | Choice | Reason |
 |---|---|---|
 | Language | TypeScript end to end | One language and shared types |
-| Monorepo | Turborepo + pnpm | Apps and packages share code and build caching |
+| Monorepo | Turborepo + pnpm workspaces | Apps and packages share code and build caching; strict dependency rules |
+| Runtime | Node.js 24 LTS (development and production) | The runtime Next.js, NestJS and the main libraries are built and tested on |
 | Web | Next.js (App Router), Tailwind, shadcn/ui | SSR for sales-page SEO; fast UI development |
 | API | Next.js route handlers / tRPC, with NestJS as an option if the API splits out | Type-safe client–server calls |
 | Database | PostgreSQL + Prisma | Relational data, RLS, mature tooling |
@@ -182,7 +183,7 @@ reanit-lms/
 
 Each step is complete when it works end to end.
 
-- [ ] Monorepo scaffold (Turborepo + pnpm), shared configs, CI pipeline
+- [ ] Monorepo scaffold (Turborepo + pnpm workspaces), shared configs, CI pipeline
 - [ ] `infra/docker-compose.yml` with Postgres, Redis and Mailpit
 - [ ] Prisma schema for the core model and a tenant-scoped client with RLS
 - [ ] Auth, school creation and subdomain routing
@@ -211,6 +212,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 | 3 | 🟡 Payment providers | Stripe Connect · ABA PayWay / KHQR · PayPal | Stripe payouts may not be available in Cambodia, so a local gateway may be needed |
 | 4 | 🟡 Hosting | Vercel + Fly/Railway · AWS (ECS + RDS) | Start on managed hosting and move to AWS as cost and scale require |
 | 5 | 🟡 ORM | Prisma · Drizzle | Prisma is the default; Drizzle gives finer control over RLS and SQL |
+| 6 | ✅ Package manager / runtime | **Decided:** pnpm + Node.js 24 LTS | Chosen over Bun for strict dependencies and maturity. See [pnpm usage](#pnpm-usage) |
 
 ---
 
@@ -219,11 +221,31 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 _Not set up yet; this section will be filled in by Milestone 1._ The planned flow:
 
 ```bash
+corepack enable          # one-time: provides the pinned pnpm version
 pnpm install
 docker compose -f infra/docker-compose.yml up -d
 pnpm db:migrate && pnpm db:seed
 pnpm dev
 ```
+
+### pnpm usage
+
+**Do**
+- Pin pnpm in the root `package.json` (`"packageManager": "pnpm@10.x.y"`) and get it through **Corepack** (`corepack enable`), so everyone and CI use the same version.
+- Pin Node with `.nvmrc` and `engines.node` (`>=24`).
+- Commit `pnpm-lock.yaml`. CI installs with `pnpm install --frozen-lockfile`.
+- Define workspaces in `pnpm-workspace.yaml` (`apps/*`, `packages/*`) and reference internal packages as `"@reanit/core": "workspace:*"`.
+- Use **catalogs** in `pnpm-workspace.yaml` to keep shared dependency versions (React, Next.js, TypeScript, Prisma) the same across all packages.
+- Use filters to work on one package: `pnpm --filter web dev`, `pnpm --filter @reanit/db db:migrate`.
+- Add each dependency to the package that uses it (`pnpm --filter web add zod`). Only tooling goes in the root (`pnpm add -Dw turbo`).
+- Use `pnpm dlx` for one-off CLIs, and `tsx` to run TypeScript scripts (`pnpm tsx scripts/seed.ts`).
+- Approve packages that need install scripts (Prisma, esbuild, sharp) in `onlyBuiltDependencies`.
+- Cache the pnpm store in CI (`pnpm/action-setup` + `actions/setup-node` with `cache: pnpm`).
+
+**Avoid**
+- `shamefully-hoist=true` or `node-linker=hoisted`. These turn off pnpm's strict rules and hide missing dependencies.
+- Importing a package without declaring it in that package's own `package.json`.
+- Mixing package managers. Keep no `package-lock.json`, `yarn.lock` or `bun.lock` in the repo.
 
 ## License
 
