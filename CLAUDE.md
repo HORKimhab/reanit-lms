@@ -7,5 +7,6 @@ Rules:
 - Enroll students only from a confirmed payment webhook, processed idempotently.
 - Money is integer minor units + ISO currency code.
 - pnpm + Node 24 only. No other lockfiles.
+- Adding or changing a skill, command or hook: in the same commit, update README §10 (skill table + command table) and the skill's `description` and modes.
 
 Before creating or moving files, use the `project-structure` skill.

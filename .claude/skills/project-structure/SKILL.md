@@ -28,6 +28,8 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |
 | Script | `scripts/`, run with `pnpm tsx` |
+| Claude skill / command | `.claude/skills/<name>/SKILL.md`. Its `description` lists every prompt form. Document it in README §10. |
+| Claude hook / status line | Script in `.claude/hooks/` or `.claude/`, registered in `.claude/settings.json`. Document it in README §10. |
 
 Imports flow `apps → core → db`. Packages never import from apps. Use a module's `index.ts` only, never its internals.
 
