@@ -19,3 +19,6 @@ coverage/
 
 # OS
 .DS_Store
+
+# Next.js
+next-env.d.ts

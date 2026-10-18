@@ -1,0 +1,8 @@
+{
+  "extends": "@reanit/config/tsconfig/library.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "jsx": "react-jsx"
+  },
+  "include": ["src"]
+}
