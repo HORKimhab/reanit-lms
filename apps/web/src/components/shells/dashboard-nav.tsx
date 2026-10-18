@@ -10,7 +10,11 @@ const ITEMS = [
   { href: "/dashboard/settings", key: "settings", icon: Settings, exact: false },
 ] as const;
 
-// Sidebar on desktop, horizontal scroller on mobile.
+/**
+ * Dashboard section links: a sidebar on desktop, a horizontal scroller on mobile.
+ *
+ * @returns A nav with one link per dashboard section, the current one marked.
+ */
 export function DashboardNav() {
   const t = useTranslations("DashboardNav");
   return (
@@ -23,7 +27,7 @@ export function DashboardNav() {
           className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
           activeClassName="bg-accent text-foreground font-medium"
         >
-          <Icon className="size-4" />
+          <Icon aria-hidden className="size-4" />
           {t(key)}
         </NavLink>
       ))}

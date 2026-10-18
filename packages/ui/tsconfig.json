@@ -1,8 +1,17 @@
 {
   "extends": "@reanit/config/tsconfig/library.json",
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2023"],
-    "jsx": "react-jsx"
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2023"
+    ],
+    "jsx": "react-jsx",
+    "types": [
+      "@testing-library/jest-dom/vitest"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

@@ -4,6 +4,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
 
+/**
+ * Class names for a button's look, for styling non-button elements like a button.
+ *
+ * @example
+ * <a className={buttonVariants({ variant: "outline", size: "sm" })} href="/docs">Docs</a>
+ */
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
@@ -30,6 +36,19 @@ const buttonVariants = cva(
   },
 );
 
+/**
+ * Themed button. With `asChild` it styles its only child (such as a link) instead of rendering a `<button>`.
+ *
+ * @param props - Native button props plus look options.
+ * @param props.className - Extra classes, merged over the variant classes.
+ * @param props.variant - Visual style; `default` uses the brand color.
+ * @param props.size - Height and padding; `icon` is square.
+ * @param props.asChild - Render the child element with button styling instead of a `<button>`.
+ * @returns The styled button or child element.
+ * @example
+ * <Button variant="outline" onClick={save}>Save</Button>
+ * <Button asChild><a href="/start">Start</a></Button>
+ */
 function Button({
   className,
   variant,

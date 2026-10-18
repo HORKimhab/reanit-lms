@@ -10,8 +10,8 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] WEB-01 apps/web + packages/ui: Next, Tailwind, shadcn, design tokens, dark mode
 - [x] WEB-02 i18n: next-intl, en/km, Khmer font, locale switcher, formatters
 - [x] WEB-03 Layout shells: school site, student area, dashboard
-- [ ] REPO-02 Quality tooling: Vitest + Testing Library, eslint-plugin-jsdoc (every function), knip, jscpd; `test`/`knip`/`dup` scripts in turbo and CI. Done when CI runs all of them.
-- [ ] TEST-00 Backfill WEB-01 to WEB-06: tests, full JSDoc, remove dead/duplicate code. Done when `pnpm test`, `lint`, `knip`, `dup` pass. Needs REPO-02.
+- [x] REPO-02 Quality tooling: Vitest + Testing Library, eslint-plugin-jsdoc (every function), knip, jscpd; `test`/`knip`/`dup` scripts in turbo and CI. Done when CI runs all of them.
+- [x] TEST-00 Backfill WEB-01 to WEB-06: tests, full JSDoc, remove dead/duplicate code. Done when `pnpm test`, `lint`, `knip`, `dup` pass. Needs REPO-02.
 
 ## UI with mock data
 - [x] WEB-04 School home + course sales page (hero, curriculum, instructor, FAQ, buy)

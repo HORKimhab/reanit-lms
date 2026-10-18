@@ -9,9 +9,14 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "knip": "knip",
+    "dup": "jscpd"
   },
   "devDependencies": {
+    "jscpd": "catalog:",
+    "knip": "catalog:",
     "turbo": "2.11.9"
   }
 }

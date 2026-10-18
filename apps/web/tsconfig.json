@@ -1,9 +1,23 @@
 {
   "extends": "@reanit/config/tsconfig/nextjs.json",
   "compilerOptions": {
-    "types": ["node"],
-    "paths": { "@/*": ["./src/*"] }
+    "types": [
+      "node",
+      "@testing-library/jest-dom/vitest"
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
-  "include": ["next-env.d.ts", "src", "*.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "*.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

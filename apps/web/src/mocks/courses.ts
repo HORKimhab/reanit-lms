@@ -1,16 +1,28 @@
 // Mock catalog until API-03 (catalog) lands. Content is in the creator's language, not translated.
+
+/** Kind of content a lesson holds. */
 export type LessonType = "video" | "text" | "pdf";
 
-export type MockLesson = { title: string; type: LessonType; durationSec: number; preview?: boolean };
-export type MockSection = { title: string; lessons: MockLesson[] };
+type MockLesson = {
+  title: string;
+  type: LessonType;
+  /** 0 for lessons without a running time, such as PDFs. */
+  durationSec: number;
+  /** Free to watch on the sales page without buying. */
+  preview?: boolean;
+};
+type MockSection = { title: string; lessons: MockLesson[] };
 
+/** A course with its curriculum and sales-page content. */
 export type MockCourse = {
   slug: string;
   schoolSlug: string;
   title: string;
   subtitle: string;
   level: "beginner" | "intermediate" | "advanced";
+  /** Price in integer minor units of `currency`. */
   priceMinor: number;
+  /** Struck-through "was" price in minor units, if any. */
   compareAtMinor?: number;
   currency: "USD" | "KHR";
   outcomes: string[];
@@ -107,25 +119,63 @@ const COURSES: MockCourse[] = [
   },
 ];
 
+/**
+ * Lists a school's courses.
+ *
+ * @param schoolSlug - The school's slug.
+ * @returns The school's courses, empty when it has none. Never another school's.
+ */
 export function getMockCourses(schoolSlug: string) {
   return COURSES.filter((c) => c.schoolSlug === schoolSlug);
 }
 
+/**
+ * Looks up one course inside a school.
+ *
+ * @param schoolSlug - The school's slug.
+ * @param slug - The course's slug.
+ * @returns The course, or `undefined` when the school has no course with that slug.
+ */
 export function getMockCourse(schoolSlug: string, slug: string) {
   return COURSES.find((c) => c.schoolSlug === schoolSlug && c.slug === slug);
 }
 
+/**
+ * Totals a course's lesson count and running time for cards and the sales page.
+ *
+ * @param course - The course to measure.
+ * @returns The number of lessons and their total duration in seconds.
+ */
 export function courseStats(course: MockCourse) {
   const lessons = course.sections.flatMap((s) => s.lessons);
   return { lessons: lessons.length, durationSec: lessons.reduce((sum, l) => sum + l.durationSec, 0) };
 }
 
-export type FlatLesson = MockLesson & { id: string; index: number; sectionIndex: number };
+/** A lesson placed in course order, with the section it belongs to. */
+export type FlatLesson = MockLesson & {
+  /** Stable id: "1-2" is section 1, lesson 2. */
+  id: string;
+  /** 0-based position across the whole course. */
+  index: number;
+  sectionIndex: number;
+  sectionTitle: string;
+};
 
-// Lessons in order with stable ids ("1-2" = section 1, lesson 2) until real ids come from the API.
+/**
+ * Lists a course's lessons in order with stable ids, until real ids come from the API.
+ *
+ * @param course - The course to flatten.
+ * @returns Every lesson in course order.
+ */
 export function flattenLessons(course: MockCourse): FlatLesson[] {
   let index = 0;
   return course.sections.flatMap((section, si) =>
-    section.lessons.map((lesson, li) => ({ ...lesson, id: `${si + 1}-${li + 1}`, index: index++, sectionIndex: si })),
+    section.lessons.map((lesson, li) => ({
+      ...lesson,
+      id: `${si + 1}-${li + 1}`,
+      index: index++,
+      sectionIndex: si,
+      sectionTitle: section.title,
+    })),
   );
 }

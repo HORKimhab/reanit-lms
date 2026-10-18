@@ -1,6 +1,13 @@
 import { useTranslations } from "next-intl";
 
-// Stand-in body for screens that later tasks build out.
+/**
+ * Stand-in body for screens that a later task builds out.
+ *
+ * @param props - Component props.
+ * @param props.title - Page heading.
+ * @param props.task - TODO.md task ID that builds the screen.
+ * @returns The heading and a "built in <task>" notice.
+ */
 export function PagePlaceholder({ title, task }: { title: string; task: string }) {
   const t = useTranslations("Common");
   return (

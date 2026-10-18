@@ -7,6 +7,13 @@ import { courseStats, type MockCourse } from "@/mocks/courses";
 import { Duration } from "./duration";
 import { Price } from "./price";
 
+/**
+ * Catalog card linking to a course's sales page.
+ *
+ * @param props - Component props.
+ * @param props.course - The course to show.
+ * @returns A linked card with cover, title, subtitle, instructor, length and price.
+ */
 export function CourseCard({ course }: { course: MockCourse }) {
   const t = useTranslations("Course");
   const stats = courseStats(course);

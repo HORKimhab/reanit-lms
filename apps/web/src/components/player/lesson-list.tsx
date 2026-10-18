@@ -1,12 +1,19 @@
-import { Check, FileText, PlayCircle, AlignLeft } from "lucide-react";
+import { cn } from "@reanit/ui/lib/utils";
+import { Check } from "lucide-react";
 
 import { Duration } from "@/components/course/duration";
+import { LessonIcon } from "@/components/course/lesson-icon";
 import { NavLink } from "@/components/shells/nav-link";
-import { flattenLessons, type LessonType, type MockCourse } from "@/mocks/courses";
+import { flattenLessons, type MockCourse } from "@/mocks/courses";
 
-const LESSON_ICON: Record<LessonType, typeof PlayCircle> = { video: PlayCircle, text: AlignLeft, pdf: FileText };
-
-// Course outline with completion marks; the current lesson is highlighted by NavLink.
+/**
+ * Course outline for the player: sections, lessons with done marks, and the current lesson highlighted.
+ *
+ * @param props - Component props.
+ * @param props.course - The course being played.
+ * @param props.completedLessons - Lessons finished so far, counted from the start.
+ * @returns One headed list per section, each lesson linking to its player page.
+ */
 export function LessonList({ course, completedLessons }: { course: MockCourse; completedLessons: number }) {
   const lessons = flattenLessons(course);
   const base = `/s/${course.schoolSlug}/learn/${course.slug}`;
@@ -22,8 +29,7 @@ export function LessonList({ course, completedLessons }: { course: MockCourse; c
             {lessons
               .filter((l) => l.sectionIndex === si)
               .map((lesson) => {
-                const done = lesson.index < completedLessons;
-                const Icon = LESSON_ICON[lesson.type];
+                const isDone = lesson.index < completedLessons;
                 return (
                   <li key={lesson.id}>
                     <NavLink
@@ -33,16 +39,15 @@ export function LessonList({ course, completedLessons }: { course: MockCourse; c
                       activeClassName="bg-primary/10 text-foreground font-medium"
                     >
                       <span
-                        className={
-                          done
-                            ? "flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-white"
-                            : "flex size-5 shrink-0 items-center justify-center rounded-full border"
-                        }
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full",
+                          isDone ? "bg-success text-white" : "border",
+                        )}
                       >
-                        {done ? <Check className="size-3" /> : null}
+                        {isDone ? <Check aria-hidden className="size-3" /> : null}
                       </span>
                       <span className="flex-1">{lesson.title}</span>
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      <LessonIcon type={lesson.type} className="size-4 shrink-0 text-muted-foreground" />
                       <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
                         <Duration seconds={lesson.durationSec} />
                       </span>

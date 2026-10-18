@@ -7,11 +7,17 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { MockEnrollment } from "@/mocks/enrollments";
 
+/**
+ * "My courses" card with the student's progress and a link into the player.
+ *
+ * @param props - Component props.
+ * @param props.enrollment - The student's enrollment to show.
+ * @returns A card with progress bar and a Start / Continue / Review button.
+ */
 export function EnrollmentCard({ enrollment }: { enrollment: MockEnrollment }) {
   const t = useTranslations("MyCourses");
-  const { course, completedLessons, totalLessons, percent } = enrollment;
-  const done = completedLessons >= totalLessons;
-  const action = done ? "review" : completedLessons === 0 ? "start" : "continue";
+  const { course, completedLessons, totalLessons, percent, isCompleted } = enrollment;
+  const action = isCompleted ? "review" : completedLessons === 0 ? "start" : "continue";
 
   return (
     <Card className="gap-0 overflow-hidden p-0">
@@ -22,12 +28,11 @@ export function EnrollmentCard({ enrollment }: { enrollment: MockEnrollment }) {
         <div className="mt-auto flex flex-col gap-2">
           <Progress value={percent} aria-label={t("progressLabel")} />
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            {done ? <CircleCheck className="size-3.5 text-success" /> : null}
+            {isCompleted ? <CircleCheck aria-hidden className="size-3.5 text-success" /> : null}
             {t("progress", { done: completedLessons, total: totalLessons, percent: Math.round(percent) })}
           </p>
         </div>
-        {/* The player route is built in WEB-06. */}
-        <Button asChild variant={done ? "outline" : "default"} className="w-full">
+        <Button asChild variant={isCompleted ? "outline" : "default"} className="w-full">
           <Link href={`/s/${course.schoolSlug}/learn/${course.slug}`}>{t(action)}</Link>
         </Button>
       </div>

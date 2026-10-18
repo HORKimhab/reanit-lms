@@ -3,11 +3,18 @@ import { use } from "react";
 
 import { CourseCard } from "@/components/course/course-card";
 import { getMockCourses } from "@/mocks/courses";
-import { getMockSchool, type MockSchool } from "@/mocks/schools";
+import { requireMockSchool } from "@/mocks/schools";
 
-export default function SchoolHome({ params }: { params: Promise<{ school: string }> }) {
+/**
+ * School home: hero with the school's name and tagline, then its course catalog.
+ *
+ * @param props - Page props.
+ * @param props.params - Route params with the school slug.
+ * @returns The hero and a grid of course cards, or an empty notice.
+ */
+export default function SchoolHome({ params }: PageProps<"/[locale]/s/[school]">) {
   const { school: slug } = use(params);
-  const school = getMockSchool(slug) as MockSchool;
+  const school = requireMockSchool(slug);
   const courses = getMockCourses(slug);
   const t = useTranslations("School");
 

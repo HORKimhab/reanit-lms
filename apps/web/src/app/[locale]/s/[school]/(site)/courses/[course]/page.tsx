@@ -1,18 +1,25 @@
 import { Button } from "@reanit/ui/components/button";
 import { Card } from "@reanit/ui/components/card";
-import { Check, ChevronDown, FileText, PlayCircle, AlignLeft } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { notFound } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { use } from "react";
 
 import { Duration } from "@/components/course/duration";
+import { LessonIcon } from "@/components/course/lesson-icon";
 import { Price } from "@/components/course/price";
-import { courseStats, getMockCourse, type LessonType, type MockCourse } from "@/mocks/courses";
+import { courseStats, getMockCourse, type MockCourse } from "@/mocks/courses";
 
-const LESSON_ICON: Record<LessonType, typeof PlayCircle> = { video: PlayCircle, text: AlignLeft, pdf: FileText };
+const INCLUDES = ["lifetime", "certificate", "anyDevice"] as const;
 
-// Course sales page: hero → outcomes → curriculum → instructor → FAQ, with a buy box.
-export default function CoursePage({ params }: { params: Promise<{ school: string; course: string }> }) {
+/**
+ * Course sales page: hero, outcomes, curriculum, instructor and FAQ, with a buy box. Unknown courses 404.
+ *
+ * @param props - Page props.
+ * @param props.params - Route params with the school and course slugs.
+ * @returns The sales page, with a sticky buy box on desktop and a pinned buy bar on mobile.
+ */
+export default function CoursePage({ params }: PageProps<"/[locale]/s/[school]/courses/[course]">) {
   const { school, course: slug } = use(params);
   const course = getMockCourse(school, slug);
   if (!course) notFound();
@@ -39,7 +46,7 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
             <ul className="grid gap-3 sm:grid-cols-2">
               {course.outcomes.map((o) => (
                 <li key={o} className="flex gap-2 text-sm">
-                  <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                  <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-success" />
                   {o}
                 </li>
               ))}
@@ -55,15 +62,13 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
                     <span>{section.title}</span>
                     <span className="flex items-center gap-2 text-sm font-normal text-muted-foreground">
                       {t("lessons", { count: section.lessons.length })}
-                      <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                      <ChevronDown aria-hidden className="size-4 transition-transform group-open:rotate-180" />
                     </span>
                   </summary>
                   <ul className="flex flex-col pb-2">
-                    {section.lessons.map((lesson) => {
-                      const Icon = LESSON_ICON[lesson.type];
-                      return (
-                        <li key={lesson.title} className="flex items-center gap-3 px-5 py-2 text-sm">
-                          <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    {section.lessons.map((lesson) => (
+                      <li key={lesson.title} className="flex items-center gap-3 px-5 py-2 text-sm">
+                          <LessonIcon type={lesson.type} className="size-4 shrink-0 text-muted-foreground" />
                           <span className="flex-1">{lesson.title}</span>
                           {lesson.preview ? (
                             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -74,8 +79,7 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
                             <Duration seconds={lesson.durationSec} />
                           </span>
                         </li>
-                      );
-                    })}
+                    ))}
                   </ul>
                 </details>
               ))}
@@ -85,7 +89,7 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
           <section className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold">{t("instructor")}</h2>
             <div className="flex gap-4">
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+              <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
                 {course.instructor.initials}
               </span>
               <div className="flex flex-col gap-1">
@@ -103,7 +107,7 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
                 <details key={item.q} className="group px-5 py-4">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
                     {item.q}
-                    <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+                    <ChevronDown aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-180" />
                   </summary>
                   <p className="pt-3 text-sm text-muted-foreground">{item.a}</p>
                 </details>
@@ -122,6 +126,14 @@ export default function CoursePage({ params }: { params: Promise<{ school: strin
   );
 }
 
+/**
+ * Price, enroll button and what the purchase includes.
+ *
+ * @param props - Component props.
+ * @param props.course - The course on sale.
+ * @param props.className - Extra classes for the card.
+ * @returns The buy card.
+ */
 function BuyBox({ course, className }: { course: MockCourse; className?: string }) {
   const t = useTranslations("Course");
   return (
@@ -133,9 +145,9 @@ function BuyBox({ course, className }: { course: MockCourse; className?: string 
         {t("enroll")}
       </Button>
       <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-        {(["lifetime", "certificate", "anyDevice"] as const).map((key) => (
+        {INCLUDES.map((key) => (
           <li key={key} className="flex gap-2">
-            <Check className="size-4 shrink-0 text-success" />
+            <Check aria-hidden className="size-4 shrink-0 text-success" />
             {t(`includes.${key}`)}
           </li>
         ))}

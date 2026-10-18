@@ -98,5 +98,8 @@
     "pdfHint": "Download the file to read it offline.",
     "download": "Download",
     "textPlaceholder": "The lesson text written by the instructor appears here."
+  },
+  "ThemeToggle": {
+    "label": "Toggle theme"
   }
 }

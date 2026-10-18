@@ -13,19 +13,32 @@ import type { Locale } from "@/i18n/routing";
 import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
 
 const FEATURES = ["build", "sell", "teach"] as const;
+// Sample values that show the locale formatters at work.
+const SAMPLE_USD_MINOR = 4900;
+const SAMPLE_KHR_MINOR = 20000000;
+const SAMPLE_STUDENTS = 1250;
+const SAMPLE_DATE = new Date(Date.UTC(2026, 9, 18));
+const SAMPLE_BRAND = "oklch(0.6 0.2 30)";
 
-// Placeholder home: shows tokens and i18n until the real screens (WEB-03+) land.
-export default function Home({ params }: { params: Promise<{ locale: string }> }) {
+/**
+ * Platform home: pitch, calls to action, feature cards and i18n/brand samples.
+ *
+ * @param props - Page props.
+ * @param props.params - Route params with the locale.
+ * @returns The marketing home page.
+ */
+export default function Home({ params }: PageProps<"/[locale]">) {
   // The layout has already rejected unknown locales.
   setRequestLocale(use(params).locale as Locale);
   const t = useTranslations("Home");
+  const brand = useTranslations("Metadata");
   const format = useFormatter();
   const money = useMoney();
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-10 px-6 py-12">
       <header className="flex items-center justify-between">
-        <span className="text-lg font-semibold">Reanit</span>
+        <span className="text-lg font-semibold">{brand("title")}</span>
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />
@@ -55,13 +68,13 @@ export default function Home({ params }: { params: Promise<{ locale: string }> }
       </section>
 
       <section className="flex flex-col gap-1 text-sm text-muted-foreground">
-        <p>{t("samplePrice", { usd: money(4900, "USD"), khr: money(20000000, "KHR") })}</p>
-        <p>{t("sampleStudents", { count: 1250, formatted: format.number(1250) })}</p>
-        <p>{format.dateTime(new Date(Date.UTC(2026, 9, 18)), { dateStyle: "long" })}</p>
+        <p>{t("samplePrice", { usd: money(SAMPLE_USD_MINOR, "USD"), khr: money(SAMPLE_KHR_MINOR, "KHR") })}</p>
+        <p>{t("sampleStudents", { count: SAMPLE_STUDENTS, formatted: format.number(SAMPLE_STUDENTS) })}</p>
+        <p>{format.dateTime(SAMPLE_DATE, { dateStyle: "long" })}</p>
       </section>
 
       {/* A school overrides --brand on a wrapper element. */}
-      <section style={{ "--brand": "oklch(0.6 0.2 30)" } as React.CSSProperties} className="flex gap-3">
+      <section style={{ "--brand": SAMPLE_BRAND } as React.CSSProperties} className="flex gap-3">
         <Button>{t("brandSample")}</Button>
       </section>
     </main>

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    "packages/ui": {
+      "entry": ["src/components/*.tsx", "src/lib/*.ts"]
+    },
+    "packages/config": {
+      "ignoreUnresolved": ["next"]
+    }
+  }
+}
