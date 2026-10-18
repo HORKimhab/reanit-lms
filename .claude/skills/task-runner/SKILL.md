@@ -1,6 +1,6 @@
 ---
 name: task-runner
-description: Build TODO.md tasks by ID and commit. Use when the prompt is "init <ID>[, <ID> to <ID>]", "init <ID> onward [max N] [until P%]" or "next task".
+description: Build TODO.md tasks by ID to the quality.md rules (patterns, no duplicate/dead code, full JSDoc, tests), refactor, verify and commit. Use when the prompt is "init <ID>[, <ID> to <ID>]", "init <ID> onward [max N] [until P%]" or "next task".
 ---
 
 **Modes**
@@ -18,11 +18,12 @@ description: Build TODO.md tasks by ID and commit. Use when the prompt is "init 
 **Steps per task**
 1. **Resolve the IDs.** Expand `X-01 to X-03` into X-01, X-02, X-03, kept in TODO.md order. For each `Needs <ID>` that is still `- [ ]`, add that ID first. Skip IDs that are already `- [x]` and say so.
 2. **⚠ tasks.** Stop and ask the user for the decision.
-3. **Build.** Do exactly what the TODO line says, nothing extra and no plan step. Follow `project-structure` for file placement.
-4. **Verify.** Run whichever of `pnpm build`, `pnpm lint`, `pnpm typecheck` exist. If they fail, fix them. If they still fail, report the output and **don't commit**.
-5. **Update TODO.md.** Change the finished task's `- [ ]` to `- [x]` in place. Never delete, move or reorder lines.
-6. **Commit** code + TODO.md, using the git config identity only (no `--author`, no trailer):
+3. **Build.** Do exactly what the TODO line says, nothing extra and no plan step. Follow `project-structure` for file placement and **every rule in `quality.md`**: reuse before writing, full JSDoc on every function, and tests for every behaviour, written alongside the code.
+4. **Refactor.** Read the task's full diff (`git diff` + new files) against `quality.md` and fix every problem you find, don't just note it: merge duplicates into a shared function, delete dead code, move logic to the right layer, apply the right pattern, add missing JSDoc and tests. Keep it to code this task touches. A wider problem elsewhere goes into the report as a suggested TODO task.
+5. **Verify.** Run whichever of `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip`, `pnpm dup` exist. If they fail, fix them. If they still fail, report the output and **don't commit**. Never skip, delete or weaken a test, lint rule or threshold to make a check pass.
+6. **Update TODO.md.** Change the finished task's `- [ ]` to `- [x]` in place. Never delete, move or reorder lines.
+7. **Commit** code + TODO.md, using the git config identity only (no `--author`, no trailer):
    - Subject: `feat: init <IDs as the user wrote them>`. Include any dependency IDs that were added. In onward mode it's `feat: init <ID>` for each task.
    - Use `feat: :sparkles: init …` only when the user writes `:sparkles:`.
 
-**End:** delete `.claude/run.lock`, then report: one line per task, commit hashes, why it stopped, session % and reset time (from `usage.json` `resets_at`), and the next unticked task.
+**End:** delete `.claude/run.lock`, then report: one line per task, the tests added per task (or why there are none), commit hashes, why it stopped, session % and reset time (from `usage.json` `resets_at`), and the next unticked task.

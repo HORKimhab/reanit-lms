@@ -258,7 +258,7 @@ Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `W
 
 | Skill | Purpose |
 |---|---|
-| `task-runner` | Builds TODO tasks by ID, verifies them, updates TODO.md and commits |
+| `task-runner` | Builds TODO tasks by ID to the rules in [`quality.md`](.claude/skills/task-runner/quality.md), refactors the diff, verifies, updates TODO.md and commits |
 | `project-structure` | Folder map and where new code goes; Claude uses it automatically when it creates or moves files |
 
 ### task-runner commands
@@ -277,7 +277,9 @@ Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 **Behaviour**
 - Open dependencies (`Needs <ID>`) are built first and named in the commit.
 - Tasks marked ⚠ stop the run and ask for a decision.
-- Build, lint and typecheck must pass. If they don't, nothing is committed and Claude reports the error.
+- Every task follows [`quality.md`](.claude/skills/task-runner/quality.md): reuse before writing, design patterns that fit the layer, no duplicate or dead code, full JSDoc on every function, and tests for every behaviour it adds.
+- After building, Claude refactors the task's own diff against those rules. It fixes problems rather than just listing them.
+- Build, lint, typecheck, test, knip (dead code) and jscpd (duplicate code) must pass. If they don't, nothing is committed and Claude reports the error. Tests and lint rules are never weakened to make a check pass.
 - Finished tasks are ticked `- [x]` in place in TODO.md, never deleted or moved, so TODO.md shows both done and open work. History: `git log --grep WEB-03`.
 - An onward run commits after every task, so if it stops for any reason, all finished work is already saved. Continue with `next task`.
 - If a run was cut off mid-task, the next run finds the uncommitted work and asks whether to continue or discard it.
