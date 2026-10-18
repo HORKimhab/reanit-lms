@@ -278,6 +278,7 @@ Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 - Open dependencies (`Needs <ID>`) are built first and named in the commit.
 - Tasks marked ⚠ stop the run and ask for a decision.
 - Every task follows [`quality.md`](.claude/skills/task-runner/quality.md): reuse before writing, design patterns that fit the layer, no duplicate or dead code, full JSDoc on every function, and tests for every behaviour it adds.
+- Tests: unit and component tests sit next to the source (`<name>.test.ts(x)`), integration tests go in `packages/db/test/`, E2E tests in `apps/web/e2e/`, and shared helpers in each package's `src/test/`. Claude runs the touched package's tests while building and checks that every new test fails when its behaviour breaks.
 - After building, Claude refactors the task's own diff against those rules. It fixes problems rather than just listing them.
 - Build, lint, typecheck, test, knip (dead code) and jscpd (duplicate code) must pass. If they don't, nothing is committed and Claude reports the error. Tests and lint rules are never weakened to make a check pass.
 - Finished tasks are ticked `- [x]` in place in TODO.md, never deleted or moved, so TODO.md shows both done and open work. History: `git log --grep WEB-03`.

@@ -18,8 +18,12 @@ description: Build TODO.md tasks by ID to the quality.md rules (patterns, no dup
 **Steps per task**
 1. **Resolve the IDs.** Expand `X-01 to X-03` into X-01, X-02, X-03, kept in TODO.md order. For each `Needs <ID>` that is still `- [ ]`, add that ID first. Skip IDs that are already `- [x]` and say so.
 2. **⚠ tasks.** Stop and ask the user for the decision.
-3. **Build.** Do exactly what the TODO line says, nothing extra and no plan step. Follow `project-structure` for file placement and **every rule in `quality.md`**: reuse before writing, full JSDoc on every function, and tests for every behaviour, written alongside the code.
-4. **Refactor.** Read the task's full diff (`git diff` + new files) against `quality.md` and fix every problem you find, don't just note it: merge duplicates into a shared function, delete dead code, move logic to the right layer, apply the right pattern, add missing JSDoc and tests. Keep it to code this task touches. A wider problem elsewhere goes into the report as a suggested TODO task.
+3. **Build.** Do exactly what the TODO line says, nothing extra and no plan step. Follow `project-structure` for file placement and **every rule in `quality.md`**: reuse before writing, full JSDoc on every function, and tests for every behaviour, written alongside the code. Test flow:
+   - Before writing a test, read the package's `src/test/` helpers and a nearby `*.test.tsx` and copy their style.
+   - Put each test where `quality.md` → Tests → Place says.
+   - While building, run only the touched package's tests (`pnpm --filter <pkg> test`). The full suite runs in Verify.
+   - Check that each new test fails when its behaviour breaks.
+4. **Refactor.** Read the task's full diff (`git diff` + new files) against `quality.md` and fix every problem you find, don't just note it: merge duplicates into a shared function, delete dead code, move logic to the right layer, apply the right pattern, add missing JSDoc and tests, move setup repeated across test files into `src/test/`, and delete or rewrite tests that can't fail. Keep it to code this task touches. A wider problem elsewhere goes into the report as a suggested TODO task.
 5. **Verify.** Run whichever of `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip`, `pnpm dup` exist. If they fail, fix them. If they still fail, report the output and **don't commit**. Never skip, delete or weaken a test, lint rule or threshold to make a check pass.
 6. **Update TODO.md.** Change the finished task's `- [ ]` to `- [x]` in place. Never delete, move or reorder lines.
 7. **Commit** code + TODO.md, using the git config identity only (no `--author`, no trailer):

@@ -37,10 +37,16 @@ Types and interfaces that are exported also get a one-line JSDoc, with a comment
 
 # Tests
 Every task adds tests for the behaviour it introduces or changes. Vitest + Testing Library for unit and component tests, Playwright for E2E.
-- **Place:** next to the source as `<name>.test.ts(x)`. E2E goes in `apps/web/e2e/`.
+- **Place:**
+  - Unit and component tests go next to the source as `<name>.test.ts(x)`, so a file with no test is easy to spot and the test moves or is deleted with its file.
+  - Integration tests against real Postgres go in `packages/db/test/` as `<name>.int.test.ts`.
+  - E2E tests go in `apps/web/e2e/` as `<flow>.spec.ts`.
+  - Shared test helpers (render with intl, setup, mocks of framework modules, fakes of `core` interfaces) go in the package's `src/test/`, e.g. `apps/web/src/test/render.tsx`. Reuse them, and never copy setup into a test file. A helper used by a second package moves into that package's exports.
+  - Test files never ship. Keep `*.test.*`, `*.spec.*` and `src/test/` out of package `exports` and out of production code imports.
 - **Cover:** the happy path, edge cases (empty, boundary, locale `km`) and every error branch. For money: currency and rounding. For tenant code: data from another school is never returned.
 - **Test behaviour, not implementation.** Query the UI by role and label, as a user would. Don't assert on internal state, private functions or CSS classes. No snapshot-only tests.
 - **Arrange / Act / Assert**, one behaviour per test, named `it("<does what> when <condition>")`.
 - **Mock only at boundaries** (network, vendor SDKs, clock, random). Never mock the module under test.
 - **Deterministic:** no real timers, no real network, no order dependence.
+- **Tests must be able to fail.** Each test must fail when the behaviour it covers breaks. Check this by temporarily breaking the code or flipping the assertion, then restore it. A test that passes either way is deleted or rewritten.
 - A task with no testable behaviour (pure config such as docker-compose) says so in the run report and explains how it was verified instead.

@@ -28,7 +28,7 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |
 | Script | `scripts/`, run with `pnpm tsx` |
-| Test | Next to the source as `<name>.test.ts(x)`. E2E in `apps/web/e2e/`. |
+| Test | Unit/component: next to the source as `<name>.test.ts(x)`. Integration (real Postgres): `packages/db/test/<name>.int.test.ts`. E2E: `apps/web/e2e/<flow>.spec.ts`. Shared helpers: the package's `src/test/`. |
 | Claude skill / command | `.claude/skills/<name>/SKILL.md`. Its `description` lists every prompt form. Document it in README §10. |
 | Claude hook / status line | Script in `.claude/hooks/` or `.claude/`, registered in `.claude/settings.json`. Document it in README §10. |
 
