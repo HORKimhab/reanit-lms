@@ -72,5 +72,18 @@
       "certificate": "Certificate of completion",
       "anyDevice": "Watch on any device"
     }
+  },
+  "MyCourses": {
+    "title": "My courses",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "progressLabel": "Course progress",
+    "progress": "{done} of {total} lessons · {percent}%",
+    "start": "Start course",
+    "continue": "Continue",
+    "review": "Review course",
+    "emptyTitle": "No courses yet",
+    "emptyText": "Courses you enroll in will show up here.",
+    "browse": "Browse courses"
   }
 }
