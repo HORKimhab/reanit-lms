@@ -17,6 +17,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 7. [Roadmap](#7-roadmap)
 8. [Open decisions](#8-open-decisions)
 9. [Local development](#9-local-development)
+10. [Working with Claude Code](#10-working-with-claude-code)
 
 ---
 
@@ -246,6 +247,38 @@ pnpm dev
 - `shamefully-hoist=true` or `node-linker=hoisted`. These turn off pnpm's strict rules and hide missing dependencies.
 - Importing a package without declaring it in that package's own `package.json`.
 - Mixing package managers. Keep no `package-lock.json`, `yarn.lock` or `bun.lock` in the repo.
+
+---
+
+## 10. Working with Claude Code
+
+Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `WEB-03` or `API-01`. The project rules are in [CLAUDE.md](CLAUDE.md), and Claude loads them on every task.
+
+### Skills
+
+| Skill | Purpose |
+|---|---|
+| `task-runner` | Builds TODO tasks by ID, verifies them, updates TODO.md and commits |
+| `project-structure` | Folder map and where new code goes; Claude uses it automatically when it creates or moves files |
+
+### task-runner commands
+
+| Prompt | What happens | Commit |
+|---|---|---|
+| `init REPO-01` | Builds one task | `feat: init REPO-01` |
+| `init REPO-01, WEB-01 to WEB-02` | Builds REPO-01, WEB-01 and WEB-02 in order | One commit: `feat: init REPO-01, WEB-01 to WEB-02` |
+| `init WEB-03 onward` | Builds tasks in TODO order, starting at WEB-03, until it stops | One commit per task: `feat: init WEB-03`, … |
+| `init WEB-03 onward max 5` | Same, but stops after 5 tasks | One commit per task |
+| `next task` | Builds the task under **Now** in TODO.md | `feat: init <ID>` |
+
+Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
+
+**Behaviour**
+- Open dependencies (`Needs <ID>`) are built first and named in the commit.
+- Tasks marked ⚠ stop the run and ask for a decision.
+- Build, lint and typecheck must pass. If they don't, nothing is committed and Claude reports the error.
+- Finished tasks are deleted from TODO.md. Their history stays in git: `git log --grep WEB-03`.
+- An onward run commits after every task, so if it stops for any reason, all finished work is already saved. Continue with `next task`.
 
 ## License
 
