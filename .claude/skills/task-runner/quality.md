@@ -37,6 +37,12 @@ Types and interfaces that are exported also get a one-line JSDoc, with a comment
 
 # Tests
 Every task adds tests for the behaviour it introduces or changes. Vitest + Testing Library for unit and component tests, Playwright for E2E.
+- **Test behaviour per task, not one test file per source file.** What gets a test:
+  - Pure logic (reducers, helpers, mocks, formatters) and hooks: always, as unit tests.
+  - Interactive or reusable components: always, as component tests.
+  - `page.tsx` / `layout.tsx` that only fetches data and composes components: no test. Keep it thin, and move any logic into a component or function, which then gets the test.
+  - `page.tsx` / `layout.tsx` with its own branch (`notFound()`, `redirect()`, param checks): test that branch only.
+  - A whole user flow across pages: E2E.
 - **Place:**
   - Unit and component tests go next to the source as `<name>.test.ts(x)`, so a file with no test is easy to spot and the test moves or is deleted with its file.
   - Integration tests against real Postgres go in `packages/db/test/` as `<name>.int.test.ts`.

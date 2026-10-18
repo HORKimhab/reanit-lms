@@ -20,6 +20,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] WEB-07 Dashboard overview + course list
 - [ ] WEB-08 Course builder: sections/lessons drag-and-drop, autosave
 - [ ] WEB-09 Students list + school settings (logo, color, live preview)
+- [ ] TEST-02 Remove page/layout tests that only re-check composed components (keep `notFound()`/`redirect()`/param branch tests); move any logic left in pages into tested components. Done when `pnpm test`, `lint`, `knip`, `dup` pass.
 
 ## Connect to backend
 - [ ] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.
