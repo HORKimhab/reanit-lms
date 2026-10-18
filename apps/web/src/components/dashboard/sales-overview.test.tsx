@@ -1,31 +1,13 @@
 import { screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import type * as SalesModule from "@/mocks/sales";
+import { getMockCourseSales } from "@/mocks/sales";
+import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
 import { renderWithIntl } from "@/test/render";
 
-import DashboardOverview from "./page";
+import { SalesOverview } from "./sales-overview";
 
-const salesState = vi.hoisted(() => ({ isEmpty: false }));
-
-// Sales data is the page's data boundary: an empty school has no courses to sell.
-vi.mock("@/mocks/sales", async (importOriginal) => {
-  const actual = await importOriginal<typeof SalesModule>();
-  /**
-   * Returns no sales while the test sets `salesState.isEmpty`, otherwise the real mock sales.
-   *
-   * @param schoolSlug - The school's slug.
-   * @returns The school's per-course sales.
-   */
-  function getMockCourseSales(schoolSlug: string) {
-    return salesState.isEmpty ? [] : actual.getMockCourseSales(schoolSlug);
-  }
-  return { ...actual, getMockCourseSales };
-});
-
-afterEach(() => {
-  salesState.isEmpty = false;
-});
+const SALES = getMockCourseSales(MOCK_SCHOOL_SLUG);
 
 /**
  * Finds the figure shown under a stat tile's label.
@@ -38,9 +20,9 @@ function statOf(label: string) {
   return screen.getByText(label, { selector: "dt" }).nextElementSibling as HTMLElement;
 }
 
-describe("DashboardOverview", () => {
+describe("SalesOverview", () => {
   it("shows revenue per currency, total students and the completion rate", async () => {
-    renderWithIntl(<DashboardOverview />);
+    renderWithIntl(<SalesOverview sales={SALES} />);
     expect(await screen.findByRole("heading", { level: 1, name: "Overview" })).toBeInTheDocument();
     const revenue = within(statOf("Revenue"));
     expect(revenue.getByText("$6,272.00")).toBeInTheDocument();
@@ -50,7 +32,7 @@ describe("DashboardOverview", () => {
   });
 
   it("lists the top courses and links to the full course list", async () => {
-    renderWithIntl(<DashboardOverview />);
+    renderWithIntl(<SalesOverview sales={SALES} />);
     const table = await screen.findByRole("table", { name: "Top courses" });
     expect(within(table).getAllByRole("rowheader").map((h) => h.textContent)).toEqual([
       "Brand Design Basics",
@@ -60,8 +42,7 @@ describe("DashboardOverview", () => {
   });
 
   it("shows no sales, zero students and an empty course list when the school has no courses", async () => {
-    salesState.isEmpty = true;
-    renderWithIntl(<DashboardOverview />);
+    renderWithIntl(<SalesOverview sales={[]} />);
     expect(await screen.findByText("No sales yet")).toBeInTheDocument();
     expect(statOf("Students")).toHaveTextContent("0");
     expect(statOf("Completion rate")).toHaveTextContent("0%");
@@ -69,7 +50,7 @@ describe("DashboardOverview", () => {
   });
 
   it("uses Khmer labels when the locale is km", async () => {
-    renderWithIntl(<DashboardOverview />, { locale: "km" });
+    renderWithIntl(<SalesOverview sales={SALES} />, { locale: "km" });
     expect(await screen.findByRole("heading", { level: 1, name: "ទិដ្ឋភាពទូទៅ" })).toBeInTheDocument();
     expect(screen.getByText("អត្រាបញ្ចប់")).toBeInTheDocument();
   });

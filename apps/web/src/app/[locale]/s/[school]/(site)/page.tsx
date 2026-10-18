@@ -1,42 +1,17 @@
-import { useTranslations } from "next-intl";
 import { use } from "react";
 
-import { CourseCard } from "@/components/course/course-card";
+import { SchoolHome } from "@/components/school/school-home";
 import { getMockCourses } from "@/mocks/courses";
 import { requireMockSchool } from "@/mocks/schools";
 
 /**
- * School home: hero with the school's name and tagline, then its course catalog.
+ * School home page.
  *
  * @param props - Page props.
  * @param props.params - Route params with the school slug.
- * @returns The hero and a grid of course cards, or an empty notice.
+ * @returns The school's hero and course catalog.
  */
-export default function SchoolHome({ params }: PageProps<"/[locale]/s/[school]">) {
-  const { school: slug } = use(params);
-  const school = requireMockSchool(slug);
-  const courses = getMockCourses(slug);
-  const t = useTranslations("School");
-
-  return (
-    <div className="flex flex-col gap-12">
-      <section className="flex flex-col items-start gap-3 rounded-2xl bg-primary/10 px-6 py-12 sm:px-10">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{school.name}</h1>
-        <p className="max-w-xl text-lg text-muted-foreground">{school.tagline}</p>
-      </section>
-
-      <section className="flex flex-col gap-6">
-        <h2 className="text-2xl font-semibold tracking-tight">{t("coursesHeading")}</h2>
-        {courses.length === 0 ? (
-          <p className="text-muted-foreground">{t("noCourses")}</p>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <CourseCard key={course.slug} course={course} />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
-  );
+export default function SchoolHomePage({ params }: PageProps<"/[locale]/s/[school]">) {
+  const { school } = use(params);
+  return <SchoolHome school={requireMockSchool(school)} courses={getMockCourses(school)} />;
 }

@@ -54,7 +54,7 @@ export function renderWithIntl(ui: React.ReactElement, { locale = "en" }: Render
  * @param options.locale - UI locale; defaults to English.
  * @returns Testing Library's render result, once the page has rendered.
  */
-export async function renderRoute(ui: React.ReactElement, { locale = "en" }: RenderOptions = {}) {
+async function renderRoute(ui: React.ReactElement, { locale = "en" }: RenderOptions = {}) {
   let result: RenderResult | undefined;
   await act(async () => {
     result = renderWithIntl(<Suspense fallback={null}>{ui}</Suspense>, { locale });
