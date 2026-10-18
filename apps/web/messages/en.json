@@ -46,5 +46,31 @@
     "courses": "Courses",
     "students": "Students",
     "settings": "Settings"
+  },
+  "School": {
+    "coursesHeading": "Courses",
+    "noCourses": "No courses yet."
+  },
+  "Course": {
+    "lessons": "{count, plural, one {# lesson} other {# lessons}}",
+    "minutes": "{m} min",
+    "hoursMinutes": "{h} h {m} min",
+    "byInstructor": "By {name}",
+    "level": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "whatYouLearn": "What you'll learn",
+    "curriculum": "Curriculum",
+    "instructor": "Your instructor",
+    "faq": "Frequently asked questions",
+    "preview": "Preview",
+    "enroll": "Enroll now",
+    "includes": {
+      "lifetime": "Lifetime access",
+      "certificate": "Certificate of completion",
+      "anyDevice": "Watch on any device"
+    }
   }
 }

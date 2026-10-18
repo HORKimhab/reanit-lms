@@ -46,5 +46,31 @@
     "courses": "វគ្គសិក្សា",
     "students": "សិស្ស",
     "settings": "ការកំណត់"
+  },
+  "School": {
+    "coursesHeading": "វគ្គសិក្សា",
+    "noCourses": "មិនទាន់មានវគ្គសិក្សានៅឡើយទេ។"
+  },
+  "Course": {
+    "lessons": "មេរៀន {count}",
+    "minutes": "{m} នាទី",
+    "hoursMinutes": "{h} ម៉ោង {m} នាទី",
+    "byInstructor": "ដោយ {name}",
+    "level": {
+      "beginner": "កម្រិតដំបូង",
+      "intermediate": "កម្រិតមធ្យម",
+      "advanced": "កម្រិតខ្ពស់"
+    },
+    "whatYouLearn": "អ្វីដែលអ្នកនឹងរៀន",
+    "curriculum": "កម្មវិធីសិក្សា",
+    "instructor": "គ្រូរបស់អ្នក",
+    "faq": "សំណួរដែលសួរញឹកញាប់",
+    "preview": "មើលសាកល្បង",
+    "enroll": "ចុះឈ្មោះឥឡូវនេះ",
+    "includes": {
+      "lifetime": "ចូលមើលបានជារៀងរហូត",
+      "certificate": "វិញ្ញាបនបត្របញ្ចប់ការសិក្សា",
+      "anyDevice": "មើលលើឧបករណ៍ណាមួយក៏បាន"
+    }
   }
 }
