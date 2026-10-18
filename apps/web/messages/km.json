@@ -14,12 +14,37 @@
     "createSchool": "បង្កើតសាលារបស់អ្នក",
     "browseCourses": "មើលវគ្គសិក្សា",
     "features": {
-      "build": { "title": "បង្កើត", "text": "ផ្នែក មេរៀន វីដេអូ និង PDF។" },
-      "sell": { "title": "លក់", "text": "តម្លៃម្ដង គូប៉ុង និងកញ្ចប់។" },
-      "teach": { "title": "បង្រៀន", "text": "តាមដានការរីកចម្រើន និងវិញ្ញាបនបត្រ។" }
+      "build": {
+        "title": "បង្កើត",
+        "text": "ផ្នែក មេរៀន វីដេអូ និង PDF។"
+      },
+      "sell": {
+        "title": "លក់",
+        "text": "តម្លៃម្ដង គូប៉ុង និងកញ្ចប់។"
+      },
+      "teach": {
+        "title": "បង្រៀន",
+        "text": "តាមដានការរីកចម្រើន និងវិញ្ញាបនបត្រ។"
+      }
     },
     "samplePrice": "តម្លៃគំរូ៖ {usd} ឬ {khr}",
     "sampleStudents": "សិស្ស {formatted} នាក់",
     "brandSample": "ពណ៌ម៉ាកសាលា"
+  },
+  "Common": {
+    "comingSoon": "អេក្រង់នេះនឹងបង្កើតក្នុង {task}។"
+  },
+  "SchoolNav": {
+    "courses": "វគ្គសិក្សា",
+    "allCourses": "វគ្គសិក្សាទាំងអស់",
+    "myCourses": "វគ្គសិក្សារបស់ខ្ញុំ",
+    "login": "ចូល",
+    "poweredBy": "ដំណើរការដោយ Reanit"
+  },
+  "DashboardNav": {
+    "overview": "ទិដ្ឋភាពទូទៅ",
+    "courses": "វគ្គសិក្សា",
+    "students": "សិស្ស",
+    "settings": "ការកំណត់"
   }
 }

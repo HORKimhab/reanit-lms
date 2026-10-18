@@ -14,12 +14,37 @@
     "createSchool": "Create your school",
     "browseCourses": "Browse courses",
     "features": {
-      "build": { "title": "Build", "text": "Sections, lessons, video and PDFs." },
-      "sell": { "title": "Sell", "text": "One-time prices, coupons and bundles." },
-      "teach": { "title": "Teach", "text": "Progress tracking and certificates." }
+      "build": {
+        "title": "Build",
+        "text": "Sections, lessons, video and PDFs."
+      },
+      "sell": {
+        "title": "Sell",
+        "text": "One-time prices, coupons and bundles."
+      },
+      "teach": {
+        "title": "Teach",
+        "text": "Progress tracking and certificates."
+      }
     },
     "samplePrice": "Sample price: {usd} or {khr}",
     "sampleStudents": "{count, plural, one {# student} other {{formatted} students}}",
     "brandSample": "School brand color"
+  },
+  "Common": {
+    "comingSoon": "This screen is built in {task}."
+  },
+  "SchoolNav": {
+    "courses": "Courses",
+    "allCourses": "All courses",
+    "myCourses": "My courses",
+    "login": "Log in",
+    "poweredBy": "Powered by Reanit"
+  },
+  "DashboardNav": {
+    "overview": "Overview",
+    "courses": "Courses",
+    "students": "Students",
+    "settings": "Settings"
   }
 }

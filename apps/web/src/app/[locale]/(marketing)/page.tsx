@@ -8,7 +8,9 @@ import type * as React from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useMoney } from "@/i18n/format";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
 
 const FEATURES = ["build", "sell", "teach"] as const;
 
@@ -34,9 +36,11 @@ export default function Home({ params }: { params: Promise<{ locale: string }> }
         <h1 className="text-4xl font-bold tracking-tight">{t("title")}</h1>
         <p className="max-w-xl text-lg text-muted-foreground">{t("subtitle")}</p>
         <div className="flex flex-wrap gap-3">
-          <Button size="lg">{t("createSchool")}</Button>
-          <Button size="lg" variant="outline">
-            {t("browseCourses")}
+          <Button asChild size="lg">
+            <Link href="/dashboard">{t("createSchool")}</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href={`/s/${MOCK_SCHOOL_SLUG}`}>{t("browseCourses")}</Link>
           </Button>
         </div>
       </section>
