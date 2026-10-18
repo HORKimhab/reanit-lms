@@ -6,9 +6,6 @@ UI: Teachable-style (white, one brand color per school) + dark mode, ⌘K palett
 i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (USD/KHR). Course content is not translated.
 
 ## Now
-- [ ] WEB-02 i18n: next-intl, en/km, Khmer font, locale switcher, formatters
-
-## Foundation
 - [ ] WEB-03 Layout shells: school site, student area, dashboard
 
 ## UI with mock data

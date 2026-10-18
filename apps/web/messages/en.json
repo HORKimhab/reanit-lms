@@ -1,0 +1,25 @@
+{
+  "Metadata": {
+    "title": "Reanit",
+    "description": "Create, sell and teach online courses."
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "km": "ខ្មែរ"
+  },
+  "Home": {
+    "title": "Teach what you know.",
+    "subtitle": "Open your own school, build courses and sell them to students.",
+    "createSchool": "Create your school",
+    "browseCourses": "Browse courses",
+    "features": {
+      "build": { "title": "Build", "text": "Sections, lessons, video and PDFs." },
+      "sell": { "title": "Sell", "text": "One-time prices, coupons and bundles." },
+      "teach": { "title": "Teach", "text": "Progress tracking and certificates." }
+    },
+    "samplePrice": "Sample price: {usd} or {khr}",
+    "sampleStudents": "{count, plural, one {# student} other {{formatted} students}}",
+    "brandSample": "School brand color"
+  }
+}

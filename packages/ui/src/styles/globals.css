@@ -55,7 +55,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-app, ui-sans-serif, system-ui, sans-serif);
+  --font-sans: var(--font-inter), var(--font-kantumruy), ui-sans-serif, system-ui, sans-serif;
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-background: var(--background);
