@@ -270,7 +270,7 @@ Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `W
 | `init WEB-03 onward` | Builds tasks in TODO order, starting at WEB-03, until it stops | One commit per task: `feat: init WEB-03`, … |
 | `init WEB-03 onward max 5` | Same, but stops after 5 tasks | One commit per task |
 | `init WEB-03 onward until 80%` | Same, but stops at 80% session usage instead of 95% | One commit per task |
-| `next task` | Builds the task under **Now** in TODO.md | `feat: init <ID>` |
+| `next task` | Builds the first unticked `- [ ]` task in TODO.md | `feat: init <ID>` |
 
 Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 
@@ -278,7 +278,7 @@ Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 - Open dependencies (`Needs <ID>`) are built first and named in the commit.
 - Tasks marked ⚠ stop the run and ask for a decision.
 - Build, lint and typecheck must pass. If they don't, nothing is committed and Claude reports the error.
-- Finished tasks are deleted from TODO.md. Their history stays in git: `git log --grep WEB-03`.
+- Finished tasks are ticked `- [x]` in place in TODO.md, never deleted or moved, so TODO.md shows both done and open work. History: `git log --grep WEB-03`.
 - An onward run commits after every task, so if it stops for any reason, all finished work is already saved. Continue with `next task`.
 - If a run was cut off mid-task, the next run finds the uncommitted work and asks whether to continue or discard it.
 
