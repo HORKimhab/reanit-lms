@@ -119,3 +119,13 @@ export function courseStats(course: MockCourse) {
   const lessons = course.sections.flatMap((s) => s.lessons);
   return { lessons: lessons.length, durationSec: lessons.reduce((sum, l) => sum + l.durationSec, 0) };
 }
+
+export type FlatLesson = MockLesson & { id: string; index: number; sectionIndex: number };
+
+// Lessons in order with stable ids ("1-2" = section 1, lesson 2) until real ids come from the API.
+export function flattenLessons(course: MockCourse): FlatLesson[] {
+  let index = 0;
+  return course.sections.flatMap((section, si) =>
+    section.lessons.map((lesson, li) => ({ ...lesson, id: `${si + 1}-${li + 1}`, index: index++, sectionIndex: si })),
+  );
+}

@@ -17,3 +17,7 @@ export function getMockEnrollments(schoolSlug: string): MockEnrollment[] {
     return [{ course, completedLessons: e.completedLessons, totalLessons, percent: (e.completedLessons / totalLessons) * 100 }];
   });
 }
+
+export function getMockEnrollment(schoolSlug: string, courseSlug: string) {
+  return getMockEnrollments(schoolSlug).find((e) => e.course.slug === courseSlug);
+}

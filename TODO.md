@@ -6,10 +6,9 @@ UI: Teachable-style (white, one brand color per school) + dark mode, ⌘K palett
 i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (USD/KHR). Course content is not translated.
 
 ## Now
-- [ ] WEB-06 Lesson player + progress sidebar
+- [ ] WEB-07 Dashboard overview + course list
 
 ## UI with mock data
-- [ ] WEB-07 Dashboard overview + course list
 - [ ] WEB-08 Course builder: sections/lessons drag-and-drop, autosave
 - [ ] WEB-09 Students list + school settings (logo, color, live preview)
 

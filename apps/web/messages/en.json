@@ -85,5 +85,18 @@
     "emptyTitle": "No courses yet",
     "emptyText": "Courses you enroll in will show up here.",
     "browse": "Browse courses"
+  },
+  "Player": {
+    "backToCourses": "Back to my courses",
+    "courseContent": "Course content",
+    "progressLabel": "Course progress",
+    "progress": "{percent}% complete",
+    "lessonOf": "Lesson {n} of {total}",
+    "previous": "Previous",
+    "completeAndContinue": "Complete and continue",
+    "finish": "Finish course",
+    "pdfHint": "Download the file to read it offline.",
+    "download": "Download",
+    "textPlaceholder": "The lesson text written by the instructor appears here."
   }
 }
