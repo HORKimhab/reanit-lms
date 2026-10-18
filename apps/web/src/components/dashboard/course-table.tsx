@@ -2,6 +2,7 @@ import { useFormatter, useTranslations } from "next-intl";
 
 import { Price } from "@/components/course/price";
 import { useMoney } from "@/i18n/format";
+import { Link } from "@/i18n/navigation";
 import { courseStats } from "@/mocks/courses";
 import type { CourseSales } from "@/mocks/sales";
 
@@ -11,7 +12,7 @@ import type { CourseSales } from "@/mocks/sales";
  * @param props - Component props.
  * @param props.caption - Accessible name of the table.
  * @param props.rows - Courses with their sales, in display order.
- * @returns A scrollable table, or an empty state when there are no courses.
+ * @returns A scrollable table with each title linking to its builder, or an empty state when there are no courses.
  */
 export function CourseTable({ caption, rows }: { caption: string; rows: CourseSales[] }) {
   const t = useTranslations("Dashboard");
@@ -43,7 +44,11 @@ export function CourseTable({ caption, rows }: { caption: string; rows: CourseSa
         <tbody className="divide-y">
           {rows.map(({ course, students, revenueMinor }) => (
             <tr key={course.slug}>
-              <th scope="row" className="px-4 py-3 text-left font-medium">{course.title}</th>
+              <th scope="row" className="px-4 py-3 text-left font-medium">
+                <Link href={`/dashboard/courses/${course.slug}`} className="hover:text-primary hover:underline">
+                  {course.title}
+                </Link>
+              </th>
               <td className="px-4 py-3">
                 <Price course={course} />
               </td>

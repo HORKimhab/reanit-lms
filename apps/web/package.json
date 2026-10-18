@@ -12,13 +12,17 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
     "@reanit/ui": "workspace:*",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-intl": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "catalog:",

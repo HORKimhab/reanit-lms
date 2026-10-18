@@ -61,6 +61,32 @@
     "emptyTitle": "មិនទាន់មានវគ្គសិក្សា",
     "emptyText": "វគ្គសិក្សាដែលអ្នកបង្កើតនឹងបង្ហាញនៅទីនេះ។"
   },
+  "Builder": {
+    "status": {
+      "saving": "កំពុងរក្សាទុក…",
+      "saved": "បានរក្សាទុកការផ្លាស់ប្ដូរទាំងអស់",
+      "error": "មិនអាចរក្សាទុកបានទេ។ ការកែប្រែបន្ទាប់នឹងព្យាយាមម្ដងទៀត។"
+    },
+    "addSection": "បន្ថែមផ្នែក",
+    "addLesson": "បន្ថែមមេរៀន",
+    "newSection": "ផ្នែកគ្មានចំណងជើង",
+    "newLesson": "មេរៀនគ្មានចំណងជើង",
+    "sectionTitle": "ចំណងជើងផ្នែក",
+    "lessonTitle": "ចំណងជើងមេរៀន",
+    "dragSection": "ផ្លាស់ទីផ្នែក {title}",
+    "dragLesson": "ផ្លាស់ទីមេរៀន {title}",
+    "removeSection": "លុបផ្នែក {title}",
+    "removeLesson": "លុបមេរៀន {title}",
+    "emptySection": "ផ្នែកនេះមិនទាន់មានមេរៀនទេ។",
+    "drag": {
+      "instructions": "ដើម្បីលើកធាតុ សូមចុច space ឬ enter។ ប្រើគ្រាប់ចុចព្រួញដើម្បីផ្លាស់ទី បន្ទាប់មកចុច space ឬ enter ដើម្បីដាក់ ឬ escape ដើម្បីបោះបង់។",
+      "pickedUp": "បានលើក {item}។",
+      "over": "{item} ស្ថិតនៅលើ {target}។",
+      "dropped": "{item} ត្រូវបានដាក់នៅ {target}។",
+      "outside": "{item} នៅក្រៅបញ្ជី។",
+      "cancelled": "ការផ្លាស់ទី {item} ត្រូវបានបោះបង់។"
+    }
+  },
   "School": {
     "coursesHeading": "វគ្គសិក្សា",
     "noCourses": "មិនទាន់មានវគ្គសិក្សានៅឡើយទេ។"

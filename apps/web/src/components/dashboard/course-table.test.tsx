@@ -28,6 +28,10 @@ describe("CourseTable", () => {
     expect(brand.getByRole("cell", { name: "9" })).toBeInTheDocument();
     expect(brand.getByRole("cell", { name: "128" })).toBeInTheDocument();
     expect(brand.getByRole("cell", { name: "$6,272.00" })).toBeInTheDocument();
+    expect(brand.getByRole("link", { name: "Brand Design Basics" })).toHaveAttribute(
+      "href",
+      "/dashboard/courses/brand-design-basics",
+    );
     expect(within(rowOf("Social Media Content That Sells")).getByRole("cell", { name: "KHR\u00a06,480,000" })).toBeInTheDocument();
   });
 

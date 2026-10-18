@@ -1,7 +1,10 @@
 // Mock catalog until API-03 (catalog) lands. Content is in the creator's language, not translated.
 
+/** Every kind of content a lesson can hold. */
+export const LESSON_TYPES = ["video", "text", "pdf"] as const;
+
 /** Kind of content a lesson holds. */
-export type LessonType = "video" | "text" | "pdf";
+export type LessonType = (typeof LESSON_TYPES)[number];
 
 type MockLesson = {
   title: string;

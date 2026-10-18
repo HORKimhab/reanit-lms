@@ -61,6 +61,32 @@
     "emptyTitle": "No courses yet",
     "emptyText": "Courses you create will show up here."
   },
+  "Builder": {
+    "status": {
+      "saving": "Saving…",
+      "saved": "All changes saved",
+      "error": "Couldn't save. Your next edit will try again."
+    },
+    "addSection": "Add section",
+    "addLesson": "Add lesson",
+    "newSection": "Untitled section",
+    "newLesson": "Untitled lesson",
+    "sectionTitle": "Section title",
+    "lessonTitle": "Lesson title",
+    "dragSection": "Move section {title}",
+    "dragLesson": "Move lesson {title}",
+    "removeSection": "Remove section {title}",
+    "removeLesson": "Remove lesson {title}",
+    "emptySection": "No lessons in this section yet.",
+    "drag": {
+      "instructions": "To pick up an item, press space or enter. Use the arrow keys to move it, then press space or enter to drop it, or escape to cancel.",
+      "pickedUp": "Picked up {item}.",
+      "over": "{item} is over {target}.",
+      "dropped": "{item} was dropped at {target}.",
+      "outside": "{item} is outside the list.",
+      "cancelled": "Moving {item} was cancelled."
+    }
+  },
   "School": {
     "coursesHeading": "Courses",
     "noCourses": "No courses yet."
