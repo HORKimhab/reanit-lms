@@ -47,6 +47,20 @@
     "students": "សិស្ស",
     "settings": "ការកំណត់"
   },
+  "Dashboard": {
+    "revenue": "ចំណូល",
+    "students": "សិស្ស",
+    "completionRate": "អត្រាបញ្ចប់",
+    "noSales": "មិនទាន់មានការលក់",
+    "topCourses": "វគ្គសិក្សាពេញនិយម",
+    "viewAll": "មើលវគ្គសិក្សាទាំងអស់",
+    "allCourses": "វគ្គសិក្សាទាំងអស់",
+    "course": "វគ្គសិក្សា",
+    "price": "តម្លៃ",
+    "lessons": "មេរៀន",
+    "emptyTitle": "មិនទាន់មានវគ្គសិក្សា",
+    "emptyText": "វគ្គសិក្សាដែលអ្នកបង្កើតនឹងបង្ហាញនៅទីនេះ។"
+  },
   "School": {
     "coursesHeading": "វគ្គសិក្សា",
     "noCourses": "មិនទាន់មានវគ្គសិក្សានៅឡើយទេ។"

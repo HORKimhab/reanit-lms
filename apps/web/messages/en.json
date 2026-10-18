@@ -47,6 +47,20 @@
     "students": "Students",
     "settings": "Settings"
   },
+  "Dashboard": {
+    "revenue": "Revenue",
+    "students": "Students",
+    "completionRate": "Completion rate",
+    "noSales": "No sales yet",
+    "topCourses": "Top courses",
+    "viewAll": "View all courses",
+    "allCourses": "All courses",
+    "course": "Course",
+    "price": "Price",
+    "lessons": "Lessons",
+    "emptyTitle": "No courses yet",
+    "emptyText": "Courses you create will show up here."
+  },
   "School": {
     "coursesHeading": "Courses",
     "noCourses": "No courses yet."

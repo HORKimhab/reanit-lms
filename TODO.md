@@ -17,7 +17,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] WEB-04 School home + course sales page (hero, curriculum, instructor, FAQ, buy)
 - [x] WEB-05 Student "My courses"
 - [x] WEB-06 Lesson player + progress sidebar
-- [ ] WEB-07 Dashboard overview + course list
+- [x] WEB-07 Dashboard overview + course list
 - [ ] WEB-08 Course builder: sections/lessons drag-and-drop, autosave
 - [ ] WEB-09 Students list + school settings (logo, color, live preview)
 
