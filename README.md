@@ -269,6 +269,7 @@ Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `W
 | `init REPO-01, WEB-01 to WEB-02` | Builds REPO-01, WEB-01 and WEB-02 in order | One commit: `feat: init REPO-01, WEB-01 to WEB-02` |
 | `init WEB-03 onward` | Builds tasks in TODO order, starting at WEB-03, until it stops | One commit per task: `feat: init WEB-03`, … |
 | `init WEB-03 onward max 5` | Same, but stops after 5 tasks | One commit per task |
+| `init WEB-03 onward until 80%` | Same, but stops at 80% session usage instead of 95% | One commit per task |
 | `next task` | Builds the task under **Now** in TODO.md | `feat: init <ID>` |
 
 Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
@@ -279,6 +280,18 @@ Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 - Build, lint and typecheck must pass. If they don't, nothing is committed and Claude reports the error.
 - Finished tasks are deleted from TODO.md. Their history stays in git: `git log --grep WEB-03`.
 - An onward run commits after every task, so if it stops for any reason, all finished work is already saved. Continue with `next task`.
+- If a run was cut off mid-task, the next run finds the uncommitted work and asks whether to continue or discard it.
+
+### Stopping an onward run
+
+| Stop | How |
+|---|---|
+| Manual | Create an empty `.claude/STOP` file. The run stops after the current task's commit. |
+| Session usage | It doesn't start a new task at 90% or more (P−5), and the usage-guard hook stops it mid-task at 95% (P). |
+| Count | `max N` |
+| Decision | It reaches a ⚠ task. |
+
+How usage is read: [`.claude/statusline.sh`](.claude/statusline.sh) shows `session X% · ctx Y%` and saves the session % to `.claude/usage.json`. The PreToolUse hook [`.claude/hooks/usage-guard.sh`](.claude/hooks/usage-guard.sh) reads that file only while `.claude/run.lock` exists, so normal chats are never blocked. If the status line doesn't run (for example in an IDE extension) or the data is more than 10 minutes old, the usage check is skipped and the other stops still apply. `usage.json`, `run.lock` and `STOP` are gitignored.
 
 ## License
 

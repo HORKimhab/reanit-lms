@@ -1,0 +1,5 @@
+# Claude Code local state
+.claude/settings.local.json
+.claude/usage.json
+.claude/run.lock
+.claude/STOP
