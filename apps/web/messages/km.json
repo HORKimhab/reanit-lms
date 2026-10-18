@@ -31,9 +31,6 @@
     "sampleStudents": "សិស្ស {formatted} នាក់",
     "brandSample": "ពណ៌ម៉ាកសាលា"
   },
-  "Common": {
-    "comingSoon": "អេក្រង់នេះនឹងបង្កើតក្នុង {task}។"
-  },
   "SchoolNav": {
     "courses": "វគ្គសិក្សា",
     "allCourses": "វគ្គសិក្សាទាំងអស់",
@@ -86,6 +83,34 @@
       "outside": "{item} នៅក្រៅបញ្ជី។",
       "cancelled": "ការផ្លាស់ទី {item} ត្រូវបានបោះបង់។"
     }
+  },
+  "Students": {
+    "caption": "សិស្ស",
+    "student": "ឈ្មោះ",
+    "email": "អ៊ីមែល",
+    "courses": "វគ្គសិក្សា",
+    "completed": "បានបញ្ចប់",
+    "joined": "ចូលរួមនៅ",
+    "emptyTitle": "មិនទាន់មានសិស្ស",
+    "emptyText": "សិស្សដែលចុះឈ្មោះក្នុងវគ្គសិក្សារបស់អ្នកនឹងបង្ហាញនៅទីនេះ។"
+  },
+  "Settings": {
+    "name": "ឈ្មោះសាលា",
+    "brand": "ពណ៌ម៉ាក",
+    "logo": "ឡូហ្គោ",
+    "logoHint": "PNG, JPEG ឬ WebP ទំហំមិនលើស {maxMb} MB។",
+    "save": "រក្សាទុកការផ្លាស់ប្ដូរ",
+    "saving": "កំពុងរក្សាទុក…",
+    "saved": "បានរក្សាទុកការកំណត់",
+    "errors": {
+      "name": "សូមបញ្ចូលឈ្មោះមិនលើស {max} តួអក្សរ។",
+      "brand": "សូមជ្រើសរើសពណ៌។",
+      "logo": "សូមជ្រើសរើសរូបភាព PNG, JPEG ឬ WebP ទំហំមិនលើស {maxMb} MB។"
+    },
+    "preview": "មើលផ្ទាល់",
+    "previewHint": "នេះជារបៀបដែលគេហទំព័រសាលារបស់អ្នកបង្ហាញដល់សិស្ស។",
+    "logoPreview": "មើលឡូហ្គោជាមុន",
+    "previewCourse": "ចំណងជើងវគ្គសិក្សារបស់អ្នក"
   },
   "School": {
     "coursesHeading": "វគ្គសិក្សា",

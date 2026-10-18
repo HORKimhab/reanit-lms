@@ -1,13 +1,20 @@
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
-import { PagePlaceholder } from "@/components/shells/page-placeholder";
+import { StudentTable } from "@/components/dashboard/student-table";
+import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
+import { getMockStudents } from "@/mocks/students";
 
 /**
- * Students list, until WEB-09 builds it.
+ * Students list: everyone enrolled in the school's courses, newest first.
  *
- * @returns The page heading and a placeholder.
+ * @returns The page heading and the students table.
  */
-export default async function DashboardStudents() {
-  const t = await getTranslations("DashboardNav");
-  return <PagePlaceholder title={t("students")} task="WEB-09" />;
+export default function DashboardStudents() {
+  const t = useTranslations("DashboardNav");
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">{t("students")}</h1>
+      <StudentTable rows={getMockStudents(MOCK_SCHOOL_SLUG)} />
+    </div>
+  );
 }

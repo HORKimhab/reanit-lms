@@ -31,9 +31,6 @@
     "sampleStudents": "{count, plural, one {# student} other {{formatted} students}}",
     "brandSample": "School brand color"
   },
-  "Common": {
-    "comingSoon": "This screen is built in {task}."
-  },
   "SchoolNav": {
     "courses": "Courses",
     "allCourses": "All courses",
@@ -86,6 +83,34 @@
       "outside": "{item} is outside the list.",
       "cancelled": "Moving {item} was cancelled."
     }
+  },
+  "Students": {
+    "caption": "Students",
+    "student": "Name",
+    "email": "Email",
+    "courses": "Courses",
+    "completed": "Completed",
+    "joined": "Joined",
+    "emptyTitle": "No students yet",
+    "emptyText": "Students who enroll in your courses will show up here."
+  },
+  "Settings": {
+    "name": "School name",
+    "brand": "Brand color",
+    "logo": "Logo",
+    "logoHint": "PNG, JPEG or WebP, up to {maxMb} MB.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Settings saved",
+    "errors": {
+      "name": "Enter a name of up to {max} characters.",
+      "brand": "Pick a color.",
+      "logo": "Choose a PNG, JPEG or WebP image of up to {maxMb} MB."
+    },
+    "preview": "Live preview",
+    "previewHint": "This is how your school site looks to students.",
+    "logoPreview": "Logo preview",
+    "previewCourse": "Your course title"
   },
   "School": {
     "coursesHeading": "Courses",
