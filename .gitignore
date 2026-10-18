@@ -3,3 +3,19 @@
 .claude/usage.json
 .claude/run.lock
 .claude/STOP
+
+# Dependencies and build output
+node_modules/
+.turbo/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store

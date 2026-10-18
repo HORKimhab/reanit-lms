@@ -232,7 +232,7 @@ pnpm dev
 ### pnpm usage
 
 **Do**
-- Pin pnpm in the root `package.json` (`"packageManager": "pnpm@10.x.y"`) and get it through **Corepack** (`corepack enable`), so everyone and CI use the same version.
+- Pin pnpm in the root `package.json` (`"packageManager": "pnpm@12.14.0"`) and get it through **Corepack** (`corepack enable`), so everyone and CI use the same version.
 - Pin Node with `.nvmrc` and `engines.node` (`>=24`).
 - Commit `pnpm-lock.yaml`. CI installs with `pnpm install --frozen-lockfile`.
 - Define workspaces in `pnpm-workspace.yaml` (`apps/*`, `packages/*`) and reference internal packages as `"@reanit/core": "workspace:*"`.
