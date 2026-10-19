@@ -136,7 +136,15 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     async findOrder(orderId: string, userId: string) {
       const order = await tenant.order.findFirst({
         where: { id: orderId, userId },
-        select: { id: true, status: true, totalAmount: true, currency: true, paymentMethod: true, items: { select: { courseId: true }, take: 1 } },
+        select: {
+          id: true,
+          status: true,
+          totalAmount: true,
+          currency: true,
+          paymentMethod: true,
+          providerRef: true,
+          items: { select: { courseId: true }, take: 1 },
+        },
       });
       const [item] = order?.items ?? [];
       if (!order || !item) return null;
@@ -147,6 +155,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
         amount: order.totalAmount,
         currency: order.currency as Currency,
         method: order.paymentMethod,
+        providerRef: order.providerRef,
       };
     },
   };

@@ -41,6 +41,7 @@ export const TEST_ENV: Env = {
   S3_FORCE_PATH_STYLE: true,
   STRIPE_SECRET_KEY: "sk_test_reanit",
   STRIPE_WEBHOOK_SECRET: "whsec_reanit_test",
+  PAYWAY_BASE_URL: "https://payway.test",
   PORT: 4000,
   HOST: "127.0.0.1",
   LOG_LEVEL: "silent",
@@ -73,6 +74,8 @@ type TestAppOptions = {
   controllers?: Type[];
   /** Test-only modules, for probe controllers that need a feature module's providers. */
   imports?: Type[];
+  /** Extra providers to replace, e.g. a gateway the test controls. */
+  overrides?: { provide: symbol; useValue: unknown }[];
   /** Receives the app's logs at `info` level; logging is silent otherwise. nestjs-pino keeps the first app's logger for the whole test file. */
   logStream?: DestinationStream;
 };
@@ -133,7 +136,7 @@ export function createFakeClients(): FakeClients {
  * Boots the app on Fastify, set up as `main.ts` does, without listening; send requests with `app.inject`.
  *
  * @param clients Fakes from `createFakeClients`.
- * @param options Extra controllers, modules and a log destination.
+ * @param options Extra controllers, modules, provider overrides and a log destination.
  * @returns The initialized app. Close it after the test.
  */
 export async function createTestApp(
@@ -159,6 +162,7 @@ export async function createTestApp(
     .useValue(clients.commerceFor)
     .overrideProvider(PAYMENT_CONFIRMATION)
     .useValue(clients.confirmation);
+  for (const { provide, useValue } of options.overrides ?? []) builder = builder.overrideProvider(provide).useValue(useValue);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });

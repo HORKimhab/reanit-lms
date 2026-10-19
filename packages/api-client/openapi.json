@@ -1765,6 +1765,32 @@
                   "kind": {
                     "type": "string",
                     "enum": [
+                      "form"
+                    ]
+                  },
+                  "action": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "action",
+                  "fields"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
                       "qr"
                     ]
                   },

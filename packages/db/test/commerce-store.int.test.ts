@@ -62,10 +62,10 @@ describe("commerce store", () => {
   });
 
   it("creates a pending order its buyer can read and others cannot", async () => {
-    const { id } = await pendingOrder(buyerId);
+    const { id, providerRef } = await pendingOrder(buyerId);
     const store = createCommerceStore(db, alphaId);
 
-    expect(await store.findOrder(id, buyerId)).toEqual({ id, status: "pending", courseId, amount: 4900, currency: "USD", method: "stripe" });
+    expect(await store.findOrder(id, buyerId)).toEqual({ id, status: "pending", courseId, amount: 4900, currency: "USD", method: "stripe", providerRef });
     expect(await store.findOrder(id, randomUUID())).toBeNull();
     expect(await createCommerceStore(db, betaId).findOrder(id, buyerId)).toBeNull();
   });

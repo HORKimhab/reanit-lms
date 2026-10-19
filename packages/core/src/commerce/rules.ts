@@ -9,11 +9,19 @@ export const PAYMENT_METHODS = ["stripe", "aba_payway", "bakong_khqr"] as const;
 /** Highest price accepted, in minor units: guards against a typo with extra zeros. */
 const MAX_AMOUNT = 100_000_000;
 
+/** Minor units per major unit; riel have no coins below one, so KHR prices are whole riel. */
+const MINOR_PER_MAJOR = 100;
+
 /** A course price as the creator sets it. */
-export const priceSchema = z.object({
-  amount: z.number().int().positive().max(MAX_AMOUNT),
-  currency: z.enum(CURRENCIES),
-});
+export const priceSchema = z
+  .object({
+    amount: z.number().int().positive().max(MAX_AMOUNT),
+    currency: z.enum(CURRENCIES),
+  })
+  .refine(({ amount, currency }) => currency !== "KHR" || amount % MINOR_PER_MAJOR === 0, {
+    message: "KHR prices are whole riel",
+    path: ["amount"],
+  });
 
 /** What the student picks at checkout. */
 export const checkoutSchema = z.object({

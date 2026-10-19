@@ -26,8 +26,8 @@ export type Agent = ReturnType<typeof request.agent>;
 /** In-memory object storage: an upload "arrives" when a test adds its key to `uploaded`. */
 type MemoryStorage = ObjectStorage & { uploaded: Set<string> };
 
-/** The app under test, the email it has sent and its object storage. */
-export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[]; storage: MemoryStorage };
+/** The app under test, the email it has sent, its object storage, and the PayWay-like gateway's paid references. */
+export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[]; storage: MemoryStorage; paidAtGateway: Set<string> };
 
 /** Stripe without the network: the session id is `cs_e2e_<order id>`, so tests can sign its webhook. */
 const e2eStripeGateway: PaymentGateway = {
@@ -49,6 +49,40 @@ const e2eStripeGateway: PaymentGateway = {
    */
   async startPayment(request) {
     return { kind: "redirect", url: `https://checkout.stripe.test/cs_e2e_${request.orderId}`, providerRef: `cs_e2e_${request.orderId}` };
+  },
+};
+
+/** References the PayWay-like test gateway reports as paid; tests add `pw_<order id>` to "pay". */
+const paidAtGateway = new Set<string>();
+
+/** PayWay without the network: posts a form, and answers status checks from `paidAtGateway`. */
+const e2ePayWayGateway: PaymentGateway = {
+  method: "aba_payway",
+  /**
+   * Takes USD and KHR.
+   *
+   * @returns True.
+   */
+  supports() {
+    return true;
+  },
+  /**
+   * Fakes PayWay's checkout form.
+   *
+   * @param request The order.
+   * @returns A form whose reference is `pw_<order id>`.
+   */
+  async startPayment(request) {
+    return { kind: "form", action: "https://payway.test/purchase", fields: { tran_id: `pw_${request.orderId}` }, providerRef: `pw_${request.orderId}` };
+  },
+  /**
+   * Fakes check-transaction.
+   *
+   * @param providerRef The transaction.
+   * @returns "paid" once a test added it to `paidAtGateway`.
+   */
+  async checkPayment(providerRef) {
+    return paidAtGateway.has(providerRef) ? "paid" : "pending";
   },
 };
 
@@ -116,14 +150,14 @@ async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
     .overrideProvider(OBJECT_STORAGE)
     .useValue(storage)
     .overrideProvider(PAYMENT_GATEWAYS)
-    .useValue([e2eStripeGateway])
+    .useValue([e2ePayWayGateway, e2eStripeGateway])
     .overrideProvider(ENV)
     .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl })
     .overrideProvider(REDIS)
     .useValue(createFakeClients().redis)
     .overrideProvider(MAILER)
     .useValue(mailer);
-  return { app: await bootTestApp(builder), mail, storage };
+  return { app: await bootTestApp(builder), mail, storage, paidAtGateway };
 }
 
 /**

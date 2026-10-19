@@ -23,6 +23,7 @@ describe("parseEnv", () => {
       LOG_LEVEL: "info",
       S3_REGION: "auto",
       S3_FORCE_PATH_STYLE: false,
+      PAYWAY_BASE_URL: "https://checkout-sandbox.payway.com.kh",
     });
   });
 
@@ -34,7 +35,7 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...REQUIRED, STRIPE_SECRET_KEY: "sk_test_1", STRIPE_WEBHOOK_SECRET: "whsec_1" }).STRIPE_SECRET_KEY).toBe("sk_test_1");
   });
 
-  it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }])("throws a ZodError for half the Stripe credentials: %j", (half) => {
+  it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }, { PAYWAY_MERCHANT_ID: "m" }, { PAYWAY_API_KEY: "k" }])("throws a ZodError for half a gateway's credentials: %j", (half) => {
     expect(() => parseEnv({ ...REQUIRED, ...half })).toThrow(ZodError);
   });
 

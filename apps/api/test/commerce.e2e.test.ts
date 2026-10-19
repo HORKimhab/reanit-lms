@@ -48,7 +48,7 @@ describe("checkout", () => {
     await alpha.agent.put(`/courses/${course.id}/price`).send({ amount: 4900, currency: "USD" }).expect(200);
     expect((await anonymous.get(`${base}/courses/${course.slug}/offer`).expect(200)).body).toEqual({
       price: { amount: 4900, currency: "USD" },
-      methods: ["stripe"],
+      methods: ["aba_payway", "stripe"],
     });
 
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer"));
@@ -65,12 +65,26 @@ describe("checkout", () => {
     expect(again.body.type).toBe("urn:reanit:problem:already-enrolled");
   });
 
-  it("refuses a method that is not configured", async () => {
+  it("enrolls a PayWay buyer once the gateway reports the payment, when the order is read", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-aba"));
+    const checkout = await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "aba_payway" }).expect(201);
+    const { orderId } = checkout.body;
+    expect(checkout.body.payment).toEqual({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: `pw_${orderId}` } });
+
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("pending");
+    e2e().paidAtGateway.add(`pw_${orderId}`);
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("paid");
+
+    await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "aba_payway" }).expect(409);
+  });
+
+  it("refuses a method that is not configured", async () => {
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-khqr"));
 
     const response = await buyer
       .post(`/schools/by-subdomain/${alpha.school.subdomain}/checkout`)
-      .send({ courseSlug: course.slug, method: "aba_payway" })
+      .send({ courseSlug: course.slug, method: "bakong_khqr" })
       .expect(400);
 
     expect(response.body.type).toBe("urn:reanit:problem:payment-method-unavailable");

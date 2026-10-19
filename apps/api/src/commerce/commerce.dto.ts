@@ -29,12 +29,13 @@ export class OfferResponse extends createZodDto(
   z.object({ price: priceResponseSchema.nullable(), methods: z.array(z.enum(PAYMENT_METHODS)) }),
 ) {}
 
-/** The new order and what the browser does next: go to the gateway, or show a KHQR code. */
+/** The new order and what the browser does next: go to the gateway, post a form to it, or show a KHQR code. */
 export class CheckoutResponse extends createZodDto(
   z.object({
     orderId: z.uuid(),
     payment: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("redirect"), url: z.url() }),
+      z.object({ kind: z.literal("form"), action: z.url(), fields: z.record(z.string(), z.string()) }),
       z.object({ kind: z.literal("qr"), qr: z.string(), expiresAt: z.iso.datetime() }),
     ]),
   }),

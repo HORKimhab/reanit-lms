@@ -9,6 +9,7 @@ export type {
   CommerceStore,
   OrderStatus,
   OrderSummary,
+  PaymentCheck,
   PaymentConfirmationStore,
   PaymentGateway,
   PaymentRequest,

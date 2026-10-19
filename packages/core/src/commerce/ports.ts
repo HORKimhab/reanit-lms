@@ -27,6 +27,8 @@ export interface OrderSummary {
   amount: number;
   currency: Currency;
   method: PaymentMethod;
+  /** The gateway's reference; null until payment starts. Never sent to the browser. */
+  providerRef: string | null;
 }
 
 /** One school's prices and orders. `@reanit/db` implements it with `createCommerceStore`. */
@@ -56,8 +58,13 @@ export interface PaymentConfirmationStore {
 export type PaymentStart =
   /** Go to the gateway's hosted page (Stripe Checkout, PayWay). */
   | { kind: "redirect"; url: string; providerRef: string }
+  /** Post these fields from the browser to the gateway's hosted page (PayWay checkout). */
+  | { kind: "form"; action: string; fields: Record<string, string>; providerRef: string }
   /** Show a KHQR code to scan in a banking app. */
   | { kind: "qr"; qr: string; providerRef: string; expiresAt: Date };
+
+/** What a gateway says about a payment when asked. */
+export type PaymentCheck = "paid" | "pending" | "failed";
 
 /** The order a gateway charges. */
 export interface PaymentRequest {
@@ -76,4 +83,6 @@ export interface PaymentGateway {
   readonly method: PaymentMethod;
   supports(currency: Currency): boolean;
   startPayment(request: PaymentRequest): Promise<PaymentStart>;
+  /** Asks the gateway whether a payment arrived; gateways that only push (Stripe) leave it out. */
+  checkPayment?(providerRef: string): Promise<PaymentCheck>;
 }

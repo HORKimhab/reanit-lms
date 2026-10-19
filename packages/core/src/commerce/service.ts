@@ -15,20 +15,23 @@ export interface CommerceDependencies {
   store: CommerceStore;
   /** Every configured gateway; which ones a course offers depends on its currency. */
   gateways: readonly PaymentGateway[];
+  /** Enrolls when a gateway that can be asked reports a pending order paid. */
+  confirmation: PaymentConfirmation;
 }
 
 /**
  * Builds one school's selling use cases: prices, the payment methods a course offers, and checkout.
  * Enrollment never happens here: only a confirmed payment enrolls (`createPaymentConfirmation`).
  *
- * @param dependencies Store and gateways.
+ * @param dependencies Store, gateways and confirmation.
  * @param dependencies.store The school's prices and orders.
  * @param dependencies.gateways Every configured gateway.
+ * @param dependencies.confirmation Enrolls from a confirmed payment.
  * @returns Pricing, offer and checkout operations.
  * @example
- * const commerce = createCommerceService({ store: createCommerceStore(db, schoolId), gateways });
+ * const commerce = createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation });
  */
-export function createCommerceService({ store, gateways }: CommerceDependencies) {
+export function createCommerceService({ store, gateways, confirmation }: CommerceDependencies) {
   /**
    * Lists the methods that can charge a price.
    *
@@ -107,17 +110,23 @@ export function createCommerceService({ store, gateways }: CommerceDependencies)
     },
 
     /**
-     * Reads an order for its buyer, e.g. while a status page waits for the payment.
+     * Reads an order for its buyer, e.g. while a status page waits for the payment. A pending order
+     * whose gateway can be asked (PayWay, Bakong) is checked with it, and enrolled once it is paid.
      *
      * @param orderId The order.
      * @param userId The signed-in user.
-     * @returns The order.
+     * @returns The order, up to date with the gateway.
      * @throws {OrderNotFoundError} When the user has no such order in this school.
      */
     async getOrder(orderId: string, userId: string): Promise<OrderSummary> {
       const order = await store.findOrder(orderId, userId);
       if (!order) throw new OrderNotFoundError();
-      return order;
+      const gateway = gateways.find(({ method }) => method === order.method);
+      if (order.status !== "pending" || !order.providerRef || !gateway?.checkPayment) return order;
+      const check = await gateway.checkPayment(order.providerRef);
+      if (check !== "paid") return order;
+      await confirmation.confirm(order.method, order.providerRef);
+      return { ...order, status: "paid" };
     },
   };
 }

@@ -3,6 +3,7 @@ import type {
   CommerceStore,
   Currency,
   OrderSummary,
+  PaymentCheck,
   PaymentConfirmationStore,
   PaymentGateway,
   PaymentMethod,
@@ -13,7 +14,7 @@ import type {
 } from "../commerce";
 
 /** A stored order with its buyer and gateway reference. */
-type FakeOrder = OrderSummary & { userId: string; providerRef: string | null };
+type FakeOrder = OrderSummary & { userId: string };
 
 /** In-memory `CommerceStore` for one school, whose rows tests can inspect. */
 export class FakeCommerceStore implements CommerceStore {
@@ -94,7 +95,8 @@ export class FakeCommerceStore implements CommerceStore {
   async findOrder(orderId: string, userId: string) {
     const order = this.orders.find((candidate) => candidate.id === orderId && candidate.userId === userId);
     if (!order) return null;
-    return { id: order.id, status: order.status, courseId: order.courseId, amount: order.amount, currency: order.currency, method: order.method };
+    const { userId: buyer, ...summary } = order;
+    return buyer === userId ? { ...summary } : null;
   }
 }
 
@@ -158,5 +160,24 @@ export class FakeGateway implements PaymentGateway {
   async startPayment(request: PaymentRequest) {
     this.requests.push(request);
     return { kind: "redirect" as const, url: `https://pay.test/${request.orderId}`, providerRef: `ref-${request.orderId}` };
+  }
+}
+
+/** A gateway that can also be asked about a payment, like PayWay and Bakong. */
+export class AskableFakeGateway extends FakeGateway {
+  /** What `checkPayment` answers. */
+  checkResult: PaymentCheck = "pending";
+  /** References it was asked about. */
+  readonly checked: string[] = [];
+
+  /**
+   * Answers a status check with `checkResult`.
+   *
+   * @param providerRef The payment's reference.
+   * @returns `checkResult`.
+   */
+  async checkPayment(providerRef: string) {
+    this.checked.push(providerRef);
+    return this.checkResult;
   }
 }

@@ -6,6 +6,9 @@ export const PAYMENT_GATEWAYS = Symbol("PAYMENT_GATEWAYS");
 /** Injection token for the Stripe client, or null when Stripe is not configured. */
 export const STRIPE = Symbol("STRIPE");
 
+/** Injection token for the PayWay gateway, or null when PayWay is not configured. */
+export const PAYWAY = Symbol("PAYWAY");
+
 /** Injection token for `CommerceForSchool`. */
 export const COMMERCE_FOR_SCHOOL = Symbol("COMMERCE_FOR_SCHOOL");
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CourseNotFoundError } from "../catalog";
-import { FakeCommerceStore, FakeConfirmationStore, FakeGateway } from "../test/commerce-fakes";
+import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway } from "../test/commerce-fakes";
 import {
   AlreadyEnrolledError,
   CourseNotForSaleError,
@@ -25,7 +25,7 @@ function urls(orderId: string) {
 
 let store: FakeCommerceStore;
 let stripe: FakeGateway;
-let khqr: FakeGateway;
+let khqr: AskableFakeGateway;
 let commerce: CommerceService;
 
 beforeEach(() => {
@@ -35,8 +35,8 @@ beforeEach(() => {
   store.courses.set("c3", { id: "c3", slug: "free", title: "No price", isPublished: true, price: null });
   store.courses.set("c4", { id: "c4", slug: "draft", title: "Draft", isPublished: false, price: { id: "p4", amount: 100, currency: "USD" } });
   stripe = new FakeGateway("stripe", ["USD"]);
-  khqr = new FakeGateway("bakong_khqr", ["USD", "KHR"]);
-  commerce = createCommerceService({ store, gateways: [stripe, khqr] });
+  khqr = new AskableFakeGateway("bakong_khqr", ["USD", "KHR"]);
+  commerce = createCommerceService({ store, gateways: [stripe, khqr], confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)) });
 });
 
 describe("getOffer", () => {
@@ -105,6 +105,40 @@ describe("getOrder", () => {
 
     expect(await commerce.getOrder("order-1", "user-1")).toMatchObject({ id: "order-1", status: "pending" });
     await expect(commerce.getOrder("order-1", "user-2")).rejects.toThrow(OrderNotFoundError);
+  });
+});
+
+describe("getOrder with a gateway that can be asked", () => {
+  it("asks the gateway about a pending order and enrolls once it is paid", async () => {
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+    khqr.checkResult = "paid";
+
+    expect((await commerce.getOrder(orderId, "user-1")).status).toBe("paid");
+    expect(khqr.checked).toEqual([`ref-${orderId}`]);
+    expect(store.enrollments).toEqual(new Set(["user-1:c2"]));
+  });
+
+  it("leaves a still-pending order pending and enrolls nobody", async () => {
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+
+    expect((await commerce.getOrder(orderId, "user-1")).status).toBe("pending");
+    expect(store.enrollments.size).toBe(0);
+  });
+
+  it("does not ask again once the order is paid", async () => {
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+    khqr.checkResult = "paid";
+    await commerce.getOrder(orderId, "user-1");
+
+    await commerce.getOrder(orderId, "user-1");
+
+    expect(khqr.checked).toHaveLength(1);
+  });
+
+  it("never asks a gateway that only pushes (Stripe)", async () => {
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls);
+
+    expect((await commerce.getOrder(orderId, "user-1")).status).toBe("pending");
   });
 });
 

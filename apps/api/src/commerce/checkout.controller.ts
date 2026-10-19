@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
-import type { CommerceService } from "@reanit/core/commerce";
+import type { CommerceService, PaymentStart } from "@reanit/core/commerce";
 import type { SchoolService } from "@reanit/core/schools";
 import { ENV } from "@reanit/nest";
 
@@ -10,6 +10,23 @@ import type { Env } from "../config/env";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 import { CheckoutBody, CheckoutResponse, OfferParams, OfferResponse, OrderParams, OrderResponse, SchoolParams } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
+
+/**
+ * Describes the browser's next step without the gateway's reference, which stays on the server.
+ *
+ * @param payment What the gateway returned.
+ * @returns The step for the response.
+ */
+function toPaymentStep(payment: PaymentStart): CheckoutResponse["payment"] {
+  switch (payment.kind) {
+    case "redirect":
+      return { kind: "redirect", url: payment.url };
+    case "form":
+      return { kind: "form", action: payment.action, fields: payment.fields };
+    case "qr":
+      return { kind: "qr", qr: payment.qr, expiresAt: payment.expiresAt.toISOString() };
+  }
+}
 
 /** Buying a course on a school site: its offer, checkout and the order's status. */
 @Controller("schools/by-subdomain/:subdomain")
@@ -73,13 +90,7 @@ export class CheckoutController {
       successUrl: `${schoolUrl}/orders/${id}`,
       cancelUrl: `${schoolUrl}/courses/${body.courseSlug}`,
     }));
-    return {
-      orderId,
-      payment:
-        payment.kind === "redirect"
-          ? { kind: "redirect", url: payment.url }
-          : { kind: "qr", qr: payment.qr, expiresAt: payment.expiresAt.toISOString() },
-    };
+    return { orderId, payment: toPaymentStep(payment) };
   }
 
   /**
@@ -93,6 +104,8 @@ export class CheckoutController {
   @Get("orders/:orderId")
   @ApiOkResponse({ type: OrderResponse })
   async order(@Param() params: OrderParams, @CurrentUser() user: AuthUser): Promise<OrderResponse> {
-    return { order: await (await this.commerce(params.subdomain)).getOrder(params.orderId, user.id) };
+    // Picked field by field: the gateway's reference stays on the server.
+    const { id, status, courseId, amount, currency, method } = await (await this.commerce(params.subdomain)).getOrder(params.orderId, user.id);
+    return { order: { id, status, courseId, amount, currency, method } };
   }
 }
