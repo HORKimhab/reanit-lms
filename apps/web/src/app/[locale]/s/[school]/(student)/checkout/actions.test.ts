@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onApi, problem, requestTo } from "@/test/api";
+import { setTestLocale } from "@/test/intl-server";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
@@ -45,7 +46,16 @@ describe("startCheckout", () => {
     onApi(ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
 
     expect(await pay("aba_payway")).toEqual({ status: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } });
-    expect(await requestTo(ROUTE)?.json()).toEqual({ courseSlug: "brand", method: "aba_payway" });
+    expect(await requestTo(ROUTE)?.json()).toEqual({ courseSlug: "brand", method: "aba_payway", locale: "en" });
+  });
+
+  it("sends the page's language, so a Khmer buyer gets Khmer emails", async () => {
+    setTestLocale("km");
+    onApi(ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
+
+    await pay("aba_payway");
+
+    expect(await requestTo(ROUTE)?.json()).toMatchObject({ locale: "km" });
   });
 
   it("sends a card payment to Stripe's page", async () => {

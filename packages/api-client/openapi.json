@@ -2125,6 +2125,14 @@
               "aba_payway",
               "bakong_khqr"
             ]
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en",
+              "km"
+            ]
           }
         },
         "required": [

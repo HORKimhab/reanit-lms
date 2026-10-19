@@ -76,7 +76,7 @@ export function createCommerceService({ store, gateways, confirmation }: Commerc
      * @param buyer Who is paying.
      * @param buyer.userId Their user id.
      * @param buyer.email Their email, for the gateway's receipt.
-     * @param input The course and payment method.
+     * @param input The course, payment method and the buyer's language.
      * @param urls Where the gateway sends the student back, given the new order's id.
      * @returns The order id and what the browser does next.
      * @throws {CourseNotFoundError} When the school has no published course with that slug.
@@ -96,7 +96,13 @@ export function createCommerceService({ store, gateways, confirmation }: Commerc
       if (!gateway?.supports(course.price.currency)) throw new PaymentMethodUnavailableError();
       if (await store.isEnrolled(buyer.userId, course.id)) throw new AlreadyEnrolledError();
 
-      const { id: orderId } = await store.createOrder({ userId: buyer.userId, courseId: course.id, price: course.price, method: gateway.method });
+      const { id: orderId } = await store.createOrder({
+        userId: buyer.userId,
+        courseId: course.id,
+        price: course.price,
+        method: gateway.method,
+        locale: input.locale,
+      });
       const payment = await gateway.startPayment({
         orderId,
         amount: course.price.amount,

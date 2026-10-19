@@ -13,6 +13,10 @@
     "./vitest-nest": {
       "types": "./vitest.nest.d.ts",
       "default": "./vitest.nest.js"
+    },
+    "./tsup-nest": {
+      "types": "./tsup.nest.d.ts",
+      "default": "./tsup.nest.js"
     }
   },
   "scripts": {
@@ -26,6 +30,7 @@
     "@vitejs/plugin-react": "catalog:",
     "eslint-plugin-jsdoc": "catalog:",
     "globals": "catalog:",
+    "tsup": "catalog:",
     "typescript-eslint": "catalog:",
     "unplugin-swc": "catalog:"
   },

@@ -1,0 +1,33 @@
+{
+  "Common": {
+    "greeting": "Hi {name},",
+    "greetingNoName": "Hi,",
+    "sentBy": "Sent by {school} through Reanit."
+  },
+  "MagicLink": {
+    "subject": "Your sign-in link",
+    "heading": "Sign in",
+    "body": "Use this button to sign in. It expires in {minutes} minutes and works once.",
+    "button": "Sign in",
+    "fallback": "If the button doesn't work, open this link:",
+    "ignore": "If you didn't ask for it, you can ignore this email.",
+    "sentBy": "Sent by Reanit."
+  },
+  "Receipt": {
+    "subject": "Your receipt from {school}",
+    "heading": "Thanks for your purchase",
+    "intro": "Your payment to {school} went through. Here is your receipt.",
+    "order": "Order {id}",
+    "paidAt": "Paid on {date}",
+    "course": "Course",
+    "amount": "Amount",
+    "total": "Total",
+    "button": "Go to my courses"
+  },
+  "Welcome": {
+    "subject": "Welcome to {course}",
+    "heading": "Welcome to {course}",
+    "body": "You now have {course} from {school}. Start whenever you're ready: your progress is saved as you go.",
+    "button": "Start learning"
+  }
+}

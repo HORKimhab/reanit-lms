@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@nestjs/common": "catalog:",
+    "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
     "nestjs-pino": "catalog:",
+    "nodemailer": "catalog:",
     "pino-http": "catalog:",
     "zod": "catalog:"
   },

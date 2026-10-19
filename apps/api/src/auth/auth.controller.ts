@@ -8,6 +8,7 @@ import {
   type AuthSession,
   type AuthUser,
 } from "@reanit/core/auth";
+import { composeMagicLinkEmail } from "@reanit/email";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { ENV } from "@reanit/nest";
@@ -16,7 +17,7 @@ import type { Env } from "../config/env";
 import { CurrentUser, Public } from "./auth.decorators";
 import { LogInBody, MagicLinkBody, SessionResponse, SignUpBody, VerifyMagicLinkQuery } from "./auth.dto";
 import { AUTH_SERVICE } from "./auth.tokens";
-import { composeMagicLinkEmail } from "./magic-link-email";
+import { MAGIC_LINK_MINUTES, magicLinkUrl } from "./magic-link-url";
 import { sessionCookieOptions } from "./session-cookie";
 
 /** Web login page with the error it shows for a bad magic link. */
@@ -90,7 +91,7 @@ export class AuthController {
   async requestMagicLink(@Body() body: MagicLinkBody) {
     const next = safeRedirectPath(body.next);
     await this.auth.requestMagicLink(body.email, (token) =>
-      composeMagicLinkEmail({ appUrl: this.env.APP_URL, token, next, locale: body.locale }),
+      composeMagicLinkEmail({ locale: body.locale, url: magicLinkUrl({ appUrl: this.env.APP_URL, token, next }), minutes: MAGIC_LINK_MINUTES }),
     );
   }
 

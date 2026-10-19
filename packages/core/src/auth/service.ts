@@ -117,11 +117,11 @@ export function createAuthService({ store, mailer, clock }: AuthDependencies) {
      * @param email Parsed email.
      * @param compose Builds the localized email around the raw token.
      */
-    async requestMagicLink(email: string, compose: (token: string) => Omit<MailMessage, "to">): Promise<void> {
+    async requestMagicLink(email: string, compose: (token: string) => Promise<Omit<MailMessage, "to">>): Promise<void> {
       const token = generateToken();
       const expiresAt = new Date(clock.now().getTime() + MAGIC_LINK_TTL_MS);
       await store.createMagicLink({ tokenHash: hashToken(token), email, expiresAt });
-      await mailer.send({ to: email, ...compose(token) });
+      await mailer.send({ to: email, ...(await compose(token)) });
     },
 
     /**

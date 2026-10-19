@@ -1,6 +1,7 @@
 "use server";
 
 import { checkoutSchema, type OrderStatus } from "@reanit/core/commerce";
+import { getLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 
 import { getApi } from "@/server/api";
@@ -28,12 +29,12 @@ export type CheckoutState =
  * @param subdomain The school's subdomain.
  * @param courseSlug The course.
  * @param _previous The form's last state; unused, but `useActionState` passes it first.
- * @param formData Untrusted `method`.
+ * @param formData Untrusted `method`. The page's locale goes with it, for the buyer's receipt and welcome emails.
  * @returns What the browser does next.
  * @throws {Error} Next's redirect signal (to the gateway, or to log in), or any unexpected failure.
  */
 export async function startCheckout(subdomain: string, courseSlug: string, _previous: CheckoutState, formData: FormData): Promise<CheckoutState> {
-  const parsed = checkoutSchema.safeParse({ courseSlug, method: formData.get("method") });
+  const parsed = checkoutSchema.safeParse({ courseSlug, method: formData.get("method"), locale: await getLocale() });
   if (!parsed.success) return { status: "unavailable" };
   const { data, error, response } = await (await getApi()).POST("/schools/by-subdomain/{subdomain}/checkout", {
     params: { path: { subdomain } },

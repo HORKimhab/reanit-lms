@@ -23,7 +23,10 @@ export interface AuthStore {
 export interface MailMessage {
   to: string;
   subject: string;
+  /** Plain-text body, for clients that show no HTML. */
   text: string;
+  /** HTML body; plain text only when left out. */
+  html?: string;
 }
 
 /** Sends email. The app provides SMTP (Mailpit locally); tests use a fake. */

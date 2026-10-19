@@ -1,3 +1,4 @@
+import type { EmailLocale } from "../notifications/rules";
 import type { Currency, PaymentMethod, PriceInput } from "./rules";
 
 /** A course's current price. */
@@ -37,7 +38,7 @@ export interface CommerceStore {
   /** Returns the new price, or null when the school has no such course. */
   setPrice(courseId: string, price: PriceInput): Promise<Price | null>;
   isEnrolled(userId: string, courseId: string): Promise<boolean>;
-  createOrder(order: { userId: string; courseId: string; price: Price; method: PaymentMethod }): Promise<{ id: string }>;
+  createOrder(order: { userId: string; courseId: string; price: Price; method: PaymentMethod; locale: EmailLocale }): Promise<{ id: string }>;
   setProviderRef(orderId: string, providerRef: string): Promise<void>;
   findOrder(orderId: string, userId: string): Promise<OrderSummary | null>;
 }

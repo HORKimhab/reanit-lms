@@ -1,15 +1,6 @@
-import { defineConfig } from "tsup";
+import { nestTsupConfig } from "@reanit/config/tsup-nest";
+import type { Options } from "tsup";
 
-// Bundles the app with the workspace packages it imports, which ship TypeScript source.
-// tsup compiles with SWC because tsconfig enables emitDecoratorMetadata, which esbuild lacks.
-export default defineConfig({
-  entry: ["src/main.ts", "src/openapi.ts", "src/storage-setup.ts"],
-  format: "esm",
-  platform: "node",
-  target: "node24",
-  sourcemap: true,
-  clean: true,
-  noExternal: [/^@reanit\//],
-  // Bundled CommonJS code (pg, via @reanit/db) calls require(), which ESM output lacks.
-  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-});
+const config: Options = nestTsupConfig(["src/main.ts", "src/openapi.ts", "src/storage-setup.ts"]);
+
+export default config;

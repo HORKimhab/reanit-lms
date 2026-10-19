@@ -2,6 +2,8 @@
   "extends": "@reanit/config/tsconfig/library.json",
   "compilerOptions": {
     "types": ["node"],
+    // @reanit/email's templates are React components.
+    "jsx": "react-jsx",
     // Nest resolves constructor dependencies from decorator metadata.
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

@@ -14,8 +14,8 @@ packages/nest   @reanit/nest: Nest modules both apps share (env, database, loggi
 packages/core   @reanit/core: pure domain logic, one folder per module
 packages/api-client @reanit/api-client: typed apps/api client from openapi.json (`pnpm openapi` regenerates)
 packages/ui     @reanit/ui: shared shadcn components
-packages/email  @reanit/email: React Email templates
-packages/config @reanit/config: eslint/tsconfig/tailwind presets
+packages/email  @reanit/email: React Email templates (en/km messages in src/messages), rendered to HTML + text
+packages/config @reanit/config: eslint/tsconfig/tailwind/vitest presets; tsup + vitest presets for the Nest apps
 infra/          docker-compose (Postgres, Redis, Mailpit)
 ```
 

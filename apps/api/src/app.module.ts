@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { DbModule, EnvModule, LoggingModule } from "@reanit/nest";
+import { DbModule, EnvModule, LoggingModule, MailModule } from "@reanit/nest";
 
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { AuthModule } from "./auth/auth.module";
@@ -10,7 +10,6 @@ import { RequestContextModule } from "./context/request-context";
 import { HealthModule } from "./health/health.module";
 import { HttpModule } from "./http/http.module";
 import { LearningModule } from "./learning/learning.module";
-import { MailModule } from "./mail/mail.module";
 import { MediaModule } from "./media/media.module";
 import { RedisModule } from "./redis/redis.module";
 import { SchoolsModule } from "./schools/schools.module";

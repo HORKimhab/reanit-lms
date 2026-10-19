@@ -1,8 +1,8 @@
 import { emailSchema, logInSchema, signUpSchema } from "@reanit/core/auth";
+import { EMAIL_LOCALES } from "@reanit/core/notifications";
 import { z } from "zod";
 
 import { createZodDto } from "../http/zod-dto";
-import { EMAIL_LOCALES } from "./magic-link-email";
 
 /** `POST /auth/sign-up` body. */
 export class SignUpBody extends createZodDto(signUpSchema) {}

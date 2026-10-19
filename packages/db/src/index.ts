@@ -5,6 +5,7 @@ export { createDbClient, type DbClient } from "./client";
 export { createLearningStore } from "./learning-store";
 export { createLessonMediaStore } from "./lesson-media-store";
 export { createOutboxStore } from "./outbox";
+export { createReceiptStore } from "./receipt-store";
 export { createSchoolStore } from "./school-store";
 export { createStatsStore } from "./stats-store";
 export { createStudentStore } from "./student-store";

@@ -1,0 +1,31 @@
+{
+  "name": "@reanit/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@react-email/components": "catalog:",
+    "@react-email/render": "catalog:",
+    "@reanit/core": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "use-intl": "catalog:"
+  },
+  "devDependencies": {
+    "@reanit/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

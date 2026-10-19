@@ -58,11 +58,20 @@ describe("POST .../checkout", () => {
     expect(response.json()).toEqual({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://checkout.stripe.test/s" } });
     const [buyer, input, urls] = testApp.clients.commerce.checkout.mock.calls[0] ?? [];
     expect(buyer).toEqual({ userId: TEST_USER.id, email: TEST_USER.email });
-    expect(input).toEqual(BODY);
+    expect(input).toEqual({ ...BODY, locale: "en" });
     expect(urls(ORDER_ID)).toEqual({
       successUrl: `http://localhost:3000/s/${TEST_SCHOOL.subdomain}/orders/${ORDER_ID}`,
       cancelUrl: `http://localhost:3000/s/${TEST_SCHOOL.subdomain}/courses/intro`,
     });
+  });
+
+  it("passes the buyer's language on, for their emails", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.checkout.mockResolvedValue({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://pay.test", providerRef: "cs_1" } });
+
+    await testApp.app.inject({ method: "POST", url: `${BASE_URL}/checkout`, headers, payload: { ...BODY, locale: "km" } });
+
+    expect(testApp.clients.commerce.checkout.mock.calls[0]?.[1]).toMatchObject({ locale: "km" });
   });
 
   it("returns a KHQR code with its expiry, never the gateway reference", async () => {

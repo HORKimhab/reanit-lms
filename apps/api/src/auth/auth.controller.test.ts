@@ -97,8 +97,10 @@ describe("POST /auth/magic-link", () => {
    */
   async function requestLink(payload: object) {
     const response = await testApp.app.inject({ method: "POST", url: "/auth/magic-link", payload });
-    const compose = testApp.clients.auth.requestMagicLink.mock.calls[0]?.[1] as ((token: string) => { subject: string; text: string }) | undefined;
-    return { response, email: compose?.("tok") };
+    const compose = testApp.clients.auth.requestMagicLink.mock.calls[0]?.[1] as
+      | ((token: string) => Promise<{ subject: string; text: string; html?: string }>)
+      | undefined;
+    return { response, email: await compose?.("tok") };
   }
 
   it("answers 202 and emails a link that returns to next", async () => {
@@ -112,7 +114,7 @@ describe("POST /auth/magic-link", () => {
   it("links home when next points off-site", async () => {
     const { email } = await requestLink({ email: SIGN_UP.email, next: "//evil.example" });
 
-    expect(email?.text).toContain("next=%2F\n");
+    expect(email?.html).toContain('next=%2F"');
   });
 
   it("writes the email in the requested language", async () => {

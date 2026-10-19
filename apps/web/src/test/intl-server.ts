@@ -19,13 +19,25 @@ export async function getTranslations(options?: string | { locale?: Locale; name
   return createTranslator({ locale, messages: MESSAGES[locale], namespace: namespace as never });
 }
 
+/** The request's locale as `getLocale` reports it; `setup.ts` puts the default back after each test. */
+const request: { locale: Locale } = { locale: routing.defaultLocale };
+
 /**
- * Returns the default locale.
+ * Sets the locale the request is in, as the `[locale]` segment would.
  *
- * @returns "en".
+ * @param locale - The locale.
+ */
+export function setTestLocale(locale: Locale) {
+  request.locale = locale;
+}
+
+/**
+ * Returns the request's locale.
+ *
+ * @returns The locale from `setTestLocale`, "en" by default.
  */
 export async function getLocale() {
-  return routing.defaultLocale;
+  return request.locale;
 }
 
 /** No-op: static rendering hints do not matter in tests. */

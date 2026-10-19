@@ -14,7 +14,7 @@ const DARA = { name: "Dara", email: "dara@example.com", password: "correct horse
  * @param token Raw token.
  * @returns Subject and text.
  */
-const composeLink = (token: string) => ({ subject: "Sign in", text: token });
+const composeLink = async (token: string) => ({ subject: "Sign in", text: token });
 
 let store: FakeAuthStore;
 let mailer: FakeMailer;

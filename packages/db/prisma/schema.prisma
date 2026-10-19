@@ -217,6 +217,8 @@ model Order {
   totalAmount   Int           @map("total_amount")
   currency      String        @db.Char(3)
   paymentMethod PaymentMethod @map("payment_method")
+  /// The language the buyer checked out in (`en` or `km`); their receipt and welcome emails use it.
+  locale        String        @default("en")
   /// The gateway's id for this payment (Stripe session, PayWay tran_id, KHQR md5); set once payment starts.
   providerRef   String?       @unique @map("provider_ref")
   paidAt        DateTime?     @map("paid_at")

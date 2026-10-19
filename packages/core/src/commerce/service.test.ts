@@ -66,11 +66,17 @@ describe("setPrice", () => {
 });
 
 describe("checkout", () => {
+  it("records the language the buyer checked out in, for their emails", async () => {
+    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "km" }, urls);
+
+    expect(store.orders[0]?.locale).toBe("km");
+  });
+
   it("creates a pending order at the course's price and starts the chosen gateway", async () => {
-    const result = await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls);
+    const result = await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
 
     expect(result).toEqual({ orderId: "order-1", payment: { kind: "redirect", url: "https://pay.test/order-1", providerRef: "ref-order-1" } });
-    expect(store.orders[0]).toMatchObject({ status: "pending", amount: 4900, currency: "USD", method: "stripe", providerRef: "ref-order-1" });
+    expect(store.orders[0]).toMatchObject({ status: "pending", amount: 4900, currency: "USD", method: "stripe", locale: "en", providerRef: "ref-order-1" });
     expect(stripe.requests).toEqual([
       { orderId: "order-1", amount: 4900, currency: "USD", description: "Intro", customerEmail: BUYER.email, ...urls("order-1") },
     ]);
@@ -78,30 +84,30 @@ describe("checkout", () => {
   });
 
   it("throws PaymentMethodUnavailableError for a method that does not take the currency or is not configured", async () => {
-    await expect(commerce.checkout(BUYER, { courseSlug: "riel", method: "stripe" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
-    await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "aba_payway" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
+    await expect(commerce.checkout(BUYER, { courseSlug: "riel", method: "stripe", locale: "en" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
+    await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "aba_payway", locale: "en" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
     expect(store.orders).toEqual([]);
   });
 
   it("throws CourseNotForSaleError for a course without a price", async () => {
-    await expect(commerce.checkout(BUYER, { courseSlug: "free", method: "stripe" }, urls)).rejects.toThrow(CourseNotForSaleError);
+    await expect(commerce.checkout(BUYER, { courseSlug: "free", method: "stripe", locale: "en" }, urls)).rejects.toThrow(CourseNotForSaleError);
   });
 
   it("throws CourseNotFoundError for a draft", async () => {
-    await expect(commerce.checkout(BUYER, { courseSlug: "draft", method: "stripe" }, urls)).rejects.toThrow(CourseNotFoundError);
+    await expect(commerce.checkout(BUYER, { courseSlug: "draft", method: "stripe", locale: "en" }, urls)).rejects.toThrow(CourseNotFoundError);
   });
 
   it("throws AlreadyEnrolledError when the student has the course", async () => {
     store.enrollments.add("user-1:c1");
 
-    await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls)).rejects.toThrow(AlreadyEnrolledError);
+    await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
     expect(store.orders).toEqual([]);
   });
 });
 
 describe("getOrder", () => {
   it("returns the buyer's order and hides it from others", async () => {
-    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls);
+    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
 
     expect(await commerce.getOrder("order-1", "user-1")).toMatchObject({ id: "order-1", status: "pending" });
     await expect(commerce.getOrder("order-1", "user-2")).rejects.toThrow(OrderNotFoundError);
@@ -110,7 +116,7 @@ describe("getOrder", () => {
 
 describe("getOrder with a gateway that can be asked", () => {
   it("asks the gateway about a pending order and enrolls once it is paid", async () => {
-    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
     khqr.checkResult = "paid";
 
     expect((await commerce.getOrder(orderId, "user-1")).status).toBe("paid");
@@ -119,14 +125,14 @@ describe("getOrder with a gateway that can be asked", () => {
   });
 
   it("leaves a still-pending order pending and enrolls nobody", async () => {
-    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
 
     expect((await commerce.getOrder(orderId, "user-1")).status).toBe("pending");
     expect(store.enrollments.size).toBe(0);
   });
 
   it("does not ask again once the order is paid", async () => {
-    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr" }, urls);
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
     khqr.checkResult = "paid";
     await commerce.getOrder(orderId, "user-1");
 
@@ -136,7 +142,7 @@ describe("getOrder with a gateway that can be asked", () => {
   });
 
   it("never asks a gateway that only pushes (Stripe)", async () => {
-    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls);
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
 
     expect((await commerce.getOrder(orderId, "user-1")).status).toBe("pending");
   });
@@ -144,7 +150,7 @@ describe("getOrder with a gateway that can be asked", () => {
 
 describe("payment confirmation", () => {
   it("marks the order paid and enrolls the buyer exactly once", async () => {
-    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe" }, urls);
+    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
     const confirmation = createPaymentConfirmation(new FakeConfirmationStore(store));
 
     expect(await confirmation.confirm("stripe", "ref-order-1")).toEqual({ orderId: "order-1", isNewlyPaid: true });

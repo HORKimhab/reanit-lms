@@ -13,8 +13,7 @@ import request from "supertest";
 import { afterAll, beforeAll, inject } from "vitest";
 
 import { AppModule } from "../app.module";
-import { ENV } from "@reanit/nest";
-import { MAILER } from "../mail/mail.module";
+import { ENV, MAILER } from "@reanit/nest";
 import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
 import { OBJECT_STORAGE } from "../storage/storage.module";
 import { REDIS } from "../redis/redis.module";

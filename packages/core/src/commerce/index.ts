@@ -5,6 +5,7 @@ export {
   PaymentMethodUnavailableError,
   UnknownPaymentError,
 } from "./errors";
+export { moneyFormat } from "./money";
 export type {
   CommerceStore,
   OrderStatus,

@@ -26,6 +26,7 @@
     "@reanit/config": "workspace:*",
     "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
+    "@reanit/email": "workspace:*",
     "@reanit/nest": "workspace:*",
     "@swc/core": "catalog:",
     "@types/node": "catalog:",

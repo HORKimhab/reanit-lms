@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EMAIL_LOCALES } from "../notifications/rules";
+
 /** Currencies courses are sold in. Amounts are integer ISO 4217 minor units (two decimals for both). */
 export const CURRENCIES = ["USD", "KHR"] as const;
 
@@ -23,10 +25,11 @@ export const priceSchema = z
     path: ["amount"],
   });
 
-/** What the student picks at checkout. */
+/** What the student picks at checkout, and the language they bought in, for their receipt. */
 export const checkoutSchema = z.object({
   courseSlug: z.string().min(1).max(80),
   method: z.enum(PAYMENT_METHODS),
+  locale: z.enum(EMAIL_LOCALES).default("en"),
 });
 
 /** A currency courses are sold in. */

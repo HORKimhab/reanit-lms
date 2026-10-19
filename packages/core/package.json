@@ -11,7 +11,8 @@
     "./commerce": "./src/commerce/index.ts",
     "./learning": "./src/learning/index.ts",
     "./analytics": "./src/analytics/index.ts",
-    "./events": "./src/events/index.ts"
+    "./events": "./src/events/index.ts",
+    "./notifications": "./src/notifications/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

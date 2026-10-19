@@ -22,7 +22,7 @@ async function pendingOrder(userId: string) {
   const store = createCommerceStore(db, alphaId);
   const price = (await store.findCourse("sold"))?.price;
   if (!price) throw new Error("The course has no price.");
-  const { id } = await store.createOrder({ userId, courseId, price, method: "stripe" });
+  const { id } = await store.createOrder({ userId, courseId, price, method: "stripe", locale: "en" });
   const providerRef = `cs_${randomUUID()}`;
   await store.setProviderRef(id, providerRef);
   return { id, providerRef };

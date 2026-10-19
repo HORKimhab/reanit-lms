@@ -1,14 +1,14 @@
 import { createTransport } from "nodemailer";
 import { describe, expect, it, vi } from "vitest";
 
-import { createSmtpMailer } from "./mail.module";
+import { createSmtpMailer } from "./mail";
 
 // SMTP is a network boundary: record what would be sent.
 const sendMail = vi.fn();
 vi.mock("nodemailer", () => ({ createTransport: vi.fn(() => ({ sendMail })) }));
 
 const SMTP = { SMTP_URL: "smtp://localhost:1025", MAIL_FROM: "Reanit <no-reply@reanit.test>" };
-const MESSAGE = { to: "dara@example.com", subject: "Hi", text: "Body" };
+const MESSAGE = { to: "dara@example.com", subject: "Hi", text: "Body", html: "<p>Body</p>" };
 
 describe("createSmtpMailer", () => {
   it("connects to the configured SMTP URL", () => {
@@ -17,7 +17,7 @@ describe("createSmtpMailer", () => {
     expect(createTransport).toHaveBeenCalledWith("smtp://localhost:1025");
   });
 
-  it("sends the message from the configured sender", async () => {
+  it("sends the message, both bodies included, from the configured sender", async () => {
     await createSmtpMailer(SMTP).send(MESSAGE);
 
     expect(sendMail).toHaveBeenCalledWith({ from: "Reanit <no-reply@reanit.test>", ...MESSAGE });

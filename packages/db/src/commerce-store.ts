@@ -90,6 +90,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * @param order.price.amount Amount in minor units.
      * @param order.price.currency ISO code.
      * @param order.method The payment method chosen.
+     * @param order.locale The language the buyer checked out in.
      * @returns The order's id.
      */
     createOrder({
@@ -97,11 +98,13 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
       courseId,
       price,
       method,
+      locale,
     }: {
       userId: string;
       courseId: string;
       price: { id: string; amount: number; currency: Currency };
       method: PaymentMethod;
+      locale: string;
     }) {
       return inSchoolTransaction(db, schoolId, (tx) =>
         tx.order.create({
@@ -111,6 +114,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
             totalAmount: price.amount,
             currency: price.currency,
             paymentMethod: method,
+            locale,
             items: { create: { schoolId, courseId, priceId: price.id, amount: price.amount, currency: price.currency } },
           },
           select: { id: true },

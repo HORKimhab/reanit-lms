@@ -12,9 +12,10 @@ import type {
   PriceInput,
   SellableCourse,
 } from "../commerce";
+import type { EmailLocale } from "../notifications";
 
 /** A stored order with its buyer and gateway reference. */
-type FakeOrder = OrderSummary & { userId: string };
+type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale };
 
 /** In-memory `CommerceStore` for one school, whose rows tests can inspect. */
 export class FakeCommerceStore implements CommerceStore {
@@ -66,11 +67,12 @@ export class FakeCommerceStore implements CommerceStore {
    * @param order.courseId The course.
    * @param order.price Its price.
    * @param order.method The payment method.
+   * @param order.locale The buyer's language.
    * @returns The order's id.
    */
-  async createOrder({ userId, courseId, price, method }: { userId: string; courseId: string; price: Price; method: PaymentMethod }) {
+  async createOrder({ userId, courseId, price, method, locale }: { userId: string; courseId: string; price: Price; method: PaymentMethod; locale: EmailLocale }) {
     const id = `order-${this.orders.length + 1}`;
-    this.orders.push({ id, userId, courseId, status: "pending", amount: price.amount, currency: price.currency, method, providerRef: null });
+    this.orders.push({ id, userId, courseId, status: "pending", amount: price.amount, currency: price.currency, method, locale, providerRef: null });
     return { id };
   }
 

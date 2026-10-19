@@ -1,4 +1,4 @@
-import { baseEnvSchema } from "@reanit/nest";
+import { baseEnvSchema, mailEnvSchema } from "@reanit/nest";
 import { z } from "zod";
 
 const DEFAULT_PORT = 4000;
@@ -7,10 +7,7 @@ const envSchema = baseEnvSchema
   .extend({
   /** Public origin of the web app: builds links in emails, decides the Secure cookie flag and which origins may send mutating requests. */
   APP_URL: z.url(),
-  /** SMTP server, e.g. smtp://localhost:1025 for Mailpit. */
-  SMTP_URL: z.url(),
-  /** Sender of transactional email, e.g. `Reanit <no-reply@reanit.com>`. */
-  MAIL_FROM: z.string().min(1),
+  ...mailEnvSchema.shape,
   /** S3 API endpoint the server calls, e.g. http://localhost:8333 for the local SeaweedFS; leave out for AWS S3. */
   S3_ENDPOINT: z.url().optional(),
   /** Endpoint browsers reach, used in presigned URLs when it differs (e.g. the API inside compose); defaults to S3_ENDPOINT. */
