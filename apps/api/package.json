@@ -13,6 +13,7 @@
     "openapi": "tsup && node dist/openapi.js ../../packages/api-client/openapi.json"
   },
   "dependencies": {
+    "@fastify/cookie": "catalog:",
     "@fastify/helmet": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
@@ -25,6 +26,7 @@
     "ioredis": "catalog:",
     "nestjs-cls": "catalog:",
     "nestjs-pino": "catalog:",
+    "nodemailer": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
     "reflect-metadata": "catalog:",

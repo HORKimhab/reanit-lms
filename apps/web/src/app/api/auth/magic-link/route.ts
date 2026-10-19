@@ -1,8 +1,7 @@
-import { InvalidMagicLinkError } from "@reanit/core/auth";
+import { InvalidMagicLinkError, safeRedirectPath } from "@reanit/core/auth";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 
-import { safeRedirectPath } from "@/server/auth/redirect";
 import { getAuthService } from "@/server/auth/service";
 import { setSessionCookie } from "@/server/auth/session";
 

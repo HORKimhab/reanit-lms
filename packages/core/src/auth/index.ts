@@ -1,3 +1,4 @@
+export { safeRedirectPath } from "./redirect";
 export { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "./errors";
 export type { AuthStore, AuthUser, Clock, MailMessage, Mailer } from "./ports";
 export {

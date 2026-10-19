@@ -1,8 +1,7 @@
-import type { AuthSession, AuthUser } from "@reanit/core/auth";
+import { safeRedirectPath, type AuthSession, type AuthUser } from "@reanit/core/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { safeRedirectPath } from "./redirect";
 import { getAuthService } from "./service";
 
 /** Cookie that holds the raw session token. */

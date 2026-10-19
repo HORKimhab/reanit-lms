@@ -7,6 +7,7 @@ import { outlineSchema } from "@reanit/core/catalog";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { Public } from "../auth/auth.decorators";
 import { createZodDto } from "../http/zod-dto";
 import { createTestApp } from "../test/app";
 import { buildOpenApiDocument, serializeOpenApiDocument } from "./document";
@@ -24,6 +25,7 @@ class OutlineBody extends createZodDto(outlineSchema) {}
 class PageQuery extends createZodDto(z.object({ page: z.coerce.number().int().min(1).default(1), search: z.string().optional() })) {}
 
 /** Routes typed with zod DTOs, to check what the spec says about them. */
+@Public()
 @Controller("docs-probe")
 class DocsProbeController {
   /**

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { createTestApp } from "../test/app";
 import { captureLogs } from "../test/logs";
 import { PROBLEM_CONTENT_TYPE } from "./problem";
+import { Public } from "../auth/auth.decorators";
 import { createZodDto } from "./zod-dto";
 
 /** Sign-up body validated by the core schema. */
@@ -31,6 +32,7 @@ const DOMAIN_ERRORS: Record<string, new () => Error> = {
 const INTERNAL_MESSAGE = "connect ECONNREFUSED 10.0.0.5:5432";
 
 /** Echoes validated input and throws chosen errors, to exercise the global pipe and filter. */
+@Public()
 @Controller("edge-probe")
 class EdgeProbeController {
   /**

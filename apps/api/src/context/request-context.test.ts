@@ -3,11 +3,13 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { ClsService } from "nestjs-cls";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { Public } from "../auth/auth.decorators";
 import { createTestApp } from "../test/app";
 import type { RequestContext } from "./request-context";
 import { REQUEST_ID_HEADER } from "./request-id";
 
 /** Answers with the request id the request context holds while the handler runs. */
+@Public()
 @Controller("context-probe")
 class ContextProbeController {
   /**

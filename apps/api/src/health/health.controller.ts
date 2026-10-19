@@ -4,6 +4,7 @@ import type { DbClient } from "@reanit/db";
 import type { FastifyReply } from "fastify";
 import type { Redis } from "ioredis";
 
+import { Public } from "../auth/auth.decorators";
 import { DB_CLIENT } from "../db/db.module";
 import { REDIS } from "../redis/redis.module";
 import { PingHealthIndicator } from "./ping.health";
@@ -12,6 +13,7 @@ import { PingHealthIndicator } from "./ping.health";
 export const PING_TIMEOUT_MS = 1000;
 
 /** `GET /health` for load balancers and deploys: 200 when Postgres and Redis answer, 503 otherwise. */
+@Public()
 @Controller("health")
 export class HealthController {
   /**

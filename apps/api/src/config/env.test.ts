@@ -3,7 +3,13 @@ import { ZodError } from "zod";
 
 import { parseEnv } from "./env";
 
-const REQUIRED = { DATABASE_URL: "postgresql://reanit:reanit@localhost:5432/reanit", REDIS_URL: "redis://localhost:6379" };
+const REQUIRED = {
+  DATABASE_URL: "postgresql://reanit:reanit@localhost:5432/reanit",
+  REDIS_URL: "redis://localhost:6379",
+  APP_URL: "http://localhost:3000",
+  SMTP_URL: "smtp://localhost:1025",
+  MAIL_FROM: "Reanit <no-reply@reanit.localhost>",
+};
 
 describe("parseEnv", () => {
   it("applies the default port, host and log level", () => {
@@ -18,7 +24,7 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...REQUIRED, PORT: "8080" }).PORT).toBe(8080);
   });
 
-  it.each(["DATABASE_URL", "REDIS_URL"])("throws a ZodError when %s is missing", (name) => {
+  it.each(["DATABASE_URL", "REDIS_URL", "APP_URL", "SMTP_URL", "MAIL_FROM"])("throws a ZodError when %s is missing", (name) => {
     expect(() => parseEnv({ ...REQUIRED, [name]: undefined })).toThrow(ZodError);
   });
 

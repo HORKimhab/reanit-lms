@@ -6,12 +6,12 @@ import {
   InvalidCredentialsError,
   logInSchema,
   MAGIC_LINK_TTL_MS,
+  safeRedirectPath,
   signUpSchema,
 } from "@reanit/core/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { safeRedirectPath } from "@/server/auth/redirect";
 import { getAuthService } from "@/server/auth/service";
 import { endSession, setSessionCookie } from "@/server/auth/session";
 import { getServerEnv } from "@/server/env";
