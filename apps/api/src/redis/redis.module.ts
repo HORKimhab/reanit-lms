@@ -36,8 +36,9 @@ export class RedisModule implements OnApplicationShutdown {
    */
   constructor(@Inject(REDIS) private readonly redis: Redis) {}
 
-  /** Closes the connection after pending replies arrive. */
+  /** Closes the connection after pending replies arrive, or at once when Redis is unreachable (QUIT cannot be sent then). */
   async onApplicationShutdown() {
-    await this.redis.quit();
+    if (this.redis.status === "ready") await this.redis.quit();
+    else this.redis.disconnect();
   }
 }

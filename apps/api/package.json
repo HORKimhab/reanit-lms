@@ -12,12 +12,18 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fastify/helmet": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-fastify": "catalog:",
     "@nestjs/terminus": "catalog:",
+    "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
     "ioredis": "catalog:",
+    "nestjs-cls": "catalog:",
+    "nestjs-pino": "catalog:",
+    "pino": "catalog:",
+    "pino-http": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "zod": "catalog:"

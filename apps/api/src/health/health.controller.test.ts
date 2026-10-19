@@ -78,4 +78,16 @@ describe("shutdown", () => {
     expect(clients.db.$disconnect).toHaveBeenCalledOnce();
     expect(clients.redis.quit).toHaveBeenCalledOnce();
   });
+
+  it("drops the Redis connection without QUIT when Redis is unreachable", async () => {
+    const clients = createFakeClients();
+    clients.redis.status = "reconnecting";
+    app = await createTestApp(clients);
+
+    await app.close();
+    app = undefined;
+
+    expect(clients.redis.disconnect).toHaveBeenCalledOnce();
+    expect(clients.redis.quit).not.toHaveBeenCalled();
+  });
 });

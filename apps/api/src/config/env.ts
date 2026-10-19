@@ -13,6 +13,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   /** Interface to listen on; all of them by default, as a container needs. */
   HOST: z.string().min(1).default("0.0.0.0"),
+  /** Lowest pino level written; `silent` turns logging off. */
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 });
 
 /** The API's validated environment. */
