@@ -170,6 +170,7 @@ reanit-lms/
 ├─ packages/
 │  ├─ db/           # Prisma schema, migrations, tenant-scoped client
 │  ├─ core/         # Framework-free domain logic (commerce, learning, schools)
+│  ├─ api-client/   # Typed client for apps/api, generated from the committed openapi.json
 │  ├─ ui/           # Shared UI components (shadcn)
 │  ├─ email/        # React Email templates
 │  └─ config/       # Shared eslint, tsconfig and tailwind presets
@@ -236,6 +237,7 @@ curl localhost:4000/health
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
 - If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in the three env files to match.
 - Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.
+- After changing an API route or DTO, run `pnpm openapi`: it rewrites `packages/api-client/openapi.json` and the client types. `pnpm test` fails while the committed spec is stale.
 
 ### pnpm usage
 

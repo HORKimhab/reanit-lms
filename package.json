@@ -13,7 +13,8 @@
     "test": "turbo run test",
     "knip": "knip",
     "dup": "jscpd",
-    "db:migrate": "pnpm --filter @reanit/db migrate"
+    "db:migrate": "pnpm --filter @reanit/db migrate",
+    "openapi": "pnpm --filter api openapi && pnpm --filter @reanit/api-client build"
   },
   "devDependencies": {
     "jscpd": "catalog:",

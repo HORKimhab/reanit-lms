@@ -60,6 +60,9 @@ catalog:
   pino-http: 11.0.0
   "@fastify/helmet": 13.2.0
   fastify: 5.12.5
+  "@nestjs/swagger": 12.0.2
+  openapi-fetch: 0.17.0
+  openapi-typescript: 7.13.0
 
 # Install scripts: true = allowed, false = skipped (prebuilt binaries are enough).
 allowBuilds:
@@ -71,6 +74,11 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
+
+# openapi-typescript 7 declares typescript ^5 but generates correctly with 6.
+peerDependencyRules:
+  allowedVersions:
+    openapi-typescript>typescript: "6"
 
 minimumReleaseAgeExclude:
   - eslint-plugin-jsdoc@65.3.12

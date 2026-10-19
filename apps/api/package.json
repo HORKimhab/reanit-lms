@@ -9,13 +9,15 @@
     "start": "node --env-file-if-exists=.env --enable-source-maps dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi": "tsup && node dist/openapi.js ../../packages/api-client/openapi.json"
   },
   "dependencies": {
     "@fastify/helmet": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-fastify": "catalog:",
+    "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
     "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
