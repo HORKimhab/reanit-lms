@@ -3,6 +3,16 @@ import type { CatalogStore, Course, CourseWithOutline } from "./ports";
 import { uniqueCourseSlug, type CreateCourseInput, type Outline, type UpdateCourseInput } from "./rules";
 
 /**
+ * Tells whether students can see a course.
+ *
+ * @param course The course.
+ * @returns True when it is published.
+ */
+function isPublished(course: Course): boolean {
+  return course.status === "published";
+}
+
+/**
  * Builds one school's catalog use cases over a store scoped to that school.
  *
  * @param dependencies Store for the school's catalog.
@@ -32,6 +42,28 @@ export function createCatalogService({ store }: { store: CatalogStore }) {
     async getCourse(slug: string): Promise<CourseWithOutline> {
       const course = await store.findCourseBySlug(slug);
       if (!course) throw new CourseNotFoundError();
+      return course;
+    },
+
+    /**
+     * Lists the courses students can see, newest first.
+     *
+     * @returns The published courses without outlines.
+     */
+    async listPublishedCourses(): Promise<Course[]> {
+      return (await store.listCourses()).filter(isPublished);
+    },
+
+    /**
+     * Loads a course for its public sales page. Drafts look like missing courses.
+     *
+     * @param slug The course's slug.
+     * @returns The published course with its outline.
+     * @throws {CourseNotFoundError} When the school has no published course with that slug.
+     */
+    async getPublishedCourse(slug: string): Promise<CourseWithOutline> {
+      const course = await store.findCourseBySlug(slug);
+      if (!course || !isPublished(course)) throw new CourseNotFoundError();
       return course;
     },
 

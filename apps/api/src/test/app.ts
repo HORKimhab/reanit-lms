@@ -3,6 +3,7 @@ import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import type { AuthService } from "@reanit/core/auth";
+import type { CatalogService } from "@reanit/core/catalog";
 import type { SchoolService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
@@ -10,6 +11,7 @@ import { vi, type Mock } from "vitest";
 
 import { AppModule } from "../app.module";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
+import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
 import { setupApp } from "../app.setup";
 import { ENV, type Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
@@ -38,6 +40,9 @@ export type FakeClients = {
   auth: Record<keyof AuthService, Mock>;
   /** Stands in for `@reanit/core/schools`. */
   schools: Record<keyof SchoolService, Mock>;
+  /** Stands in for every school's catalog; `catalogFor` records which school was asked for. */
+  catalog: Record<keyof CatalogService, Mock>;
+  catalogFor: Mock<(schoolId: string) => CatalogService>;
 };
 
 /** Extras a test can boot the app with. */
@@ -50,24 +55,46 @@ type TestAppOptions = {
   logStream?: DestinationStream;
 };
 
+/** Every use case of each core service; the `FakeClients` type fails the build when a service gains one missing here. */
+const AUTH_METHODS = ["signUp", "logIn", "requestMagicLink", "verifyMagicLink", "getSessionUser", "logOut"] as const satisfies readonly (keyof AuthService)[];
+const SCHOOL_METHODS = ["createSchool", "getSchoolBySubdomain", "getStaffSchool"] as const satisfies readonly (keyof SchoolService)[];
+const CATALOG_METHODS = [
+  "listCourses",
+  "getCourse",
+  "listPublishedCourses",
+  "getPublishedCourse",
+  "createCourse",
+  "updateCourse",
+  "deleteCourse",
+  "saveOutline",
+] as const satisfies readonly (keyof CatalogService)[];
+
+/**
+ * Creates a fake of a core service with one spy per use case.
+ *
+ * @param methods The service's use cases.
+ * @returns Spies keyed by use case.
+ */
+function fakeService<Method extends string>(methods: readonly Method[]): Record<Method, Mock> {
+  return Object.fromEntries(methods.map((method) => [method, vi.fn()])) as Record<Method, Mock>;
+}
+
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth and school services.
+ * @returns A fake Prisma client, Redis connection, and auth, school and catalog services.
  */
 export function createFakeClients(): FakeClients {
+  const auth = fakeService(AUTH_METHODS);
+  auth.getSessionUser.mockResolvedValue(null);
+  const catalog = fakeService(CATALOG_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
-    auth: {
-      signUp: vi.fn(),
-      logIn: vi.fn(),
-      requestMagicLink: vi.fn(),
-      verifyMagicLink: vi.fn(),
-      getSessionUser: vi.fn().mockResolvedValue(null),
-      logOut: vi.fn(),
-    },
-    schools: { createSchool: vi.fn(), getSchoolBySubdomain: vi.fn(), getStaffSchool: vi.fn() },
+    auth,
+    schools: fakeService(SCHOOL_METHODS),
+    catalog,
+    catalogFor: vi.fn(() => catalog as unknown as CatalogService),
   };
 }
 
@@ -92,7 +119,9 @@ export async function createTestApp(
     .overrideProvider(AUTH_SERVICE)
     .useValue(clients.auth)
     .overrideProvider(SCHOOL_SERVICE)
-    .useValue(clients.schools);
+    .useValue(clients.schools)
+    .overrideProvider(CATALOG_FOR_SCHOOL)
+    .useValue(clients.catalogFor);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });

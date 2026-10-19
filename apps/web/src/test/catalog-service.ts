@@ -7,6 +7,8 @@ import { vi, type Mock } from "vitest";
 export const catalogService = {
   listCourses: vi.fn(),
   getCourse: vi.fn(),
+  listPublishedCourses: vi.fn(),
+  getPublishedCourse: vi.fn(),
   createCourse: vi.fn(),
   updateCourse: vi.fn(),
   deleteCourse: vi.fn(),
