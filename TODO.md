@@ -22,6 +22,20 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] WEB-09 Students list + school settings (logo, color, live preview)
 - [x] TEST-02 Remove page/layout tests that only re-check composed components (keep `notFound()`/`redirect()`/param branch tests); move any logic left in pages into tested components. Done when `pnpm test`, `lint`, `knip`, `dup` pass.
 
+## Move backend to NestJS (`apps/api`)
+Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJS. Every later API-* and WRK-* task is built in `apps/api`. `packages/core` and `packages/db` stay framework-free and are reused as-is.
+- [ ] NEST-01 Scaffold `apps/api`: NestJS 11 on the Fastify adapter, SWC build, shared eslint/tsconfig/vitest presets, turbo + CI tasks, `GET /health` (Terminus: Postgres + Redis). Env parsed with zod at boot (fail fast). Update README §2/§6/§9, the `project-structure` skill and README §10. Done when CI builds, lints and tests `apps/api`.
+- [ ] NEST-02 Platform modules: `DbModule` (one `DbClient` provider, closed on shutdown), request context through `nestjs-cls` (request id, user, school; no REQUEST-scoped providers), `nestjs-pino` logs with request id and redacted cookies/passwords, `helmet`, graceful shutdown. Needs NEST-01.
+- [ ] NEST-03 Edge validation and errors: global zod pipe using the schemas from `@reanit/core` (no duplicate class-validator DTOs), global exception filter mapping core typed errors to RFC 9457 problem+json (e.g. `EmailTakenError` → 409, `CourseNotFoundError` → 404), unknown errors → 500 without internals. Needs NEST-02.
+- [ ] NEST-04 OpenAPI + typed client: `@nestjs/swagger` spec from the zod schemas, generated client in `packages/api-client` (openapi-typescript + openapi-fetch), CI fails when the committed spec is stale. Needs NEST-03.
+- [ ] NEST-05 Auth module: `/auth/sign-up`, `/auth/login`, `/auth/magic-link` (request + verify), `/auth/logout`, `/auth/me` over `@reanit/core/auth`; HttpOnly session cookie; global `SessionGuard` with `@Public()` opt-out and `@CurrentUser()`; CSRF protection on mutating routes (Origin check + SameSite=Lax). Moves `apps/web/src/server/auth`. Needs NEST-04.
+- [ ] NEST-06 Schools module: `POST /schools`, `GET /schools/by-subdomain/:subdomain`, `RolesGuard` with `@Roles("owner","admin","instructor")` resolving the staff school into the request context. Moves `apps/web/src/server/schools`. Needs NEST-05.
+- [ ] NEST-07 Catalog module: courses CRUD + `PUT /courses/:id/outline` on the tenant client from the request context; public `GET` of published courses by school. Moves `apps/web/src/server/catalog`. Needs NEST-06.
+- [ ] NEST-08 Web as API client: same-origin `/api/*` rewrite from Next to `apps/api` (no CORS, one cookie domain); server actions and pages call `packages/api-client`, forwarding the session cookie. Remove `@reanit/db` and the server wiring from `apps/web`, and block re-adding it with an eslint `no-restricted-imports` rule. Done when no `apps/web` file imports `@reanit/db`. Needs NEST-07.
+- [ ] NEST-09 API e2e tests: supertest against the Nest app + Testcontainers Postgres per module (auth, schools, catalog), including the 401/403/404 paths and a cross-school request that must see nothing. Needs NEST-08.
+- [ ] NEST-10 Run it: `apps/api` Dockerfile (multi-stage, non-root), compose service for local dev, `pnpm dev` starts web + api. Done when sign-up → create school → create course works through the web app. Needs NEST-09.
+- [ ] NEST-11 Worker on Nest ⚠ Nest standalone app with `@nestjs/bullmq` or plain BullMQ for WRK-02.
+
 ## Connect to backend
 - [x] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.
 - [x] DB-01 Prisma core schema, tenant client, RLS. Done when the RLS isolation test passes.

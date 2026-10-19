@@ -208,7 +208,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 
 | # | Question | Options | Notes |
 |---|---|---|---|
-| 1 | 🟡 Backend framework | Next.js route handlers / tRPC · NestJS · Laravel · Go · Django | Current default: TypeScript with Next.js |
+| 1 | ✅ Backend framework | **Decided:** NestJS (`apps/api`) | Chosen to give mobile and third-party clients one API, and a structure (modules, DI, guards) that scales with the team. `apps/web` becomes an API client. Migration: TODO.md NEST-01 to NEST-10 |
 | 2 | 🟡 Video provider | Mux · Cloudflare Stream | Mux has the better developer experience; Cloudflare is cheaper at scale |
 | 3 | 🟡 Payment providers | Stripe Connect · ABA PayWay / KHQR · PayPal | Stripe payouts may not be available in Cambodia, so a local gateway may be needed |
 | 4 | 🟡 Hosting | Vercel + Fly/Railway · AWS (ECS + RDS) | Start on managed hosting and move to AWS as cost and scale require |
