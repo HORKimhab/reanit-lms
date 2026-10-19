@@ -1,6 +1,6 @@
 import { parseEnv } from "./config/env";
-import { setUpBucket } from "./media/bucket-setup";
-import { s3Client } from "./media/s3-storage";
+import { setUpBucket } from "./storage/bucket-setup";
+import { s3Client } from "./storage/s3-storage";
 
 /**
  * `pnpm storage:setup`: creates the media bucket if needed and allows the web app's origin to

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createSchoolSchema, subdomainSchema, suggestSubdomain } from "./rules";
+import { createSchoolSchema, schoolSettingsSchema, studentSearchSchema, subdomainSchema, suggestSubdomain } from "./rules";
 
 describe("subdomainSchema", () => {
   it("lower-cases and trims the subdomain", () => {
@@ -43,5 +43,38 @@ describe("suggestSubdomain", () => {
 
   it("caps the suggestion at the 63-character DNS label limit", () => {
     expect(suggestSubdomain("a".repeat(70))).toHaveLength(63);
+  });
+});
+
+describe("schoolSettingsSchema", () => {
+  it("trims the name and lower-cases the brand color", () => {
+    expect(schoolSettingsSchema.parse({ name: " Angkor ", brandColor: "#00AA55" })).toEqual({ name: "Angkor", brandColor: "#00aa55" });
+  });
+
+  it("keeps a null brand color and a null logo key", () => {
+    expect(schoolSettingsSchema.parse({ name: "Angkor", brandColor: null, logoKey: null })).toEqual({
+      name: "Angkor",
+      brandColor: null,
+      logoKey: null,
+    });
+  });
+
+  it.each(["00aa55", "#0a5", "#00aa5g", "red", "#00aa55ff"])("rejects the brand color %s", (brandColor) => {
+    expect(schoolSettingsSchema.safeParse({ name: "Angkor", brandColor }).success).toBe(false);
+  });
+
+  it("rejects an empty name", () => {
+    expect(schoolSettingsSchema.safeParse({ name: "  ", brandColor: null }).success).toBe(false);
+  });
+});
+
+describe("studentSearchSchema", () => {
+  it("defaults to the first page and reads the page from a query string", () => {
+    expect(studentSearchSchema.parse({})).toEqual({ page: 1 });
+    expect(studentSearchSchema.parse({ q: " sokha ", page: "2" })).toEqual({ q: "sokha", page: 2 });
+  });
+
+  it.each(["0", "-1", "1.5", "two"])("rejects page %s", (page) => {
+    expect(studentSearchSchema.safeParse({ page }).success).toBe(false);
   });
 });

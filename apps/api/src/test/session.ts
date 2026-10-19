@@ -8,7 +8,13 @@ import { useTestApp, type FakeClients, type TestApp } from "./app";
 export const TEST_USER: AuthUser = { id: "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e2d", email: "dara@example.com", name: "Dara" };
 
 /** A school test users run. */
-export const TEST_SCHOOL: School = { id: "6f5e4d3c-2b1a-4098-8f7e-6d5c4b3a2918", name: "Angkor Academy", subdomain: "angkor" };
+export const TEST_SCHOOL: School = {
+  id: "6f5e4d3c-2b1a-4098-8f7e-6d5c4b3a2918",
+  name: "Angkor Academy",
+  subdomain: "angkor",
+  brandColor: null,
+  logoUrl: null,
+};
 
 /**
  * Makes the fake auth service accept a session for the user.

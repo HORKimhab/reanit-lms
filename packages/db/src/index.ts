@@ -6,4 +6,5 @@ export { createLearningStore } from "./learning-store";
 export { createLessonMediaStore } from "./lesson-media-store";
 export { createSchoolStore } from "./school-store";
 export { createStatsStore } from "./stats-store";
+export { createStudentStore } from "./student-store";
 export { forSchool, inSchoolTransaction, type SchoolTransaction, type TenantClient } from "./tenant";

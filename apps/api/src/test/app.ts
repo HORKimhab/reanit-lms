@@ -8,7 +8,7 @@ import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
 import type { LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
-import type { SchoolService } from "@reanit/core/schools";
+import type { SchoolService, StudentService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
@@ -28,7 +28,7 @@ import { loggerOptions } from "@reanit/nest";
 import { LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
-import { SCHOOL_SERVICE } from "../schools/schools.tokens";
+import { SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL } from "../schools/schools.tokens";
 
 /** Environment the test app boots with; nothing connects to these URLs (e2e tests swap in a real database). */
 export const TEST_ENV: Env = {
@@ -62,6 +62,9 @@ export type FakeClients = {
   auth: Record<keyof AuthService, Mock>;
   /** Stands in for `@reanit/core/schools`. */
   schools: Record<keyof SchoolService, Mock>;
+  /** Stands in for every school's students list; `studentsFor` records which school was asked for. */
+  students: Record<keyof StudentService, Mock>;
+  studentsFor: Mock<(schoolId: string) => StudentService>;
   /** Stands in for every school's catalog; `catalogFor` records which school was asked for. */
   catalog: Record<keyof CatalogService, Mock>;
   catalogFor: Mock<(schoolId: string) => CatalogService>;
@@ -95,7 +98,15 @@ type TestAppOptions = {
 
 /** Every use case of each core service; the `FakeClients` type fails the build when a service gains one missing here. */
 const AUTH_METHODS = ["signUp", "logIn", "requestMagicLink", "verifyMagicLink", "getSessionUser", "logOut"] as const satisfies readonly (keyof AuthService)[];
-const SCHOOL_METHODS = ["createSchool", "getSchoolBySubdomain", "getPublicSchool", "getStaffSchool"] as const satisfies readonly (keyof SchoolService)[];
+const SCHOOL_METHODS = [
+  "createSchool",
+  "getSchoolBySubdomain",
+  "getPublicSchool",
+  "getStaffSchool",
+  "requestLogoUpload",
+  "updateSettings",
+] as const satisfies readonly (keyof SchoolService)[];
+const STUDENT_METHODS = ["searchStudents"] as const satisfies readonly (keyof StudentService)[];
 const CATALOG_METHODS = [
   "listCourses",
   "getCourse",
@@ -124,7 +135,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, catalog, media, commerce, learning and stats services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning and stats services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -134,11 +145,14 @@ export function createFakeClients(): FakeClients {
   const commerce = fakeService(COMMERCE_METHODS);
   const learning = fakeService(LEARNING_METHODS);
   const analytics = fakeService(ANALYTICS_METHODS);
+  const students = fakeService(STUDENT_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
     auth,
     schools: fakeService(SCHOOL_METHODS),
+    students,
+    studentsFor: vi.fn(() => students as unknown as StudentService),
     catalog,
     catalogFor: vi.fn(() => catalog as unknown as CatalogService),
     media,
@@ -175,6 +189,8 @@ export async function createTestApp(
     .useValue(clients.auth)
     .overrideProvider(SCHOOL_SERVICE)
     .useValue(clients.schools)
+    .overrideProvider(STUDENTS_FOR_SCHOOL)
+    .useValue(clients.studentsFor)
     .overrideProvider(CATALOG_FOR_SCHOOL)
     .useValue(clients.catalogFor)
     .overrideProvider(MEDIA_FOR_SCHOOL)

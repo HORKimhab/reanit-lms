@@ -16,7 +16,7 @@ import { AppModule } from "../app.module";
 import { ENV } from "@reanit/nest";
 import { MAILER } from "../mail/mail.module";
 import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
-import { OBJECT_STORAGE } from "../media/media.tokens";
+import { OBJECT_STORAGE } from "../storage/storage.module";
 import { REDIS } from "../redis/redis.module";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
 
@@ -246,3 +246,20 @@ export async function createVideoCourse(agent: Agent, title: string, lessons: { 
     .expect(204);
   return course;
 }
+
+/**
+ * Buys a published, priced course with the PayWay-like test gateway, and lets the order read confirm the payment.
+ *
+ * @param e2e The app under test.
+ * @param buyer The buyer's agent.
+ * @param subdomain The school's subdomain.
+ * @param courseSlug The course's slug.
+ */
+export async function buyCourse(e2e: E2eApp, buyer: Agent, subdomain: string, courseSlug: string) {
+  const base = `/schools/by-subdomain/${subdomain}`;
+  const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug, method: "aba_payway" }).expect(201)).body;
+  e2e.paidAtGateway.add(`pw_${orderId}`);
+  const order = await buyer.get(`${base}/orders/${orderId}`).expect(200);
+  if (order.body.order.status !== "paid") throw new Error(`Order ${orderId} is ${order.body.order.status}, not paid`);
+}
+

@@ -46,4 +46,32 @@ describe("schools", () => {
   it("answers 401 when a signed-out caller opens a school", async () => {
     await request(e2e().app.getHttpServer()).post("/schools").send({ name: "Nobody", subdomain: uniqueName("nobody") }).expect(401);
   });
+
+  it("saves its owner's settings and logo, which its public site then shows", async () => {
+    const { agent, school } = await openSchool(e2e().app, uniqueName("school-brand"));
+    const { key } = (await agent.post("/schools/current/logo-uploads").send({ contentType: "image/png", sizeBytes: 2048 }).expect(201)).body;
+    expect(key).toMatch(new RegExp(`^schools/${school.id}/logo/[0-9a-f-]+\\.png$`));
+
+    await agent.patch("/schools/current").send({ name: "Brand Co", brandColor: "#0055AA", logoKey: key }).expect(409);
+    e2e().storage.uploaded.add(key);
+    const saved = await agent.patch("/schools/current").send({ name: "Brand Co", brandColor: "#0055AA", logoKey: key }).expect(200);
+
+    const expected = { ...school, name: "Brand Co", brandColor: "#0055aa", logoUrl: `https://storage.test/${key}?signed` };
+    expect(saved.body.school).toEqual(expected);
+    expect((await request(e2e().app.getHttpServer()).get(`/schools/by-subdomain/${school.subdomain}`).expect(200)).body.school).toEqual(expected);
+  });
+
+  it("refuses another school's logo, and changes only the caller's own school", async () => {
+    const alpha = await openSchool(e2e().app, uniqueName("school-alpha"));
+    const beta = await openSchool(e2e().app, uniqueName("school-beta"));
+    const alphaLogo = `schools/${alpha.school.id}/logo/forged.png`;
+    e2e().storage.uploaded.add(alphaLogo);
+
+    const response = await beta.agent.patch("/schools/current").send({ name: "Beta", brandColor: null, logoKey: alphaLogo }).expect(400);
+    expect(response.body.type).toBe("urn:reanit:problem:invalid-media-key");
+
+    await beta.agent.patch("/schools/current").send({ name: "Renamed Beta", brandColor: null }).expect(200);
+    expect((await alpha.agent.get("/schools/current").expect(200)).body.school.name).toBe(alpha.school.name);
+  });
 });
+

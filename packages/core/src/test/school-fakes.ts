@@ -1,9 +1,9 @@
 // In-memory fake of the schools port, for unit tests of the school service.
-import type { MembershipRole, School, SchoolStore } from "../schools";
+import type { MembershipRole, SchoolChanges, SchoolRecord, SchoolStore, StudentStore, StudentSummary } from "../schools";
 
 /** In-memory `SchoolStore` whose rows tests can inspect. */
 export class FakeSchoolStore implements SchoolStore {
-  readonly schools: School[] = [];
+  readonly schools: SchoolRecord[] = [];
   /** Owner user id by school id. */
   readonly owners = new Map<string, string>();
   /** Display names by user id; users missing here have no name. */
@@ -31,7 +31,7 @@ export class FakeSchoolStore implements SchoolStore {
    * @returns The school.
    */
   async createSchoolWithOwner({ name, subdomain, ownerId }: { name: string; subdomain: string; ownerId: string }) {
-    const school = { id: `school-${this.schools.length + 1}`, name, subdomain };
+    const school = { id: `school-${this.schools.length + 1}`, name, subdomain, brandColor: null, logoKey: null };
     this.schools.push(school);
     this.owners.set(school.id, ownerId);
     this.memberships.push({ schoolId: school.id, userId: ownerId, role: "owner" });
@@ -59,5 +59,43 @@ export class FakeSchoolStore implements SchoolStore {
     return this.memberships
       .filter((membership) => membership.userId === userId)
       .map(({ schoolId, role }) => ({ school: this.schools.find((school) => school.id === schoolId)!, role })); // memberships only reference stored schools
+  }
+
+  /**
+   * Applies settings to a stored school.
+   *
+   * @param schoolId The school's id.
+   * @param changes The new values; a missing `logoKey` keeps the logo.
+   * @returns The updated school.
+   * @throws {Error} When no school has the id.
+   */
+  async updateSchool(schoolId: string, changes: SchoolChanges) {
+    const index = this.schools.findIndex((school) => school.id === schoolId);
+    if (index === -1) throw new Error(`No school ${schoolId}`);
+    const updated = { ...this.schools[index]!, ...changes }; // findIndex found it
+    this.schools[index] = updated;
+    return updated;
+  }
+}
+
+/** In-memory `StudentStore` that records the last query and answers with `students`. */
+export class FakeStudentStore implements StudentStore {
+  students: StudentSummary[] = [];
+  total = 0;
+  /** The query `searchStudents` was last called with. */
+  lastQuery: { search: string | null; limit: number; offset: number } | null = null;
+
+  /**
+   * Records the query and returns the programmed page.
+   *
+   * @param query The search, limit and offset.
+   * @param query.search Text to find, or null.
+   * @param query.limit Page size.
+   * @param query.offset Students to skip.
+   * @returns `students` and `total`.
+   */
+  async searchStudents(query: { search: string | null; limit: number; offset: number }) {
+    this.lastQuery = query;
+    return { students: this.students, total: this.total };
   }
 }

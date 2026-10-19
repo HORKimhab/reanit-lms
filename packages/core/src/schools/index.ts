@@ -1,4 +1,15 @@
 export { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "./errors";
-export type { MembershipRole, School, SchoolStore } from "./ports";
-export { createSchoolSchema, subdomainSchema, suggestSubdomain, type CreateSchoolInput } from "./rules";
-export { createSchoolService, type SchoolService } from "./service";
+export type { MembershipRole, School, SchoolChanges, SchoolRecord, SchoolStore, StudentStore, StudentSummary } from "./ports";
+export {
+  createSchoolSchema,
+  LOGO_RULES,
+  schoolSettingsSchema,
+  studentSearchSchema,
+  subdomainSchema,
+  suggestSubdomain,
+  type CreateSchoolInput,
+  type SchoolSettingsInput,
+  type StudentSearchInput,
+} from "./rules";
+export { createSchoolService, LOGO_URL_TTL_SECONDS, type SchoolService } from "./service";
+export { createStudentService, STUDENTS_PAGE_SIZE, type StudentPage, type StudentService } from "./students";

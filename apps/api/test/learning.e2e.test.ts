@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { type Agent, createVideoCourse, openSchool, signUp, uniqueName, useE2eApp } from "../src/test/e2e";
+import { buyCourse, createVideoCourse, openSchool, signUp, uniqueName, useE2eApp } from "../src/test/e2e";
 
 const e2e = useE2eApp();
 const videoLesson = randomUUID();
@@ -10,17 +10,6 @@ const textLesson = randomUUID();
 let alpha: Awaited<ReturnType<typeof openSchool>>;
 let course: { id: string; slug: string };
 let base: string;
-
-/**
- * Buys the course with the PayWay-like test gateway and lets the order read confirm the payment.
- *
- * @param buyer The buyer's agent.
- */
-async function buyCourse(buyer: Agent) {
-  const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "aba_payway" }).expect(201)).body;
-  e2e().paidAtGateway.add(`pw_${orderId}`);
-  expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("paid");
-}
 
 beforeAll(async () => {
   alpha = await openSchool(e2e().app, uniqueName("learn-alpha"));
@@ -39,7 +28,7 @@ describe("learning", () => {
     await student.get(`${base}/learn/${course.slug}`).expect(403);
     await student.put(`${base}/lessons/${videoLesson}/progress`).send({ positionSeconds: 5 }).expect(403);
 
-    await buyCourse(student);
+    await buyCourse(e2e(), student, alpha.school.subdomain, course.slug);
     const player = await student.get(`${base}/learn/${course.slug}`).expect(200);
     expect(player.body.course).toMatchObject({ id: course.id, progress: [] });
     expect((await student.get(`${base}/lessons/${videoLesson}/media`).expect(200)).body.url).toMatch(/^https:\/\/storage\.test\/.+\.mp4\?signed$/);
@@ -63,7 +52,7 @@ describe("learning", () => {
 
   it("keeps a lesson closed to another school's site and its stats to other schools", async () => {
     const { agent: student } = await signUp(e2e().app, uniqueName("student-cross"));
-    await buyCourse(student);
+    await buyCourse(e2e(), student, alpha.school.subdomain, course.slug);
     const beta = await openSchool(e2e().app, uniqueName("learn-beta"));
 
     await student.get(`/schools/by-subdomain/${beta.school.subdomain}/lessons/${videoLesson}/media`).expect(403);

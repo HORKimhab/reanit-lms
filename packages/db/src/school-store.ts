@@ -1,11 +1,12 @@
 import type { DbClient } from "./client";
+import { forSchool } from "./tenant";
 
-const SCHOOL_FIELDS = { id: true, name: true, subdomain: true } as const;
+const SCHOOL_FIELDS = { id: true, name: true, subdomain: true, brandColor: true, logoKey: true } as const;
 
 /**
  * Persistence for creating and resolving schools. Runs before any tenant is known
- * (sign-up wizard, subdomain lookup), so it uses the unscoped client; it satisfies
- * `SchoolStore` from `@reanit/core/schools`.
+ * (sign-up wizard, subdomain lookup), so it uses the unscoped client, except for settings
+ * saves, which go through the tenant client; it satisfies `SchoolStore` from `@reanit/core/schools`.
  *
  * @param db Unscoped client from `createDbClient`.
  * @returns The store operations.
@@ -67,6 +68,26 @@ export function createSchoolStore(db: DbClient) {
     createSchoolWithOwner({ name, subdomain, ownerId }: { name: string; subdomain: string; ownerId: string }) {
       return db.school.create({
         data: { name, subdomain, memberships: { create: { userId: ownerId, role: "owner" } } },
+        select: SCHOOL_FIELDS,
+      });
+    },
+
+    /**
+     * Saves a school's settings as that school, so RLS rejects writes to any other.
+     *
+     * @param schoolId The school's id.
+     * @param changes New name, brand color and, when given, logo key (null removes the logo).
+     * @param changes.name School name.
+     * @param changes.brandColor `#rrggbb`, or null for the platform default.
+     * @param changes.logoKey Logo's storage key; left out to keep the current logo.
+     * @returns The updated school.
+     * @throws {z.ZodError} When `schoolId` is not a UUID.
+     * @throws {Error} When the school does not exist.
+     */
+    updateSchool(schoolId: string, { name, brandColor, logoKey }: { name: string; brandColor: string | null; logoKey?: string | null }) {
+      return forSchool(db, schoolId).school.update({
+        where: { id: schoolId },
+        data: { name, brandColor, ...(logoKey !== undefined && { logoKey }) },
         select: SCHOOL_FIELDS,
       });
     },

@@ -1,20 +1,11 @@
 import type { Clock } from "../auth";
-import {
-  InvalidMediaKeyError,
-  LessonMediaMissingError,
-  LessonNotFoundError,
-  MediaNotUploadedError,
-  MediaTooLargeError,
-  UnsupportedMediaError,
-} from "./errors";
+import { LessonMediaMissingError, LessonNotFoundError, MediaTooLargeError, UnsupportedMediaError } from "./errors";
 import type { LessonMedia, LessonMediaStore, ObjectStorage } from "./ports";
 import { lessonMediaPrefix, MEDIA_RULES, mediaExtension, type UploadRequest } from "./rules";
+import { createUploads } from "./uploads";
 
-/** How long a presigned upload URL works. */
-export const UPLOAD_TTL_SECONDS = 15 * 60;
 /** How long a playback URL works; long enough to watch a long lesson without the player refreshing it. */
 export const PLAYBACK_TTL_SECONDS = 4 * 60 * 60;
-const MS_PER_SECOND = 1000;
 
 /** What `createMediaService` needs. */
 export interface MediaDependencies {
@@ -41,6 +32,8 @@ export interface MediaDependencies {
  * const media = createMediaService({ schoolId, lessons: createLessonMediaStore(db, schoolId), storage, clock, newId: randomUUID });
  */
 export function createMediaService({ schoolId, lessons, storage, clock, newId }: MediaDependencies) {
+  const uploads = createUploads({ storage, clock });
+
   /**
    * Loads a lesson of this school.
    *
@@ -52,16 +45,6 @@ export function createMediaService({ schoolId, lessons, storage, clock, newId }:
     const lesson = await lessons.findLesson(lessonId);
     if (!lesson) throw new LessonNotFoundError();
     return lesson;
-  }
-
-  /**
-   * Says when a URL made now with the given lifetime stops working.
-   *
-   * @param seconds Lifetime.
-   * @returns The expiry time.
-   */
-  function expiresIn(seconds: number): Date {
-    return new Date(clock.now().getTime() + seconds * MS_PER_SECOND);
   }
 
   return {
@@ -82,9 +65,7 @@ export function createMediaService({ schoolId, lessons, storage, clock, newId }:
       const extension = mediaExtension(lesson.type, contentType);
       if (lesson.type === "text" || !extension) throw new UnsupportedMediaError();
       if (sizeBytes > MEDIA_RULES[lesson.type].maxBytes) throw new MediaTooLargeError();
-      const key = `${lessonMediaPrefix(schoolId, lessonId)}${newId()}.${extension}`;
-      const upload = await storage.presignUpload({ key, contentType, sizeBytes }, UPLOAD_TTL_SECONDS);
-      return { key, ...upload, expiresAt: expiresIn(UPLOAD_TTL_SECONDS) };
+      return uploads.presignUpload({ key: `${lessonMediaPrefix(schoolId, lessonId)}${newId()}.${extension}`, contentType, sizeBytes });
     },
 
     /**
@@ -98,8 +79,7 @@ export function createMediaService({ schoolId, lessons, storage, clock, newId }:
      */
     async attachMedia(lessonId: string, key: string): Promise<void> {
       await requireLesson(lessonId);
-      if (!key.startsWith(lessonMediaPrefix(schoolId, lessonId)) || key.includes("..")) throw new InvalidMediaKeyError();
-      if (!(await storage.exists(key))) throw new MediaNotUploadedError();
+      await uploads.assertUploaded(key, lessonMediaPrefix(schoolId, lessonId));
       await lessons.setMediaKey(lessonId, key);
     },
 
@@ -114,7 +94,7 @@ export function createMediaService({ schoolId, lessons, storage, clock, newId }:
     async getPlaybackUrl(lessonId: string): Promise<{ url: string; expiresAt: Date }> {
       const { mediaKey } = await requireLesson(lessonId);
       if (!mediaKey) throw new LessonMediaMissingError();
-      return { url: await storage.presignDownload(mediaKey, PLAYBACK_TTL_SECONDS), expiresAt: expiresIn(PLAYBACK_TTL_SECONDS) };
+      return uploads.signDownload(mediaKey, PLAYBACK_TTL_SECONDS);
     },
   };
 }

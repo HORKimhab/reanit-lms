@@ -26,7 +26,7 @@ describe("school store", () => {
 
     const school = await store.createSchoolWithOwner({ name: "Angkor", subdomain: "angkor-store", ownerId });
 
-    expect(school).toEqual({ id: expect.any(String), name: "Angkor", subdomain: "angkor-store" });
+    expect(school).toEqual({ id: expect.any(String), name: "Angkor", subdomain: "angkor-store", brandColor: null, logoKey: null });
     expect(await forSchool(db, school.id).membership.findMany({ select: { userId: true, role: true } })).toEqual([
       { userId: ownerId, role: "owner" },
     ]);
@@ -85,5 +85,19 @@ describe("school store", () => {
 
     await expect(store.createSchoolWithOwner({ name: "Orphan", subdomain: "orphan-store", ownerId: missingOwner })).rejects.toThrow();
     expect(await store.findSchoolBySubdomain("orphan-store")).toBeNull();
+  });
+
+  it("saves settings, keeping the logo when no key is given and removing it for null", async () => {
+    const school = await store.createSchoolWithOwner({ name: "Brand", subdomain: "brand-store", ownerId: await createOwner("owner-5@example.com") });
+    const logoKey = `schools/${school.id}/logo/a.png`;
+
+    expect(await store.updateSchool(school.id, { name: "Brand Co", brandColor: "#0055aa", logoKey })).toEqual({
+      ...school,
+      name: "Brand Co",
+      brandColor: "#0055aa",
+      logoKey,
+    });
+    expect((await store.updateSchool(school.id, { name: "Brand Co", brandColor: null })).logoKey).toBe(logoKey);
+    expect((await store.updateSchool(school.id, { name: "Brand Co", brandColor: null, logoKey: null })).logoKey).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { Controller, Get, Module } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
+import { InvalidMediaKeyError, MediaNotUploadedError, MediaTooLargeError, UnsupportedMediaError } from "@reanit/core/media";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -158,5 +159,91 @@ describe("@Roles", () => {
 
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ status: 403, title: "Forbidden" });
+  });
+});
+
+describe("PATCH /schools/current", () => {
+  const BODY = { name: " Bayon Academy ", brandColor: "#0055AA", logoKey: `schools/${TEST_SCHOOL.id}/logo/a.png` };
+  const UPDATED = { ...TEST_SCHOOL, name: "Bayon Academy", brandColor: "#0055aa", logoUrl: "https://storage.test/logo.png" };
+
+  it.each(["owner", "admin"] as const)("saves the parsed settings of the %s's school", async (role) => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role });
+    clients.schools.updateSettings.mockResolvedValue(UPDATED);
+
+    const response = await app.inject({ method: "PATCH", url: "/schools/current", headers, payload: BODY });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ school: UPDATED });
+    expect(clients.schools.updateSettings).toHaveBeenCalledWith(TEST_SCHOOL.id, { ...BODY, name: "Bayon Academy", brandColor: "#0055aa" });
+  });
+
+  it("answers 403 to an instructor", async () => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "instructor" });
+
+    const response = await app.inject({ method: "PATCH", url: "/schools/current", headers, payload: BODY });
+
+    expect(response.statusCode).toBe(403);
+    expect(clients.schools.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it("answers 400 for a brand color that is not #rrggbb", async () => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+
+    const response = await app.inject({ method: "PATCH", url: "/schools/current", headers, payload: { ...BODY, brandColor: "red" } });
+
+    expect(response.statusCode).toBe(400);
+    expect(clients.schools.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new InvalidMediaKeyError(), 400, "invalid-media-key"],
+    [new MediaNotUploadedError(), 409, "media-not-uploaded"],
+  ])("maps %s to %i", async (error, status, code) => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+    clients.schools.updateSettings.mockRejectedValue(error);
+
+    const response = await app.inject({ method: "PATCH", url: "/schools/current", headers, payload: BODY });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toMatchObject({ type: `urn:reanit:problem:${code}` });
+  });
+});
+
+describe("POST /schools/current/logo-uploads", () => {
+  const BODY = { contentType: "image/png", sizeBytes: 2048 };
+
+  it("presigns the logo upload for the owner's school", async () => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+    const upload = { key: "schools/s/logo/a.png", url: "https://storage.test/a", headers: { "content-type": "image/png" } };
+    clients.schools.requestLogoUpload.mockResolvedValue({ ...upload, expiresAt: new Date("2026-10-19T00:15:00Z") });
+
+    const response = await app.inject({ method: "POST", url: "/schools/current/logo-uploads", headers, payload: BODY });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({ ...upload, expiresAt: "2026-10-19T00:15:00.000Z" });
+    expect(clients.schools.requestLogoUpload).toHaveBeenCalledWith(TEST_SCHOOL.id, BODY);
+  });
+
+  it("answers 403 to an instructor", async () => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "instructor" });
+
+    expect((await app.inject({ method: "POST", url: "/schools/current/logo-uploads", headers, payload: BODY })).statusCode).toBe(403);
+  });
+
+  it.each([
+    [new UnsupportedMediaError(), 415],
+    [new MediaTooLargeError(), 413],
+  ])("maps %s to %i", async (error, status) => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+    clients.schools.requestLogoUpload.mockRejectedValue(error);
+
+    expect((await app.inject({ method: "POST", url: "/schools/current/logo-uploads", headers, payload: BODY })).statusCode).toBe(status);
   });
 });

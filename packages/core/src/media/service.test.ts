@@ -9,7 +9,8 @@ import {
   MediaTooLargeError,
   UnsupportedMediaError,
 } from "./errors";
-import { createMediaService, PLAYBACK_TTL_SECONDS, UPLOAD_TTL_SECONDS, type MediaService } from "./service";
+import { createMediaService, PLAYBACK_TTL_SECONDS, type MediaService } from "./service";
+import { UPLOAD_TTL_SECONDS } from "./uploads";
 
 const SCHOOL = "school-1";
 const NOW = new Date("2026-10-19T00:00:00Z");

@@ -96,7 +96,8 @@ model School {
   name       String
   subdomain  String   @unique
   brandColor String?  @map("brand_color")
-  logoUrl    String?  @map("logo_url")
+  /// Object-storage key of the logo; the API signs it into a URL.
+  logoKey    String?  @map("logo_key")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
