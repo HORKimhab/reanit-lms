@@ -44,7 +44,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-02 Schools: create school, subdomain middleware
 - [x] WEB-11 Create-school onboarding wizard. Needs API-02.
 - [x] API-03 Catalog: courses/sections/lessons CRUD
-- [ ] WEB-12 Connect builder + sales page. Needs API-03.
+- [ ] WEB-12 Connect builder + sales page. Needs API-03. Decided: use what the API has (title, description, status, curriculum); no price until API-05, instructor block shows the school owner, FAQ hidden when empty, no schema change.
 - [ ] API-04 Media: presigned upload + video ⚠ video provider
 - [ ] WEB-13 Video upload in builder. Needs API-04.
 - [ ] API-05 Checkout + WRK-01 webhook enrollment ⚠ payment provider
