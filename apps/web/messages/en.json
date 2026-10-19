@@ -168,7 +168,10 @@
       "certificate": "Certificate of completion",
       "anyDevice": "Watch on any device"
     },
-    "notForSale": "Coming soon"
+    "notForSale": "Coming soon",
+    "emptyCurriculum": "The lessons are on their way. Check back soon.",
+    "metaDescription": "A course from {school}.",
+    "ogLessons": "{count, plural, one {# lesson} other {# lessons}}"
   },
   "MyCourses": {
     "title": "My courses",
@@ -195,7 +198,9 @@
     "pdfHint": "Download the file to read it offline.",
     "download": "Download",
     "textPlaceholder": "The lesson text written by the instructor appears here.",
-    "fileNotReady": "This lesson's file is not ready yet. Check back soon."
+    "fileNotReady": "This lesson's file is not ready yet. Check back soon.",
+    "emptyCourseTitle": "No lessons yet",
+    "emptyCourseText": "This course has no lessons yet. Your access is saved, so come back once the instructor adds them."
   },
   "ThemeToggle": {
     "label": "Toggle theme"
@@ -303,5 +308,15 @@
     "refunded": "This order was refunded.",
     "myCourses": "Go to my courses",
     "browse": "Browse courses"
+  },
+  "Status": {
+    "loading": "Loading…",
+    "notFoundTitle": "Page not found",
+    "notFoundText": "The page you're looking for doesn't exist or has moved.",
+    "errorTitle": "Something went wrong",
+    "errorText": "We couldn't load this page. Try again in a moment.",
+    "retry": "Try again",
+    "home": "Go to the home page",
+    "reference": "Reference: {digest}"
   }
 }

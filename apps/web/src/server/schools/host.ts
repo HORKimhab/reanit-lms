@@ -34,3 +34,16 @@ export function toSchoolPath(pathname: string, subdomain: string): string | null
   if (path === schoolBase || path.startsWith(`${schoolBase}/`)) return pathname;
   return `/${locale}${schoolBase}${path === "/" ? "" : path}`;
 }
+
+/**
+ * Gives the school site's path on the host a request was sent to: its own subdomain serves it at
+ * the root, any other host under `/s/<subdomain>`.
+ *
+ * @param host The request's host, e.g. `angkor.reanit.com` or `reanit.com`.
+ * @param subdomain The school's subdomain.
+ * @param rootDomain The platform's root domain; unset means schools have no subdomains.
+ * @returns "" on the school's subdomain, `/s/<subdomain>` elsewhere.
+ */
+export function schoolSitePath(host: string, subdomain: string, rootDomain: string | undefined): string {
+  return rootDomain !== undefined && schoolSubdomainFromHost(host, rootDomain) === subdomain ? "" : `/s/${subdomain}`;
+}

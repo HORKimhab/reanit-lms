@@ -62,20 +62,3 @@ export function RowHeader({ children }: { children: React.ReactNode }) {
 export function Cell({ isNumeric, children }: { isNumeric?: boolean; children: React.ReactNode }) {
   return <td className={cn(CELL, isNumeric && NUMERIC)}>{children}</td>;
 }
-
-/**
- * Shown instead of a dashboard table when it has no rows.
- *
- * @param props - Component props.
- * @param props.title - What is missing, such as "No courses yet".
- * @param props.text - Where the rows will come from.
- * @returns A dashed box with the title and text.
- */
-export function EmptyState({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-16 text-center">
-      <p className="font-medium">{title}</p>
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
-  );
-}

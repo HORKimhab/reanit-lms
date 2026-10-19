@@ -77,18 +77,19 @@ export async function listSiteCourses(subdomain: string): Promise<Course[]> {
 }
 
 /**
- * Loads a published course with its curriculum, for its sales page.
+ * Loads a published course with its curriculum, for its sales page. Cached per request, so the page,
+ * its metadata and its share image share one call.
  *
  * @param subdomain The school's subdomain.
  * @param slug The course's slug.
  * @returns The course.
  * @throws {Error} Next's not-found signal for an unknown school or a draft or missing course, or an unexpected-response error.
  */
-export async function getSiteCourse(subdomain: string, slug: string): Promise<CourseWithOutline> {
+export const getSiteCourse = cache(async (subdomain: string, slug: string): Promise<CourseWithOutline> => {
   const { data, response } = await (await getApi()).GET("/schools/by-subdomain/{subdomain}/courses/{slug}", {
     params: { path: { subdomain, slug } },
   });
   checkPublicResponse(response);
   // checkPublicResponse returned, so the API answered 2xx with the course.
   return data!.course;
-}
+});

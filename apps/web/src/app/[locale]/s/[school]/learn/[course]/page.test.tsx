@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { onApi, problem } from "@/test/api";
@@ -21,10 +22,13 @@ describe("ResumeCourse", () => {
     await expect(ResumeCourse(PROPS)).rejects.toEqual(new RedirectError("/s/angkor/learn/brand-design-basics/6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a03"));
   });
 
-  it("404s when the course has no lessons", async () => {
+  it("says the course has no lessons yet instead of failing", async () => {
     onApi(ROUTE, Response.json({ course: { ...PLAYER_COURSE, sections: [], progress: [] } }));
 
-    await expect(ResumeCourse(PROPS)).rejects.toBeInstanceOf(NotFoundError);
+    const html = renderToStaticMarkup(await ResumeCourse(PROPS));
+
+    expect(html).toContain("No lessons yet");
+    expect(html).toContain("This course has no lessons yet.");
   });
 
   it("404s when the student is not enrolled", async () => {

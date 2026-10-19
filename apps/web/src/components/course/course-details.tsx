@@ -56,30 +56,34 @@ export function CourseDetails({
         <div className="flex flex-col gap-12">
           <section className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold">{t("curriculum")}</h2>
-            <div className="divide-y rounded-xl border">
-              {course.sections.map((section, i) => (
-                <details key={section.id} open={i === 0} className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium">
-                    <span>{section.title}</span>
-                    <span className="flex items-center gap-2 text-sm font-normal text-muted-foreground">
-                      {t("lessons", { count: section.lessons.length })}
-                      <ChevronDown aria-hidden className="size-4 transition-transform group-open:rotate-180" />
-                    </span>
-                  </summary>
-                  <ul className="flex flex-col pb-2">
-                    {section.lessons.map((lesson) => (
-                      <li key={lesson.id} className="flex items-center gap-3 px-5 py-2 text-sm">
-                        <LessonIcon type={lesson.type} className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="flex-1">{lesson.title}</span>
-                        <span className="w-20 text-right text-muted-foreground">
-                          <Duration seconds={lesson.durationSeconds} />
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ))}
-            </div>
+            {course.sections.length === 0 ? (
+              <p className="rounded-xl border border-dashed px-5 py-6 text-sm text-muted-foreground">{t("emptyCurriculum")}</p>
+            ) : (
+              <div className="divide-y rounded-xl border">
+                {course.sections.map((section, i) => (
+                  <details key={section.id} open={i === 0} className="group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium">
+                      <span>{section.title}</span>
+                      <span className="flex items-center gap-2 text-sm font-normal text-muted-foreground">
+                        {t("lessons", { count: section.lessons.length })}
+                        <ChevronDown aria-hidden className="size-4 transition-transform group-open:rotate-180" />
+                      </span>
+                    </summary>
+                    <ul className="flex flex-col pb-2">
+                      {section.lessons.map((lesson) => (
+                        <li key={lesson.id} className="flex items-center gap-3 px-5 py-2 text-sm">
+                          <LessonIcon type={lesson.type} className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="flex-1">{lesson.title}</span>
+                          <span className="w-20 text-right text-muted-foreground">
+                            <Duration seconds={lesson.durationSeconds} />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="flex flex-col gap-4">

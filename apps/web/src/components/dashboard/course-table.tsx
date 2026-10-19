@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 
-import { Cell, DataTable, EmptyState, RowHeader } from "./data-table";
+import { EmptyState } from "@/components/shells/empty-state";
+
+import { Cell, DataTable, RowHeader } from "./data-table";
 
 /**
  * The creator's courses with their publishing status.

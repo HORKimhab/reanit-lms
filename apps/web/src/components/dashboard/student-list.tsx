@@ -4,9 +4,9 @@ import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
 
 import { INPUT_CLASS } from "@/components/form/field";
+import { EmptyState } from "@/components/shells/empty-state";
 import { Link } from "@/i18n/navigation";
 
-import { EmptyState } from "./data-table";
 import { StudentTable } from "./student-table";
 
 /** Where the students list lives; search and page links stay on it. */

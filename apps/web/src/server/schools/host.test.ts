@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { schoolSubdomainFromHost, toSchoolPath } from "./host";
+import { schoolSitePath, schoolSubdomainFromHost, toSchoolPath } from "./host";
 
 describe("schoolSubdomainFromHost", () => {
   it.each([
@@ -42,5 +42,19 @@ describe("toSchoolPath", () => {
 
   it.each(["/en/login", "/km/signup", "/en/login/extra"])("leaves the platform page %s alone", (pathname) => {
     expect(toSchoolPath(pathname, "angkor")).toBeNull();
+  });
+});
+
+describe("schoolSitePath", () => {
+  it("serves the site at the root of the school's own subdomain", () => {
+    expect(schoolSitePath("angkor.reanit.com", "angkor", "reanit.com")).toBe("");
+  });
+
+  it.each([
+    ["the platform's own host", "reanit.com", "reanit.com"],
+    ["another school's subdomain", "bayon.reanit.com", "reanit.com"],
+    ["a setup without school subdomains", "angkor.reanit.com", undefined],
+  ])("serves the site under /s/<subdomain> on %s", (_, host, rootDomain) => {
+    expect(schoolSitePath(host, "angkor", rootDomain)).toBe("/s/angkor");
   });
 });

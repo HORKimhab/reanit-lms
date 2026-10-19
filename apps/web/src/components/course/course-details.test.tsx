@@ -37,6 +37,12 @@ describe("CourseDetails", () => {
     expect(screen.getByText("Sketching")).toBeInTheDocument();
   });
 
+  it("says the lessons are coming when the curriculum is still empty", async () => {
+    renderDetails({ course: { ...COURSE, sections: [] } });
+    expect(await screen.findByText("The lessons are on their way. Check back soon.")).toBeInTheDocument();
+    expect(screen.queryByText("Getting started")).not.toBeInTheDocument();
+  });
+
   it("names the instructor in their own section", async () => {
     renderDetails();
     const heading = await screen.findByRole("heading", { name: "Your instructor" });
