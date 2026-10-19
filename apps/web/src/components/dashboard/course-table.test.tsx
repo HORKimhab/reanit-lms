@@ -1,13 +1,13 @@
+import type { Course } from "@reanit/core/catalog";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { getMockCourseSales } from "@/mocks/sales";
-import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
 import { renderWithIntl } from "@/test/render";
 
 import { CourseTable } from "./course-table";
 
-const SALES = getMockCourseSales(MOCK_SCHOOL_SLUG);
+const DRAFT: Course = { id: "c1", title: "Intro to Design", slug: "intro-to-design", description: null, status: "draft" };
+const LIVE: Course = { id: "c2", title: "Brand Basics", slug: "brand-basics", description: "Logos", status: "published" };
 
 /**
  * Finds a course's row by its title.
@@ -20,35 +20,30 @@ function rowOf(title: string) {
 }
 
 describe("CourseTable", () => {
-  it("shows each course's price, lessons, students and revenue in its own currency", async () => {
-    renderWithIntl(<CourseTable caption="All courses" rows={SALES} />);
+  it("links each course to its builder and shows its status", async () => {
+    renderWithIntl(<CourseTable caption="All courses" courses={[DRAFT, LIVE]} />);
     await screen.findByRole("table", { name: "All courses" });
-    const brand = within(rowOf("Brand Design Basics"));
-    expect(brand.getByText("$49.00")).toBeInTheDocument();
-    expect(brand.getByRole("cell", { name: "9" })).toBeInTheDocument();
-    expect(brand.getByRole("cell", { name: "128" })).toBeInTheDocument();
-    expect(brand.getByRole("cell", { name: "$6,272.00" })).toBeInTheDocument();
-    expect(brand.getByRole("link", { name: "Brand Design Basics" })).toHaveAttribute(
-      "href",
-      "/dashboard/courses/brand-design-basics",
-    );
-    expect(within(rowOf("Social Media Content That Sells")).getByRole("cell", { name: "KHR\u00a06,480,000" })).toBeInTheDocument();
+
+    expect(within(rowOf("Intro to Design")).getByRole("link")).toHaveAttribute("href", "/dashboard/courses/intro-to-design");
+    expect(within(rowOf("Intro to Design")).getByText("Draft")).toBeInTheDocument();
+    expect(within(rowOf("Brand Basics")).getByText("Published")).toBeInTheDocument();
   });
 
   it("keeps the given row order", async () => {
-    renderWithIntl(<CourseTable caption="All courses" rows={[...SALES].reverse()} />);
+    renderWithIntl(<CourseTable caption="All courses" courses={[LIVE, DRAFT]} />);
     const headers = await screen.findAllByRole("rowheader");
-    expect(headers.map((h) => h.textContent)).toEqual(["Social Media Content That Sells", "Brand Design Basics"]);
+    expect(headers.map((h) => h.textContent)).toEqual(["Brand Basics", "Intro to Design"]);
   });
 
   it("shows an empty state instead of a table when there are no courses", async () => {
-    renderWithIntl(<CourseTable caption="All courses" rows={[]} />);
+    renderWithIntl(<CourseTable caption="All courses" courses={[]} />);
     expect(await screen.findByText("No courses yet")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("uses Khmer column headings when the locale is km", async () => {
-    renderWithIntl(<CourseTable caption="All courses" rows={SALES} />, { locale: "km" });
-    expect(await screen.findByRole("columnheader", { name: "ចំណូល" })).toBeInTheDocument();
+  it("uses Khmer headings and statuses when the locale is km", async () => {
+    renderWithIntl(<CourseTable caption="វគ្គសិក្សាទាំងអស់" courses={[DRAFT]} />, { locale: "km" });
+    expect(await screen.findByRole("columnheader", { name: "ស្ថានភាព" })).toBeInTheDocument();
+    expect(screen.getByText("សេចក្តីព្រាង")).toBeInTheDocument();
   });
 });

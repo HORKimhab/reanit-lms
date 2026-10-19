@@ -1,33 +1,33 @@
 import { ChevronLeft } from "lucide-react";
-import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { use } from "react";
+import { getTranslations } from "next-intl/server";
 
 import { CourseBuilder } from "@/components/builder/course-builder";
+import { CourseSettingsForm } from "@/components/builder/course-settings-form";
+import { DeleteCourseButton } from "@/components/builder/delete-course-button";
 import { Link } from "@/i18n/navigation";
-import { getMockCourse } from "@/mocks/courses";
-import { getMockOutline } from "@/mocks/outline";
-import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
+import { getStaffCourse } from "@/server/catalog/courses";
 
-import { saveCourseOutline } from "./actions";
+import { deleteCourse, saveOutline, updateCourse } from "../actions";
 
 /**
- * Course builder page for one of the school's courses.
+ * Course editor for one of the school's courses: details, curriculum builder and delete.
  *
  * @param props - Page props.
  * @param props.params - Route params with the course slug.
- * @returns A link back to the course list, the course title and the builder.
+ * @returns A link back to the course list, the details form, the builder and the delete button.
  * @throws {Error} Next's not-found signal when the school has no course with that slug.
  */
-export default function CourseBuilderPage({ params }: PageProps<"/[locale]/dashboard/courses/[course]">) {
-  const { course: slug } = use(params);
-  const t = useTranslations("Dashboard");
-  const course = getMockCourse(MOCK_SCHOOL_SLUG, slug);
-  const outline = getMockOutline(MOCK_SCHOOL_SLUG, slug);
-  if (!course || !outline) notFound();
+export default async function CourseBuilderPage({ params }: PageProps<"/[locale]/dashboard/courses/[course]">) {
+  const { course: slug } = await params;
+  const [t, form, course] = await Promise.all([
+    getTranslations("Dashboard"),
+    getTranslations("CourseForm"),
+    getStaffCourse(decodeURIComponent(slug)),
+  ]);
+  const { sections, ...details } = course;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <Link
         href="/dashboard/courses"
         className="flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
@@ -36,7 +36,15 @@ export default function CourseBuilderPage({ params }: PageProps<"/[locale]/dashb
         {t("allCourses")}
       </Link>
       <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
-      <CourseBuilder initial={outline} save={saveCourseOutline.bind(null, slug)} />
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">{form("details")}</h2>
+        <CourseSettingsForm course={details} action={updateCourse.bind(null, course.id)} />
+      </section>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">{form("curriculum")}</h2>
+        <CourseBuilder initial={{ sections }} save={saveOutline.bind(null, course.id)} />
+      </section>
+      <DeleteCourseButton action={deleteCourse.bind(null, course.id)} />
     </div>
   );
 }

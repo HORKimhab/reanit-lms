@@ -53,10 +53,15 @@
     "viewAll": "View all courses",
     "allCourses": "All courses",
     "course": "Course",
-    "price": "Price",
-    "lessons": "Lessons",
     "emptyTitle": "No courses yet",
-    "emptyText": "Courses you create will show up here."
+    "emptyText": "Courses you create will show up here.",
+    "status": "Status",
+    "courseStatus": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "price": "Price",
+    "lessons": "Lessons"
   },
   "Builder": {
     "status": {
@@ -218,5 +223,27 @@
       "subdomain": "Use 3 to 63 lowercase letters, numbers or inner hyphens. Some names, like www, are reserved.",
       "subdomainTaken": "Another school already uses this subdomain."
     }
+  },
+  "CourseForm": {
+    "newCourse": "New course",
+    "title": "Title",
+    "titleError": "Enter a title of up to {max} characters.",
+    "create": "Create course",
+    "creating": "Creating…",
+    "details": "Course details",
+    "description": "Description",
+    "descriptionHint": "Shown on the course's sales page.",
+    "descriptionError": "Use up to {max} characters.",
+    "status": "Status",
+    "statusHint": "Students only see published courses.",
+    "save": "Save details",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "delete": "Delete course",
+    "confirmDelete": "Delete for good",
+    "cancel": "Cancel",
+    "deleteWarning": "This deletes the course with all its sections and lessons. It cannot be undone.",
+    "deleting": "Deleting…",
+    "curriculum": "Curriculum"
   }
 }

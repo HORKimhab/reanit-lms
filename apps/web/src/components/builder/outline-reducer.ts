@@ -1,6 +1,10 @@
 import { arrayMove } from "@dnd-kit/sortable";
+import type { Outline } from "@reanit/core/catalog";
 
-import type { Outline, OutlineLesson, OutlineSection } from "@/mocks/outline";
+/** A section and its lessons, in order, as the builder edits it. */
+export type OutlineSection = Outline["sections"][number];
+/** A lesson as the builder edits it. */
+type OutlineLesson = OutlineSection["lessons"][number];
 
 /** An edit the course builder makes to an outline. New items carry an id made by the caller. */
 export type OutlineAction =
@@ -76,7 +80,7 @@ export function outlineReducer(outline: Outline, action: OutlineAction): Outline
     case "addLesson":
       return updateLessons(outline, action.sectionId, (lessons) => [
         ...lessons,
-        { id: action.id, title: action.title, type: NEW_LESSON_TYPE, durationSec: 0 },
+        { id: action.id, title: action.title, type: NEW_LESSON_TYPE, durationSeconds: 0 },
       ]);
     case "renameLesson":
       return updateLessons(outline, action.sectionId, (lessons) =>

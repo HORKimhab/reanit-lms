@@ -1,21 +1,27 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
+import { NewCourseForm } from "@/components/builder/new-course-form";
 import { CourseTable } from "@/components/dashboard/course-table";
-import { getMockCourseSales } from "@/mocks/sales";
-import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
+import { listStaffCourses } from "@/server/catalog/courses";
+
+import { createCourse } from "./actions";
 
 /**
- * Dashboard course list: every course in the school with its price and sales.
+ * Dashboard course list: a form to start a course, then every course in the school.
  *
- * @returns The page heading and the course table.
+ * @returns The page heading, the new-course form and the course table.
  */
-export default function DashboardCourses() {
-  const t = useTranslations("Dashboard");
-  const nav = useTranslations("DashboardNav");
+export default async function DashboardCourses() {
+  const [t, nav, courses] = await Promise.all([
+    getTranslations("Dashboard"),
+    getTranslations("DashboardNav"),
+    listStaffCourses(),
+  ]);
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">{nav("courses")}</h1>
-      <CourseTable caption={t("allCourses")} rows={getMockCourseSales(MOCK_SCHOOL_SLUG)} />
+      <NewCourseForm action={createCourse} />
+      <CourseTable caption={t("allCourses")} courses={courses} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Outline } from "@/mocks/outline";
+import type { Outline } from "@reanit/core/catalog";
 
 import { outlineReducer } from "./outline-reducer";
 
@@ -10,9 +10,9 @@ const OUTLINE: Outline = {
       id: "a",
       title: "Intro",
       lessons: [
-        { id: "a1", title: "Welcome", type: "video", durationSec: 60 },
-        { id: "a2", title: "Setup", type: "text", durationSec: 0 },
-        { id: "a3", title: "Workbook", type: "pdf", durationSec: 0 },
+        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60 },
+        { id: "a2", title: "Setup", type: "text", durationSeconds: 0 },
+        { id: "a3", title: "Workbook", type: "pdf", durationSeconds: 0 },
       ],
     },
     { id: "b", title: "Basics", lessons: [] },
@@ -77,7 +77,7 @@ describe("outlineReducer", () => {
 
   it("adds a text lesson with no running time at the end of the section", () => {
     const next = outlineReducer(OUTLINE, { type: "addLesson", sectionId: "b", id: "b1", title: "New lesson" });
-    expect(next.sections[1]?.lessons).toEqual([{ id: "b1", title: "New lesson", type: "text", durationSec: 0 }]);
+    expect(next.sections[1]?.lessons).toEqual([{ id: "b1", title: "New lesson", type: "text", durationSeconds: 0 }]);
   });
 
   it("renames only the given lesson", () => {

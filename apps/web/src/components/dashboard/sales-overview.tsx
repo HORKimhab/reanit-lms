@@ -4,7 +4,7 @@ import { useMoney } from "@/i18n/format";
 import { Link } from "@/i18n/navigation";
 import { summarizeSales, type CourseSales } from "@/mocks/sales";
 
-import { CourseTable } from "./course-table";
+import { CourseSalesTable } from "./course-sales-table";
 import { StatTile } from "./stat-tile";
 
 const TOP_COURSES = 3;
@@ -44,7 +44,7 @@ export function SalesOverview({ sales }: { sales: CourseSales[] }) {
             {t("viewAll")}
           </Link>
         </div>
-        <CourseTable caption={t("topCourses")} rows={sales.slice(0, TOP_COURSES)} />
+        <CourseSalesTable caption={t("topCourses")} rows={sales.slice(0, TOP_COURSES)} />
       </section>
     </div>
   );

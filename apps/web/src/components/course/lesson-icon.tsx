@@ -1,6 +1,6 @@
 import { AlignLeft, FileText, PlayCircle } from "lucide-react";
 
-import type { LessonType } from "@/mocks/courses";
+import type { LessonType } from "@reanit/core/catalog";
 
 const ICONS: Record<LessonType, typeof PlayCircle> = { video: PlayCircle, text: AlignLeft, pdf: FileText };
 

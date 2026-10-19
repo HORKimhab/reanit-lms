@@ -3,8 +3,10 @@ export type { CatalogStore, Course, CourseStatus, CourseWithOutline, LessonType 
 export {
   COURSE_STATUSES,
   createCourseSchema,
+  DESCRIPTION_MAX_LENGTH,
   LESSON_TYPES,
   outlineSchema,
+  TITLE_MAX_LENGTH,
   updateCourseSchema,
   type CreateCourseInput,
   type Outline,

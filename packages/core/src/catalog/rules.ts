@@ -3,8 +3,9 @@ import { z } from "zod";
 import { slugify } from "../shared/slug";
 
 /** Longest course, section or lesson title. */
-const TITLE_MAX_LENGTH = 200;
-const DESCRIPTION_MAX_LENGTH = 5000;
+export const TITLE_MAX_LENGTH = 200;
+/** Longest course description. */
+export const DESCRIPTION_MAX_LENGTH = 5000;
 const SLUG_MAX_LENGTH = 80;
 /** Slug for a title with no Latin letters or digits. */
 const FALLBACK_SLUG = "course";

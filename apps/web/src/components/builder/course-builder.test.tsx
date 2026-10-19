@@ -2,7 +2,7 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Outline } from "@/mocks/outline";
+import type { Outline } from "@reanit/core/catalog";
 import { renderWithIntl } from "@/test/render";
 
 import { CourseBuilder } from "./course-builder";
@@ -16,8 +16,8 @@ const OUTLINE: Outline = {
       id: "a",
       title: "Intro",
       lessons: [
-        { id: "a1", title: "Welcome", type: "video", durationSec: 60 },
-        { id: "a2", title: "Setup", type: "text", durationSec: 0 },
+        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60 },
+        { id: "a2", title: "Setup", type: "text", durationSeconds: 0 },
       ],
     },
     { id: "b", title: "Basics", lessons: [] },

@@ -1,54 +1,70 @@
-import { useFormatter, useTranslations } from "next-intl";
+import type { Course } from "@reanit/core/catalog";
+import { cn } from "@reanit/ui/lib/utils";
+import { useTranslations } from "next-intl";
 
-import { Price } from "@/components/course/price";
-import { useMoney } from "@/i18n/format";
 import { Link } from "@/i18n/navigation";
-import { courseStats } from "@/mocks/courses";
-import type { CourseSales } from "@/mocks/sales";
 
 import { Cell, DataTable, EmptyState, RowHeader } from "./data-table";
 
 /**
- * The creator's courses with price, lesson count, students and revenue.
+ * The creator's courses with their publishing status.
  *
  * @param props - Component props.
  * @param props.caption - Accessible name of the table.
- * @param props.rows - Courses with their sales, in display order.
+ * @param props.courses - The school's courses, in display order.
  * @returns A table with each title linking to its builder, or an empty state when there are no courses.
  */
-export function CourseTable({ caption, rows }: { caption: string; rows: CourseSales[] }) {
+export function CourseTable({ caption, courses }: { caption: string; courses: Course[] }) {
   const t = useTranslations("Dashboard");
-  const format = useFormatter();
-  const money = useMoney();
 
-  if (rows.length === 0) return <EmptyState title={t("emptyTitle")} text={t("emptyText")} />;
+  if (courses.length === 0) return <NoCoursesYet />;
 
   return (
-    <DataTable
-      caption={caption}
-      columns={[
-        { label: t("course") },
-        { label: t("price") },
-        { label: t("lessons"), isNumeric: true },
-        { label: t("students"), isNumeric: true },
-        { label: t("revenue"), isNumeric: true },
-      ]}
-    >
-      {rows.map(({ course, students, revenueMinor }) => (
-        <tr key={course.slug}>
-          <RowHeader>
-            <Link href={`/dashboard/courses/${course.slug}`} className="hover:text-primary hover:underline">
-              {course.title}
-            </Link>
-          </RowHeader>
+    <DataTable caption={caption} columns={[{ label: t("course") }, { label: t("status") }]}>
+      {courses.map((course) => (
+        <tr key={course.id}>
+          <CourseTitleCell course={course} />
           <Cell>
-            <Price course={course} />
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-xs font-medium",
+                course.status === "published" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
+              )}
+            >
+              {t(`courseStatus.${course.status}`)}
+            </span>
           </Cell>
-          <Cell isNumeric>{format.number(courseStats(course).lessons)}</Cell>
-          <Cell isNumeric>{format.number(students)}</Cell>
-          <Cell isNumeric>{money(revenueMinor, course.currency)}</Cell>
         </tr>
       ))}
     </DataTable>
+  );
+}
+
+/**
+ * Empty state shown instead of a course table when the school has no courses.
+ *
+ * @returns The empty state.
+ */
+export function NoCoursesYet() {
+  const t = useTranslations("Dashboard");
+  return <EmptyState title={t("emptyTitle")} text={t("emptyText")} />;
+}
+
+/**
+ * A course table's row header: the title, linking to the course's builder.
+ *
+ * @param props - Component props.
+ * @param props.course - The course.
+ * @param props.course.slug - Its URL slug.
+ * @param props.course.title - Its title.
+ * @returns The row header cell.
+ */
+export function CourseTitleCell({ course }: { course: { slug: string; title: string } }) {
+  return (
+    <RowHeader>
+      <Link href={`/dashboard/courses/${course.slug}`} className="hover:text-primary hover:underline">
+        {course.title}
+      </Link>
+    </RowHeader>
   );
 }

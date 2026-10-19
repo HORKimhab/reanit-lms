@@ -1,5 +1,6 @@
 "use client";
 
+import { TITLE_MAX_LENGTH, type Outline } from "@reanit/core/catalog";
 import { Button } from "@reanit/ui/components/button";
 import { cn } from "@reanit/ui/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
@@ -7,9 +8,8 @@ import { useTranslations } from "next-intl";
 import { useReducer, type Dispatch } from "react";
 
 import { LessonIcon } from "@/components/course/lesson-icon";
-import { TITLE_MAX_LENGTH, type Outline, type OutlineSection } from "@/mocks/outline";
 
-import { outlineReducer, type OutlineAction } from "./outline-reducer";
+import { outlineReducer, type OutlineAction, type OutlineSection } from "./outline-reducer";
 import { SortableItem, SortableList } from "./sortable-list";
 import { useAutosave, type SaveStatus } from "./use-autosave";
 
