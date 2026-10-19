@@ -8,6 +8,7 @@ import { RequestContextModule } from "./context/request-context";
 import { HealthModule } from "./health/health.module";
 import { HttpModule } from "./http/http.module";
 import { MailModule } from "./mail/mail.module";
+import { MediaModule } from "./media/media.module";
 import { RedisModule } from "./redis/redis.module";
 import { SchoolsModule } from "./schools/schools.module";
 
@@ -25,6 +26,7 @@ import { SchoolsModule } from "./schools/schools.module";
     AuthModule,
     SchoolsModule,
     CatalogModule,
+    MediaModule,
   ],
 })
 export class AppModule {}

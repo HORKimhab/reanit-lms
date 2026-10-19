@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import type { Mailer, MailMessage } from "@reanit/core/auth";
+import type { ObjectStorage } from "@reanit/core/media";
 // Types `inject("databaseUrl")` for the e2e files.
 import type {} from "@reanit/db/testing/postgres";
 import request from "supertest";
@@ -13,23 +14,69 @@ import { afterAll, beforeAll, inject } from "vitest";
 import { AppModule } from "../app.module";
 import { ENV } from "@reanit/nest";
 import { MAILER } from "../mail/mail.module";
+import { OBJECT_STORAGE } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
 
 /** A supertest agent: keeps the cookies the API sets, like a browser. */
 export type Agent = ReturnType<typeof request.agent>;
 
-/** The app under test and the email it has sent. */
-export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[] };
+/** In-memory object storage: an upload "arrives" when a test adds its key to `uploaded`. */
+type MemoryStorage = ObjectStorage & { uploaded: Set<string> };
+
+/** The app under test, the email it has sent and its object storage. */
+export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[]; storage: MemoryStorage };
+
+/**
+ * Creates storage that signs nothing: URLs name the key, and uploads are simulated.
+ *
+ * @returns The storage.
+ */
+function createMemoryStorage(): MemoryStorage {
+  const uploaded = new Set<string>();
+  return {
+    uploaded,
+    /**
+     * Fakes a presigned upload.
+     *
+     * @param object What to upload.
+     * @param object.key Its key.
+     * @param object.contentType Its content type.
+     * @returns A URL naming the key, with the header to send.
+     */
+    async presignUpload({ key, contentType }) {
+      return { url: `https://storage.test/${key}`, headers: { "content-type": contentType } };
+    },
+    /**
+     * Fakes a signed download.
+     *
+     * @param key The file's key.
+     * @returns A URL naming the key.
+     */
+    async presignDownload(key) {
+      return `https://storage.test/${key}?signed`;
+    },
+    /**
+     * Tells whether a test simulated the upload.
+     *
+     * @param key The file's key.
+     * @returns True when the key is in `uploaded`.
+     */
+    async exists(key) {
+      return uploaded.has(key);
+    },
+  };
+}
 
 /**
  * Boots the app on a real, migrated database.
  *
  * @param databaseUrl Owner connection from `inject("databaseUrl")`.
- * @returns The app and an inbox of every email it sends.
+ * @returns The app, an inbox of every email it sends, and its in-memory object storage.
  */
 async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
   const mail: MailMessage[] = [];
+  const storage = createMemoryStorage();
   const mailer: Mailer = {
     /**
      * Records a message instead of sending it.
@@ -41,13 +88,15 @@ async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
     },
   };
   const builder = Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(OBJECT_STORAGE)
+    .useValue(storage)
     .overrideProvider(ENV)
     .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl })
     .overrideProvider(REDIS)
     .useValue(createFakeClients().redis)
     .overrideProvider(MAILER)
     .useValue(mailer);
-  return { app: await bootTestApp(builder), mail };
+  return { app: await bootTestApp(builder), mail, storage };
 }
 
 /**

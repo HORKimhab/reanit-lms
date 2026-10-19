@@ -3,6 +3,14 @@ import { STATUS_CODES } from "node:http";
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
+import {
+  InvalidMediaKeyError,
+  LessonMediaMissingError,
+  LessonNotFoundError,
+  MediaNotUploadedError,
+  MediaTooLargeError,
+  UnsupportedMediaError,
+} from "@reanit/core/media";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
@@ -41,6 +49,12 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: SubdomainTakenError, status: HttpStatus.CONFLICT, code: "subdomain-taken", detail: "Another school already uses this subdomain." },
   { error: NotSchoolStaffError, status: HttpStatus.FORBIDDEN, code: "not-school-staff", detail: "You do not run a school." },
   { error: SchoolNotFoundError, status: HttpStatus.NOT_FOUND, code: "school-not-found", detail: "No school uses this subdomain." },
+  { error: LessonNotFoundError, status: HttpStatus.NOT_FOUND, code: "lesson-not-found", detail: "The lesson does not exist." },
+  { error: LessonMediaMissingError, status: HttpStatus.NOT_FOUND, code: "lesson-media-missing", detail: "The lesson has no file yet." },
+  { error: UnsupportedMediaError, status: HttpStatus.UNSUPPORTED_MEDIA_TYPE, code: "unsupported-media", detail: "This lesson does not take this kind of file." },
+  { error: MediaTooLargeError, status: HttpStatus.PAYLOAD_TOO_LARGE, code: "media-too-large", detail: "The file is too large." },
+  { error: InvalidMediaKeyError, status: HttpStatus.BAD_REQUEST, code: "invalid-media-key", detail: "This file does not belong to the lesson." },
+  { error: MediaNotUploadedError, status: HttpStatus.CONFLICT, code: "media-not-uploaded", detail: "The upload has not finished." },
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
 ];
 

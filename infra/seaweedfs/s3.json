@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "reanit",
+      "credentials": [{ "accessKey": "reanit", "secretKey": "reanit-secret" }],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

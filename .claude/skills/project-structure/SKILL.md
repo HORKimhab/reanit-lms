@@ -40,6 +40,6 @@ Imports flow `apps → core → db`. Packages never import from apps. Use a modu
 
 Deps: `pnpm --filter <pkg> add <dep>`. Internal deps use `workspace:*`. Shared versions go in `catalog:`.
 
-Undecided (README §8): video, payment provider, ORM, hosting. Keep these behind an interface in `core`, and ask the user before choosing one.
+Undecided (README §8): payment provider, ORM, hosting (video is decided for now: S3-compatible storage behind `ObjectStorage`). Keep these behind an interface in `core`, and ask the user before choosing one.
 
 Adding a feature or migration? Read `checklist.md`. More detail: README §2 architecture, §4 data model, §9 pnpm.

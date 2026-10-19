@@ -4,6 +4,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModuleBuilder } from "@nestjs/testing";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
+import type { MediaService } from "@reanit/core/media";
 import type { SchoolService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
@@ -19,6 +20,7 @@ import type { Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
 import { DB_CLIENT } from "@reanit/nest";
 import { loggerOptions } from "@reanit/nest";
+import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 
@@ -29,6 +31,12 @@ export const TEST_ENV: Env = {
   APP_URL: "http://localhost:3000",
   SMTP_URL: "smtp://localhost:1025",
   MAIL_FROM: "Reanit <no-reply@reanit.localhost>",
+  S3_ENDPOINT: "http://storage.test",
+  S3_REGION: "auto",
+  S3_BUCKET: "reanit-media",
+  S3_ACCESS_KEY_ID: "test-key",
+  S3_SECRET_ACCESS_KEY: "test-secret",
+  S3_FORCE_PATH_STYLE: true,
   PORT: 4000,
   HOST: "127.0.0.1",
   LOG_LEVEL: "silent",
@@ -45,6 +53,9 @@ export type FakeClients = {
   /** Stands in for every school's catalog; `catalogFor` records which school was asked for. */
   catalog: Record<keyof CatalogService, Mock>;
   catalogFor: Mock<(schoolId: string) => CatalogService>;
+  /** Stands in for every school's media service; `mediaFor` records which school was asked for. */
+  media: Record<keyof MediaService, Mock>;
+  mediaFor: Mock<(schoolId: string) => MediaService>;
 };
 
 /** Extras a test can boot the app with. */
@@ -70,6 +81,7 @@ const CATALOG_METHODS = [
   "deleteCourse",
   "saveOutline",
 ] as const satisfies readonly (keyof CatalogService)[];
+const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as const satisfies readonly (keyof MediaService)[];
 
 /**
  * Creates a fake of a core service with one spy per use case.
@@ -84,12 +96,13 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school and catalog services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, catalog and media services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
   auth.getSessionUser.mockResolvedValue(null);
   const catalog = fakeService(CATALOG_METHODS);
+  const media = fakeService(MEDIA_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
@@ -97,6 +110,8 @@ export function createFakeClients(): FakeClients {
     schools: fakeService(SCHOOL_METHODS),
     catalog,
     catalogFor: vi.fn(() => catalog as unknown as CatalogService),
+    media,
+    mediaFor: vi.fn(() => media as unknown as MediaService),
   };
 }
 
@@ -123,7 +138,9 @@ export async function createTestApp(
     .overrideProvider(SCHOOL_SERVICE)
     .useValue(clients.schools)
     .overrideProvider(CATALOG_FOR_SCHOOL)
-    .useValue(clients.catalogFor);
+    .useValue(clients.catalogFor)
+    .overrideProvider(MEDIA_FOR_SCHOOL)
+    .useValue(clients.mediaFor);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });

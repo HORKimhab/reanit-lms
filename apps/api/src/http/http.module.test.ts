@@ -2,6 +2,14 @@ import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError, signUpSchema } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
+import {
+  InvalidMediaKeyError,
+  LessonMediaMissingError,
+  LessonNotFoundError,
+  MediaNotUploadedError,
+  MediaTooLargeError,
+  UnsupportedMediaError,
+} from "@reanit/core/media";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -27,6 +35,12 @@ const DOMAIN_ERRORS: Record<string, new () => Error> = {
   NotSchoolStaffError,
   SchoolNotFoundError,
   CourseNotFoundError,
+  LessonNotFoundError,
+  LessonMediaMissingError,
+  UnsupportedMediaError,
+  MediaTooLargeError,
+  InvalidMediaKeyError,
+  MediaNotUploadedError,
 };
 
 /** An internal error whose message must never reach the caller. */
@@ -139,6 +153,12 @@ describe("errors", () => {
     ["NotSchoolStaffError", 403, "not-school-staff"],
     ["SchoolNotFoundError", 404, "school-not-found"],
     ["CourseNotFoundError", 404, "course-not-found"],
+    ["LessonNotFoundError", 404, "lesson-not-found"],
+    ["LessonMediaMissingError", 404, "lesson-media-missing"],
+    ["UnsupportedMediaError", 415, "unsupported-media"],
+    ["MediaTooLargeError", 413, "media-too-large"],
+    ["InvalidMediaKeyError", 400, "invalid-media-key"],
+    ["MediaNotUploadedError", 409, "media-not-uploaded"],
   ])("answers %s with %i and its problem type", async (name, status, code) => {
     const response = await app.inject({ method: "GET", url: `/edge-probe/throw/${name}` });
 

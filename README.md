@@ -98,7 +98,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 | Database | PostgreSQL + Prisma | Relational data, RLS, mature tooling |
 | Cache / queue | Redis + BullMQ | Background jobs, rate limiting, caching |
 | Auth | Better Auth or Auth.js (email/password, Google, magic link) | Supports tenant-aware student accounts |
-| Video | Mux or Cloudflare Stream | HLS, signed playback, viewing analytics |
+| Video | S3-compatible storage now (R2), Mux or Cloudflare Stream later | Signed playback today; HLS and viewing analytics come with a video provider |
 | Files | S3 / Cloudflare R2 with presigned uploads | Cheap storage; uploads go straight from the browser |
 | Payments | Stripe, Stripe Connect, Stripe Tax | Payouts, subscriptions, VAT |
 | Email | Resend or AWS SES, with React Email templates | Transactional and marketing email |
@@ -212,7 +212,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 | # | Question | Options | Notes |
 |---|---|---|---|
 | 1 | ✅ Backend framework | **Decided:** NestJS (`apps/api`) | Chosen to give mobile and third-party clients one API, and a structure (modules, DI, guards) that scales with the team. `apps/web` becomes an API client. Migration: TODO.md NEST-01 to NEST-10 |
-| 2 | 🟡 Video provider | Mux · Cloudflare Stream | Mux has the better developer experience; Cloudflare is cheaper at scale |
+| 2 | ✅ Video provider | **Decided for now:** S3-compatible object storage (R2 in production, SeaweedFS locally) | Presigned uploads and signed MP4/PDF playback behind the `ObjectStorage` port in `@reanit/core/media`; no transcoding yet. Mux or Cloudflare Stream can replace it later behind the same port |
 | 3 | 🟡 Payment providers | Stripe Connect · ABA PayWay / KHQR · PayPal | Stripe payouts may not be available in Cambodia, so a local gateway may be needed |
 | 4 | 🟡 Hosting | Vercel + Fly/Railway · AWS (ECS + RDS) | Start on managed hosting and move to AWS as cost and scale require |
 | 5 | 🟡 ORM | Prisma · Drizzle | Prisma is the default; Drizzle gives finer control over RLS and SQL |
@@ -225,7 +225,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 ```bash
 corepack enable          # one-time: provides the pinned pnpm version
 pnpm install
-docker compose -f infra/docker-compose.yml up -d --wait   # Postgres, Redis, Mailpit
+docker compose -f infra/docker-compose.yml up -d --wait   # Postgres, Redis, Mailpit, S3 storage
 cp packages/db/.env.example packages/db/.env
 cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
@@ -235,6 +235,7 @@ curl localhost:4000/health
 ```
 
 - Mailpit's inbox (magic-link emails) is at http://localhost:8025.
+- Lesson videos and PDFs go to the local S3 store (SeaweedFS) on http://localhost:8333; compose creates the `reanit-media` bucket.
 - The browser reaches the API through the web app: Next rewrites `/api/*` to `API_URL`, so there is one origin and one cookie.
 - To run the API as its production image instead of `pnpm dev`'s: `docker compose -f infra/docker-compose.yml --profile api up -d --build --wait` (multi-stage `apps/api/Dockerfile`, runs as `node`). Stop `pnpm dev`'s API first; both use port 4000.
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.

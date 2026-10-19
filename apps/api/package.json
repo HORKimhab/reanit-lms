@@ -13,6 +13,8 @@
     "openapi": "tsup && node dist/openapi.js ../../packages/api-client/openapi.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/s3-request-presigner": "catalog:",
     "@fastify/cookie": "catalog:",
     "@fastify/helmet": "catalog:",
     "@nestjs/common": "catalog:",

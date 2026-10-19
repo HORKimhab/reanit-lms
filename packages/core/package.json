@@ -6,7 +6,8 @@
   "exports": {
     "./auth": "./src/auth/index.ts",
     "./schools": "./src/schools/index.ts",
-    "./catalog": "./src/catalog/index.ts"
+    "./catalog": "./src/catalog/index.ts",
+    "./media": "./src/media/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

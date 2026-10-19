@@ -9,11 +9,25 @@ const REQUIRED = {
   APP_URL: "http://localhost:3000",
   SMTP_URL: "smtp://localhost:1025",
   MAIL_FROM: "Reanit <no-reply@reanit.localhost>",
+  S3_BUCKET: "reanit-media",
+  S3_ACCESS_KEY_ID: "key",
+  S3_SECRET_ACCESS_KEY: "secret",
 };
 
 describe("parseEnv", () => {
   it("applies the default port, host and log level", () => {
-    expect(parseEnv(REQUIRED)).toEqual({ ...REQUIRED, PORT: 4000, HOST: "0.0.0.0", LOG_LEVEL: "info" });
+    expect(parseEnv(REQUIRED)).toEqual({
+      ...REQUIRED,
+      PORT: 4000,
+      HOST: "0.0.0.0",
+      LOG_LEVEL: "info",
+      S3_REGION: "auto",
+      S3_FORCE_PATH_STYLE: false,
+    });
+  });
+
+  it("reads S3_FORCE_PATH_STYLE as a boolean", () => {
+    expect(parseEnv({ ...REQUIRED, S3_FORCE_PATH_STYLE: "true" }).S3_FORCE_PATH_STYLE).toBe(true);
   });
 
   it("throws a ZodError for an unknown log level", () => {
@@ -24,7 +38,7 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...REQUIRED, PORT: "8080" }).PORT).toBe(8080);
   });
 
-  it.each(["DATABASE_URL", "REDIS_URL", "APP_URL", "SMTP_URL", "MAIL_FROM"])("throws a ZodError when %s is missing", (name) => {
+  it.each(["DATABASE_URL", "REDIS_URL", "APP_URL", "SMTP_URL", "MAIL_FROM", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"])("throws a ZodError when %s is missing", (name) => {
     expect(() => parseEnv({ ...REQUIRED, [name]: undefined })).toThrow(ZodError);
   });
 
