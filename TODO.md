@@ -89,3 +89,16 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [ ] API-18 Sales analytics: revenue by day/course/currency, refunds, completion funnel
 - [ ] WEB-26 Analytics dashboard. Needs API-18.
 - [ ] API-19 GDPR: student data export and account deletion
+- [ ] API-22 Refunds: staff refund a paid order through its gateway, order → `refunded`, enrollment revoked, daily sales reversed, `OrderRefunded` event, audited
+- [ ] WEB-28 Refund button on the order detail + refunded state for the student. Needs API-22, WEB-29.
+- [ ] WRK-05 Order expiry: pending orders past their gateway's window are marked `failed` (KHQR expiry, abandoned card/PayWay sessions); gateway `failed` checks mark them too
+- [ ] API-23 Order history: student's own orders and receipts; staff list of the school's orders with filters (status, course, date, currency)
+- [ ] WEB-29 Student "Purchases" page + dashboard orders list and order detail. Needs API-23.
+- [ ] API-24 Team: invite admins/instructors by email, accept invite, change role, remove member; owner can't be removed; audited
+- [ ] WEB-30 Team settings screen + invite acceptance page. Needs API-24.
+- [ ] API-25 Subscriptions and payment plans: recurring and instalment prices, renewal via gateway, access ends on lapse ⚠ which gateways support recurring
+
+## M3 platform (backlog, refine before starting)
+- [ ] API-26 Creator plans: Free / Pro / Business with a per-sale transaction fee, plan limits enforced ⚠ pricing + billing provider
+- [ ] API-27 Payouts to creators: balance ledger from paid orders minus fees and refunds, payout schedule ⚠ payout provider (Stripe Connect / bank transfer)
+- [ ] WEB-31 Platform admin console: schools, plans, moderation, payouts. Needs API-26, API-27.
