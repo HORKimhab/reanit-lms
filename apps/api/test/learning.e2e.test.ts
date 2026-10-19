@@ -48,6 +48,11 @@ describe("learning", () => {
     );
     const stats = (await alpha.agent.get("/stats/courses").expect(200)).body.courses;
     expect(stats).toEqual([{ courseId: course.id, title: "Played Course", slug: course.slug, students: 1, completions: 1, revenue: [{ currency: "USD", amount: 4900 }] }]);
+    const report = (await alpha.agent.get("/stats/sales").expect(200)).body;
+    expect(report.totals).toEqual({ sales: 1, revenue: [{ currency: "USD", amount: 4900 }] });
+    expect(report.byCourse).toEqual([{ courseId: course.id, title: "Played Course", slug: course.slug, sales: 1, revenue: [{ currency: "USD", amount: 4900 }] }]);
+    expect(report.daily).toHaveLength(30);
+    expect(report.funnel).toEqual({ enrolled: 1, started: 1, halfway: 1, completed: 1 });
   });
 
   it("keeps a lesson closed to another school's site and its stats to other schools", async () => {

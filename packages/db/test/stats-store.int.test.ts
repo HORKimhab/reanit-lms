@@ -73,4 +73,43 @@ describe("stats store", () => {
   it("shows another school none of this school's courses or figures", async () => {
     expect(await createStatsStore(db, betaId).listCourseStats()).toEqual([]);
   });
+
+  describe("sales report queries", () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const TODAY = { from: today, to: today };
+    const YESTERDAY = { from: new Date(today.getTime() - DAY_MS), to: new Date(today.getTime() - DAY_MS) };
+
+    it("lists the range's daily sales per course and currency, and nothing outside it or for another school", async () => {
+      const store = createStatsStore(db, alphaId);
+
+      expect(await store.listDailySales(TODAY)).toEqual([
+        { day: today, course: { id: soldId, title: "Sold", slug: "sold" }, currency: "KHR", sales: 2, revenue: 3_000_000_000 },
+        { day: today, course: { id: soldId, title: "Sold", slug: "sold" }, currency: "USD", sales: 1, revenue: 4900 },
+      ]);
+      expect(await store.listDailySales(YESTERDAY)).toEqual([]);
+      expect(await createStatsStore(db, betaId).listDailySales(TODAY)).toEqual([]);
+    });
+
+    it("describes how far each enrollment of the range got", async () => {
+      const entries = await createStatsStore(db, alphaId).listFunnelEntries(TODAY);
+
+      expect(entries).toHaveLength(3);
+      expect(entries.filter((entry) => entry.isCompleted)).toEqual([{ isStarted: false, completedLessons: 0, totalLessons: 0, isCompleted: true }]);
+      expect(await createStatsStore(db, alphaId).listFunnelEntries(YESTERDAY)).toEqual([]);
+    });
+
+    it("counts refunded orders of the range per currency", async () => {
+      const store = createStatsStore(db, alphaId);
+      expect(await store.listRefunds(TODAY)).toEqual([]);
+      const order = await db.order.findFirstOrThrow({ where: { schoolId: alphaId, currency: "USD", status: "paid" } });
+
+      await db.order.update({ where: { id: order.id }, data: { status: "refunded" } });
+
+      expect(await store.listRefunds(TODAY)).toEqual([{ currency: "USD", amount: 4900, orders: 1 }]);
+      expect(await store.listRefunds(YESTERDAY)).toEqual([]);
+      expect(await createStatsStore(db, betaId).listRefunds(TODAY)).toEqual([]);
+    });
+  });
 });

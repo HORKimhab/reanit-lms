@@ -159,7 +159,7 @@ const LEARNING_METHODS = [
   "deleteComment",
 ] as const satisfies readonly (keyof LearningService)[];
 const MODERATION_METHODS = ["listInbox", "listLessonComments", "reply", "setHidden"] as const satisfies readonly (keyof CommentModeration)[];
-const ANALYTICS_METHODS = ["getCourseStats"] as const satisfies readonly (keyof AnalyticsService)[];
+const ANALYTICS_METHODS = ["getCourseStats", "getSalesReport"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
 
 /**

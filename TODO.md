@@ -86,7 +86,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-17 Lesson comments + instructor replies, moderation
 - [x] WEB-25 Comments under lessons + dashboard inbox. Needs API-17.
 - [ ] WRK-04 Email notifications: new sale, new comment, course completed, preferences + unsubscribe
-- [ ] API-18 Sales analytics: revenue by day/course/currency, refunds, completion funnel
+- [x] API-18 Sales analytics: revenue by day/course/currency, refunds, completion funnel
 - [ ] WEB-26 Analytics dashboard. Needs API-18.
 - [ ] API-19 GDPR: student data export and account deletion
 - [ ] API-22 Refunds: staff refund a paid order through its gateway, order → `refunded`, enrollment revoked, daily sales reversed, `OrderRefunded` event, audited

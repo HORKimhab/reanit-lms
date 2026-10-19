@@ -2,6 +2,7 @@ import { STATUS_CODES } from "node:http";
 
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { ThrottlerException } from "@nestjs/throttler";
+import { InvalidStatsRangeError } from "@reanit/core/analytics";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import {
@@ -83,6 +84,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: NotCommentAuthorError, status: HttpStatus.FORBIDDEN, code: "not-comment-author", detail: "Only its author can delete this comment." },
   { error: LessonLockedError, status: HttpStatus.FORBIDDEN, code: "lesson-locked", detail: "This lesson has not opened yet." },
   { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },
+  { error: InvalidStatsRangeError, status: HttpStatus.BAD_REQUEST, code: "invalid-stats-range", detail: "Pick a range of up to a year that ends after it starts." },
   { error: ThrottlerException, status: HttpStatus.TOO_MANY_REQUESTS, code: "rate-limited", detail: "Too many attempts. Wait a few minutes, then try again." },
 ];
 

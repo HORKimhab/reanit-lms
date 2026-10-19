@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CourseStats } from "./ports";
-import { summarizeCourseStats } from "./summary";
+import { sumByCurrency, summarizeCourseStats } from "./summary";
 
 const BRAND: CourseStats = {
   courseId: "8d7c6b5a-4f3e-4d2c-9b1a-0f9e8d7c6b5a",
@@ -44,5 +44,20 @@ describe("summarizeCourseStats", () => {
 
   it("reports zeros for a school without courses", () => {
     expect(summarizeCourseStats([])).toEqual({ students: 0, completionRate: 0, revenue: [] });
+  });
+});
+
+describe("sumByCurrency", () => {
+  it("adds amounts up per currency, sorted by code", () => {
+    expect(
+      sumByCurrency([
+        { currency: "USD", amount: 100 },
+        { currency: "KHR", amount: 400 },
+        { currency: "USD", amount: 50 },
+      ]),
+    ).toEqual([
+      { currency: "KHR", amount: 400 },
+      { currency: "USD", amount: 150 },
+    ]);
   });
 });

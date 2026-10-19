@@ -1,4 +1,5 @@
 import type { Currency } from "../commerce";
+import type { DailySale, DayRange, FunnelEntry } from "./sales";
 
 /** Money in one currency; amounts in different currencies are never added together. */
 export interface Revenue {
@@ -27,4 +28,10 @@ export interface CourseStats {
 export interface StatsStore {
   /** Every course of the school, with zeros for those without sales or completions. */
   listCourseStats(): Promise<CourseStats[]>;
+  /** Daily sales per course and currency on the range's days. */
+  listDailySales(range: DayRange): Promise<DailySale[]>;
+  /** Orders paid on the range's days and since refunded, per currency, sorted by currency code. */
+  listRefunds(range: DayRange): Promise<(Revenue & { orders: number })[]>;
+  /** One entry per enrollment made on the range's days. */
+  listFunnelEntries(range: DayRange): Promise<FunnelEntry[]>;
 }
