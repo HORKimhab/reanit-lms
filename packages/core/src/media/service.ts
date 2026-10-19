@@ -1,7 +1,7 @@
 import type { Clock } from "../auth";
 import { LessonMediaMissingError, LessonNotFoundError, MediaTooLargeError, UnsupportedMediaError } from "./errors";
 import type { LessonMedia, LessonMediaStore, ObjectStorage } from "./ports";
-import { lessonMediaPrefix, MEDIA_RULES, mediaExtension, type UploadRequest } from "./rules";
+import { holdsMedia, lessonMediaPrefix, MEDIA_RULES, mediaExtension, type UploadRequest } from "./rules";
 import { createUploads } from "./uploads";
 
 /** How long a playback URL works; long enough to watch a long lesson without the player refreshing it. */
@@ -63,7 +63,7 @@ export function createMediaService({ schoolId, lessons, storage, clock, newId }:
     async requestUpload(lessonId: string, { contentType, sizeBytes }: UploadRequest) {
       const lesson = await requireLesson(lessonId);
       const extension = mediaExtension(lesson.type, contentType);
-      if (lesson.type === "text" || !extension) throw new UnsupportedMediaError();
+      if (!holdsMedia(lesson.type) || !extension) throw new UnsupportedMediaError();
       if (sizeBytes > MEDIA_RULES[lesson.type].maxBytes) throw new MediaTooLargeError();
       return uploads.presignUpload({ key: `${lessonMediaPrefix(schoolId, lessonId)}${newId()}.${extension}`, contentType, sizeBytes });
     },

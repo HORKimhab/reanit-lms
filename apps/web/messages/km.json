@@ -111,7 +111,8 @@
     "lessonTypes": {
       "text": "អត្ថបទ",
       "video": "វីដេអូ",
-      "pdf": "PDF"
+      "pdf": "PDF",
+      "quiz": "កម្រងសំណួរ"
     }
   },
   "Students": {

@@ -115,15 +115,19 @@ describe("checkout", () => {
 });
 
 describe("coupons", () => {
-  it("discounts checkout, counts paid uses towards the limit, and stays inside its school", async () => {
-    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
-    const coupon = { code: "launch", kind: "percent", percentOff: 20, maxRedemptions: 1 };
-    const { id: couponId } = (await alpha.agent.post("/coupons").send({ coupon }).expect(201)).body.coupon;
+  const coupon = { code: "launch", kind: "percent", percentOff: 20, maxRedemptions: 1 };
+  let couponId: string;
+
+  it("creates a coupon once and prices a course with it", async () => {
+    couponId = (await alpha.agent.post("/coupons").send({ coupon }).expect(201)).body.coupon.id;
     await alpha.agent.post("/coupons").send({ coupon }).expect(409);
 
-    const offer = await request(e2e().app.getHttpServer()).get(`${base}/courses/${course.slug}/offer?coupon=LAUNCH`).expect(200);
+    const offer = await request(e2e().app.getHttpServer()).get(`/schools/by-subdomain/${alpha.school.subdomain}/courses/${course.slug}/offer?coupon=LAUNCH`).expect(200);
     expect(offer.body.discount).toEqual({ code: "LAUNCH", amountOff: 980, total: 3920 });
+  });
 
+  it("charges the discounted price and counts only paid uses towards the limit", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-coupon"));
     const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe", couponCode: "launch" }).expect(201)).body;
     expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.amount).toBe(3920);
@@ -135,10 +139,14 @@ describe("coupons", () => {
     const { agent: late } = await signUp(e2e().app, uniqueName("buyer-late"));
     const refused = await late.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe", couponCode: "LAUNCH" }).expect(400);
     expect(refused.body.type).toBe("urn:reanit:problem:invalid-coupon");
+  });
 
+  it("keeps a coupon inside its school and audits its creation and deletion", async () => {
     const beta = await openSchool(e2e().app, uniqueName("shop-coupon"));
+
     await beta.agent.delete(`/coupons/${couponId}`).expect(404);
     await alpha.agent.delete(`/coupons/${couponId}`).expect(204);
+
     expect((await alpha.agent.get("/audit-events").expect(200)).body.entries.map(({ action }: { action: string }) => action)).toEqual(
       expect.arrayContaining(["coupon.create", "coupon.delete"]),
     );

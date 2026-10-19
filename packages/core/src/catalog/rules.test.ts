@@ -58,7 +58,7 @@ describe("outlineSchema", () => {
 
   it.each([
     ["a non-UUID id", { id: "s1-l1" }],
-    ["an unknown lesson type", { type: "quiz" }],
+    ["an unknown lesson type", { type: "audio" }],
     ["a negative duration", { durationSeconds: -1 }],
     ["a fractional duration", { durationSeconds: 1.5 }],
     ["a title over 200 characters", { title: "x".repeat(201) }],

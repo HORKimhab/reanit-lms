@@ -1632,6 +1632,167 @@
         ]
       }
     },
+    "/schools/by-subdomain/{subdomain}/lessons/{lessonId}/quiz": {
+      "get": {
+        "operationId": "LearningController_quiz",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentQuizResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}/lessons/{lessonId}/quiz/attempts": {
+      "post": {
+        "operationId": "LearningController_attempt",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizAnswersBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResultResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning"
+        ]
+      }
+    },
+    "/lessons/{lessonId}/quiz": {
+      "get": {
+        "operationId": "QuizzesController_get",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Quizzes"
+        ]
+      },
+      "put": {
+        "operationId": "QuizzesController_save",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Quizzes"
+        ]
+      }
+    },
     "/stats/courses": {
       "get": {
         "operationId": "StatsController_courses",
@@ -2256,7 +2417,8 @@
                             "enum": [
                               "video",
                               "text",
-                              "pdf"
+                              "pdf",
+                              "quiz"
                             ]
                           },
                           "durationSeconds": {
@@ -2357,7 +2519,8 @@
                         "enum": [
                           "video",
                           "text",
-                          "pdf"
+                          "pdf",
+                          "quiz"
                         ]
                       },
                       "durationSeconds": {
@@ -3412,7 +3575,8 @@
                             "enum": [
                               "video",
                               "text",
-                              "pdf"
+                              "pdf",
+                              "quiz"
                             ]
                           },
                           "durationSeconds": {
@@ -3498,6 +3662,339 @@
             ]
           }
         }
+      },
+      "StudentQuizResponse": {
+        "type": "object",
+        "properties": {
+          "quiz": {
+            "type": "object",
+            "properties": {
+              "passPercent": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "single",
+                        "multiple"
+                      ]
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "prompt",
+                    "kind",
+                    "options"
+                  ]
+                }
+              },
+              "lastAttempt": {
+                "nullable": true,
+                "type": "object",
+                "properties": {
+                  "scorePercent": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "isPassed": {
+                    "type": "boolean"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "scorePercent",
+                  "isPassed",
+                  "at"
+                ]
+              }
+            },
+            "required": [
+              "passPercent",
+              "questions",
+              "lastAttempt"
+            ]
+          }
+        },
+        "required": [
+          "quiz"
+        ]
+      },
+      "QuizAnswersBody": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "optionIds": {
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                }
+              },
+              "required": [
+                "questionId",
+                "optionIds"
+              ]
+            }
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "QuizResultResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "scorePercent": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "isPassed": {
+                "type": "boolean"
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isCorrect": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "isCorrect"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "scorePercent",
+              "isPassed",
+              "questions"
+            ]
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "QuizResponse": {
+        "type": "object",
+        "properties": {
+          "quiz": {
+            "type": "object",
+            "properties": {
+              "passPercent": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "single",
+                        "multiple"
+                      ]
+                    },
+                    "options": {
+                      "minItems": 2,
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "isCorrect"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "prompt",
+                    "kind",
+                    "options"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "passPercent",
+              "questions"
+            ]
+          }
+        },
+        "required": [
+          "quiz"
+        ]
+      },
+      "QuizBody": {
+        "type": "object",
+        "properties": {
+          "passPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "questions": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "prompt": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "single",
+                    "multiple"
+                  ]
+                },
+                "options": {
+                  "minItems": 2,
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "isCorrect": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "text",
+                      "isCorrect"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "prompt",
+                "kind",
+                "options"
+              ]
+            }
+          }
+        },
+        "required": [
+          "passPercent",
+          "questions"
+        ]
       },
       "CourseStatsResponse": {
         "type": "object",
@@ -3618,6 +4115,7 @@
                     "bundle.update",
                     "bundle.price.set",
                     "lesson.media.attach",
+                    "lesson.quiz.save",
                     "school.settings.update"
                   ]
                 },

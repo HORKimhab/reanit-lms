@@ -1,5 +1,6 @@
-// In-memory fake of the learning port, for unit tests of the learning service.
-import type { Enrollment, LearningStore, LessonProgress, ProgressUpdate } from "../learning";
+// In-memory fakes of the learning ports, for unit tests of the learning service.
+import type { LessonType } from "../catalog";
+import type { Enrollment, LearningStore, LessonProgress, ProgressUpdate, Quiz, QuizAnswers, QuizResult, QuizStore } from "../learning";
 
 /** A stored enrollment with its student. */
 type FakeEnrollment = Enrollment & { userId: string };
@@ -88,5 +89,63 @@ export class FakeLearningStore implements LearningStore {
    */
   async completeCourse(enrollment: Enrollment, at: Date) {
     if (!this.completions.has(enrollment.id)) this.completions.set(enrollment.id, at);
+  }
+}
+
+/** In-memory `QuizStore` for one school: lesson types, saved quizzes and every attempt, which tests can inspect. */
+export class FakeQuizStore implements QuizStore {
+  readonly lessonTypes = new Map<string, LessonType>();
+  readonly quizzes = new Map<string, Quiz>();
+  readonly attempts: { enrollmentId: string; lessonId: string; answers: QuizAnswers; result: QuizResult; at: Date }[] = [];
+
+  /**
+   * Reads a lesson's type.
+   *
+   * @param lessonId The lesson.
+   * @returns Its type, or null when unknown.
+   */
+  async findLessonType(lessonId: string) {
+    return this.lessonTypes.get(lessonId) ?? null;
+  }
+
+  /**
+   * Reads a lesson's quiz.
+   *
+   * @param lessonId The lesson.
+   * @returns The quiz, or null before it is saved.
+   */
+  async findQuiz(lessonId: string) {
+    return this.quizzes.get(lessonId) ?? null;
+  }
+
+  /**
+   * Saves a lesson's quiz.
+   *
+   * @param lessonId The lesson.
+   * @param quiz The quiz.
+   */
+  async saveQuiz(lessonId: string, quiz: Quiz) {
+    this.quizzes.set(lessonId, quiz);
+  }
+
+  /**
+   * Keeps an attempt.
+   *
+   * @param attempt The attempt.
+   */
+  async recordAttempt(attempt: FakeQuizStore["attempts"][number]) {
+    this.attempts.push(attempt);
+  }
+
+  /**
+   * Finds an enrollment's latest attempt at a quiz.
+   *
+   * @param enrollmentId The enrollment.
+   * @param lessonId The quiz lesson.
+   * @returns Its score, result and time, or null.
+   */
+  async findLastAttempt(enrollmentId: string, lessonId: string) {
+    const last = this.attempts.filter((attempt) => attempt.enrollmentId === enrollmentId && attempt.lessonId === lessonId).at(-1);
+    return last ? { scorePercent: last.result.scorePercent, isPassed: last.result.isPassed, at: last.at } : null;
   }
 }

@@ -4,9 +4,10 @@ import { CourseNotFoundError, type CourseWithOutline } from "../catalog";
 import { LessonMediaMissingError, createMediaService } from "../media";
 import { FakeClock } from "../test/auth-fakes";
 import { FakeCatalogStore } from "../test/catalog-fakes";
-import { FakeLearningStore } from "../test/learning-fakes";
+import { FakeLearningStore, FakeQuizStore } from "../test/learning-fakes";
 import { FakeLessonMediaStore, FakeObjectStorage } from "../test/media-fakes";
-import { NotEnrolledError } from "./errors";
+import { NotEnrolledError, QuizNotFoundError } from "./errors";
+import type { Quiz } from "./quizzes";
 import { createLearningService, type LearningService } from "./service";
 
 const NOW = new Date("2026-10-19T00:00:00Z");
@@ -46,6 +47,7 @@ function newId() {
 }
 
 let store: FakeLearningStore;
+let quizzes: FakeQuizStore;
 let lessonMedia: FakeLessonMediaStore;
 let clock: FakeClock;
 let learning: LearningService;
@@ -61,7 +63,8 @@ beforeEach(() => {
   lessonMedia.lessons.set("l2", { id: "l2", type: "video", mediaKey: null });
   clock = new FakeClock(NOW);
   const media = createMediaService({ schoolId: "s", lessons: lessonMedia, storage: new FakeObjectStorage(), clock, newId });
-  learning = createLearningService({ catalog, store, media, clock });
+  quizzes = new FakeQuizStore();
+  learning = createLearningService({ catalog, store, quizzes, media, clock });
 });
 
 describe("getCourse", () => {
@@ -135,5 +138,81 @@ describe("recordProgress", () => {
   it("refuses a student who is not enrolled and saves nothing", async () => {
     await expect(learning.recordProgress("user-2", "l1", { positionSeconds: 1 })).rejects.toThrow(NotEnrolledError);
     expect(store.progress.size).toBe(0);
+  });
+});
+
+describe("quizzes", () => {
+  const Q1 = "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e01";
+  const RIGHT = "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e02";
+  const WRONG = "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e03";
+  const QUIZ: Quiz = {
+    passPercent: 100,
+    questions: [
+      {
+        id: Q1,
+        prompt: "Which is a primary color?",
+        kind: "single",
+        options: [
+          { id: RIGHT, text: "Red", isCorrect: true },
+          { id: WRONG, text: "Green", isCorrect: false },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    quizzes.lessonTypes.set("l1", "video").set("l2", "quiz");
+  });
+
+  it("gives staff a quiz lesson never saved with no questions and the default pass mark", async () => {
+    expect(await learning.getQuizForEditing("l2")).toEqual({ passPercent: 70, questions: [] });
+  });
+
+  it("saves a quiz on a quiz lesson and refuses any other lesson", async () => {
+    await learning.saveQuiz("l2", QUIZ);
+
+    expect(await learning.getQuizForEditing("l2")).toEqual(QUIZ);
+    await expect(learning.saveQuiz("l1", QUIZ)).rejects.toThrow(QuizNotFoundError);
+    await expect(learning.getQuizForEditing("missing")).rejects.toThrow(QuizNotFoundError);
+  });
+
+  it("shows the student the quiz without its right answers, and their last attempt", async () => {
+    await learning.saveQuiz("l2", QUIZ);
+
+    const before = await learning.getQuiz(STUDENT, "l2");
+    await learning.submitQuiz(STUDENT, "l2", [{ questionId: Q1, optionIds: [WRONG] }]);
+
+    expect(before).toEqual({
+      passPercent: 100,
+      questions: [{ id: Q1, prompt: "Which is a primary color?", kind: "single", options: [{ id: RIGHT, text: "Red" }, { id: WRONG, text: "Green" }] }],
+      lastAttempt: null,
+    });
+    expect((await learning.getQuiz(STUDENT, "l2")).lastAttempt).toEqual({ scorePercent: 0, isPassed: false, at: NOW });
+  });
+
+  it("keeps a failed attempt without completing the lesson", async () => {
+    await learning.saveQuiz("l2", QUIZ);
+
+    expect(await learning.submitQuiz(STUDENT, "l2", [])).toEqual({ scorePercent: 0, isPassed: false, questions: [{ questionId: Q1, isCorrect: false }] });
+    expect(quizzes.attempts).toHaveLength(1);
+    expect(store.progress.size).toBe(0);
+  });
+
+  it("completes the lesson, and the course after its last lesson, when the student passes", async () => {
+    await learning.saveQuiz("l2", QUIZ);
+    await learning.recordProgress(STUDENT, "l1", { completed: true });
+
+    expect((await learning.submitQuiz(STUDENT, "l2", [{ questionId: Q1, optionIds: [RIGHT] }])).isPassed).toBe(true);
+    expect(store.progress.get("enrollment-1:l2")?.isCompleted).toBe(true);
+    expect(store.completions).toEqual(new Map([["enrollment-1", NOW]]));
+  });
+
+  it("refuses a student who is not enrolled, and a quiz with no questions yet", async () => {
+    await learning.saveQuiz("l2", { passPercent: 70, questions: [] });
+
+    await expect(learning.getQuiz("user-2", "l2")).rejects.toThrow(NotEnrolledError);
+    await expect(learning.getQuiz(STUDENT, "l2")).rejects.toThrow(QuizNotFoundError);
+    await expect(learning.submitQuiz(STUDENT, "l2", [])).rejects.toThrow(QuizNotFoundError);
+    expect(quizzes.attempts).toEqual([]);
   });
 });

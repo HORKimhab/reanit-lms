@@ -26,6 +26,7 @@ enum LessonType {
   video
   text
   pdf
+  quiz
 }
 
 enum OrderStatus {
@@ -123,6 +124,8 @@ model School {
   coupons          Coupon[]
   bundles          Bundle[]
   bundleCourses    BundleCourse[]
+  quizzes          Quiz[]
+  quizAttempts     QuizAttempt[]
 
   @@map("schools")
 }
@@ -193,17 +196,19 @@ model Lesson {
   /// Object-storage key of the lesson's video or PDF; null until a file is attached.
   mediaKey        String?    @map("media_key")
 
-  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  section  Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  progress LessonProgress[]
+  school       School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  section      Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  progress     LessonProgress[]
+  quiz         Quiz?
+  quizAttempts QuizAttempt[]
 
   @@index([schoolId])
   @@index([sectionId, position])
   @@map("lessons")
 }
 
-/// What a course costs. Money is integer minor units + ISO 4217 code.
 /// What a course or a bundle costs; exactly one of `course_id` and `bundle_id` is set. Newest wins.
+/// Money is integer minor units + ISO 4217 code.
 model Price {
   id        String   @id @default(uuid()) @db.Uuid
   schoolId  String   @map("school_id") @db.Uuid
@@ -351,11 +356,12 @@ model Enrollment {
   completedAt DateTime?        @map("completed_at")
   createdAt   DateTime         @default(now()) @map("created_at")
 
-  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  order    Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  progress LessonProgress[]
+  school       School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order        Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  progress     LessonProgress[]
+  quizAttempts QuizAttempt[]
 
   @@unique([userId, courseId])
   @@index([schoolId])
@@ -455,4 +461,40 @@ model AuditEvent {
 
   @@index([schoolId, createdAt])
   @@map("audit_events")
+}
+
+/// A quiz lesson's pass mark and questions. `questions` is written only through `quizSchema` in
+/// `@reanit/core/learning`: [{ id, prompt, kind, options: [{ id, text, isCorrect }] }].
+model Quiz {
+  lessonId    String   @id @map("lesson_id") @db.Uuid
+  schoolId    String   @map("school_id") @db.Uuid
+  passPercent Int      @map("pass_percent")
+  questions   Json
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@map("quizzes")
+}
+
+/// One graded go at a quiz by an enrolled student; `answers` is [{ questionId, optionIds }].
+model QuizAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  schoolId     String   @map("school_id") @db.Uuid
+  enrollmentId String   @map("enrollment_id") @db.Uuid
+  lessonId     String   @map("lesson_id") @db.Uuid
+  answers      Json
+  scorePercent Int      @map("score_percent")
+  isPassed     Boolean  @map("is_passed")
+  createdAt    DateTime @map("created_at")
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([enrollmentId, lessonId, createdAt])
+  @@map("quiz_attempts")
 }

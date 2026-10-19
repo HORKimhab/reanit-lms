@@ -23,7 +23,7 @@ import {
   MediaTooLargeError,
   UnsupportedMediaError,
 } from "@reanit/core/media";
-import { NotEnrolledError } from "@reanit/core/learning";
+import { NotEnrolledError, QuizNotFoundError } from "@reanit/core/learning";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
@@ -78,6 +78,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: InvalidMediaKeyError, status: HttpStatus.BAD_REQUEST, code: "invalid-media-key", detail: "This file does not belong to the lesson." },
   { error: MediaNotUploadedError, status: HttpStatus.CONFLICT, code: "media-not-uploaded", detail: "The upload has not finished." },
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
+  { error: QuizNotFoundError, status: HttpStatus.NOT_FOUND, code: "quiz-not-found", detail: "The lesson has no quiz." },
   { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },
   { error: ThrottlerException, status: HttpStatus.TOO_MANY_REQUESTS, code: "rate-limited", detail: "Too many attempts. Wait a few minutes, then try again." },
 ];

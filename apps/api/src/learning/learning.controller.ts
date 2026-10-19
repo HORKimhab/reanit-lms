@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Put } from "@nestjs/common";
-import { ApiOkResponse } from "@nestjs/swagger";
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Put } from "@nestjs/common";
+import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
 import type { LearningService } from "@reanit/core/learning";
 import type { SchoolService } from "@reanit/core/schools";
@@ -7,10 +7,18 @@ import type { SchoolService } from "@reanit/core/schools";
 import { CurrentUser } from "../auth/auth.decorators";
 import { PlaybackResponse } from "../media/media.dto";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
-import { PlayerCourseParams, PlayerCourseResponse, PlayerLessonParams, ProgressBody } from "./learning.dto";
+import {
+  PlayerCourseParams,
+  PlayerCourseResponse,
+  PlayerLessonParams,
+  ProgressBody,
+  QuizAnswersBody,
+  QuizResultResponse,
+  StudentQuizResponse,
+} from "./learning.dto";
 import { LEARNING_FOR_SCHOOL, type LearningForSchool } from "./learning.tokens";
 
-/** The student player on a school site: the course, lesson files and progress, for enrolled students only. */
+/** The student player on a school site: the course, lesson files, progress and quizzes, for enrolled students only. */
 @Controller("schools/by-subdomain/:subdomain")
 export class LearningController {
   /**
@@ -78,5 +86,37 @@ export class LearningController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async progress(@Param() params: PlayerLessonParams, @Body() body: ProgressBody, @CurrentUser() user: AuthUser) {
     await (await this.learning(params.subdomain)).recordProgress(user.id, params.lessonId, body);
+  }
+
+  /**
+   * Loads a quiz lesson for its student, without the right answers, with their last attempt.
+   *
+   * @param params The school's subdomain and the lesson's id.
+   * @param user The signed-in student.
+   * @returns The quiz.
+   * @throws {NotEnrolledError} When the student cannot open the lesson (403).
+   * @throws {QuizNotFoundError} When the lesson has no quiz yet (404).
+   */
+  @Get("lessons/:lessonId/quiz")
+  @ApiOkResponse({ type: StudentQuizResponse })
+  async quiz(@Param() params: PlayerLessonParams, @CurrentUser() user: AuthUser): Promise<StudentQuizResponse> {
+    const { lastAttempt, ...quiz } = await (await this.learning(params.subdomain)).getQuiz(user.id, params.lessonId);
+    return { quiz: { ...quiz, lastAttempt: lastAttempt && { ...lastAttempt, at: lastAttempt.at.toISOString() } } };
+  }
+
+  /**
+   * Grades and keeps a student's attempt at a quiz; passing completes the lesson.
+   *
+   * @param params The school's subdomain and the lesson's id.
+   * @param body The options picked per question.
+   * @param user The signed-in student.
+   * @returns The score, whether it passed, and which questions were right.
+   * @throws {NotEnrolledError} When the student cannot open the lesson (403).
+   * @throws {QuizNotFoundError} When the lesson has no quiz yet (404).
+   */
+  @Post("lessons/:lessonId/quiz/attempts")
+  @ApiCreatedResponse({ type: QuizResultResponse })
+  async attempt(@Param() params: PlayerLessonParams, @Body() body: QuizAnswersBody, @CurrentUser() user: AuthUser): Promise<QuizResultResponse> {
+    return { result: await (await this.learning(params.subdomain)).submitQuiz(user.id, params.lessonId, body.answers) };
   }
 }

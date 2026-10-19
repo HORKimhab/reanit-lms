@@ -60,3 +60,51 @@ describe("learning", () => {
     expect((await beta.agent.get("/stats/courses").expect(200)).body.courses).toEqual([]);
   });
 });
+
+describe("quizzes", () => {
+  it("lets staff write a quiz and a buyer pass it, which completes the lesson", async () => {
+    const quizLesson = randomUUID();
+    const questionId = randomUUID();
+    const [right, wrong] = [randomUUID(), randomUUID()];
+    const { course: quizCourse } = (await alpha.agent.post("/courses").send({ title: "Quiz Course" }).expect(201)).body;
+    await alpha.agent
+      .put(`/courses/${quizCourse.id}/outline`)
+      .send({ sections: [{ id: randomUUID(), title: "Check", lessons: [{ id: quizLesson, title: "Check", type: "quiz", durationSeconds: 0 }] }] })
+      .expect(204);
+    expect((await alpha.agent.get(`/lessons/${quizLesson}/quiz`).expect(200)).body.quiz).toEqual({ passPercent: 70, questions: [] });
+    await alpha.agent.get(`/lessons/${videoLesson}/quiz`).expect(404);
+    const quiz = {
+      passPercent: 100,
+      questions: [
+        {
+          id: questionId,
+          prompt: "Pick red",
+          kind: "single",
+          options: [
+            { id: right, text: "Red", isCorrect: true },
+            { id: wrong, text: "Blue", isCorrect: false },
+          ],
+        },
+      ],
+    };
+    await alpha.agent.put(`/lessons/${quizLesson}/quiz`).send(quiz).expect(204);
+    await alpha.agent.patch(`/courses/${quizCourse.id}`).send({ status: "published" }).expect(200);
+    await alpha.agent.put(`/courses/${quizCourse.id}/price`).send({ amount: 1000, currency: "USD" }).expect(200);
+
+    const { agent: student } = await signUp(e2e().app, uniqueName("quiz-student"));
+    await student.get(`${base}/lessons/${quizLesson}/quiz`).expect(403);
+    await buyCourse(e2e(), student, alpha.school.subdomain, quizCourse.slug);
+    const taken = (await student.get(`${base}/lessons/${quizLesson}/quiz`).expect(200)).body.quiz;
+    expect(JSON.stringify(taken)).not.toContain("isCorrect");
+
+    const failed = await student.post(`${base}/lessons/${quizLesson}/quiz/attempts`).send({ answers: [{ questionId, optionIds: [wrong] }] }).expect(201);
+    expect(failed.body.result).toMatchObject({ scorePercent: 0, isPassed: false });
+    const passed = await student.post(`${base}/lessons/${quizLesson}/quiz/attempts`).send({ answers: [{ questionId, optionIds: [right] }] }).expect(201);
+    expect(passed.body.result).toMatchObject({ scorePercent: 100, isPassed: true });
+
+    expect((await student.get(`${base}/lessons/${quizLesson}/quiz`).expect(200)).body.quiz.lastAttempt).toMatchObject({ scorePercent: 100, isPassed: true });
+    expect((await student.get(`${base}/learn/${quizCourse.slug}`).expect(200)).body.course.progress).toEqual([
+      { lessonId: quizLesson, positionSeconds: 0, isCompleted: true },
+    ]);
+  });
+});

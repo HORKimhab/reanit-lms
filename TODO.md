@@ -75,7 +75,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-19 Coupon management + checkout coupon field. Needs API-12.
 - [x] API-13 Bundles: multiple courses, one price, enroll all on payment
 - [x] WEB-20 Bundle builder + bundle sales page. Needs API-13.
-- [ ] API-14 Quizzes: questions, attempts, pass mark
+- [x] API-14 Quizzes: questions, attempts, pass mark
 - [ ] WEB-21 Quiz builder + quiz in player. Needs API-14.
 - [ ] WRK-03 Certificates: PDF on CourseCompleted, public verify URL
 - [ ] WEB-22 Certificate template settings + student download. Needs WRK-03.

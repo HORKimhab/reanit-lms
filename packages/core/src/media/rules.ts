@@ -37,6 +37,18 @@ export function lessonMediaPrefix(schoolId: string, lessonId: string): string {
 }
 
 /**
+ * Tells whether a lesson type holds an uploaded file (video, PDF) rather than content of its own (text, quiz).
+ *
+ * @param lessonType The lesson's type.
+ * @returns True for the types `MEDIA_RULES` covers.
+ * @example
+ * holdsMedia("pdf"); // true
+ */
+export function holdsMedia(lessonType: LessonType): lessonType is keyof typeof MEDIA_RULES {
+  return Object.hasOwn(MEDIA_RULES, lessonType);
+}
+
+/**
  * Finds the file extension a lesson type stores a content type under.
  *
  * @param lessonType The lesson's type.
@@ -46,7 +58,7 @@ export function lessonMediaPrefix(schoolId: string, lessonId: string): string {
  * mediaExtension("video", "video/mp4"); // "mp4"
  */
 export function mediaExtension(lessonType: LessonType, contentType: string): string | undefined {
-  if (lessonType === "text") return undefined;
+  if (!holdsMedia(lessonType)) return undefined;
   const types: Record<string, string> = MEDIA_RULES[lessonType].contentTypes;
   return Object.hasOwn(types, contentType) ? types[contentType] : undefined;
 }

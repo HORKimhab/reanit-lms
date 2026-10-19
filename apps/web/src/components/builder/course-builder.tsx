@@ -1,6 +1,7 @@
 "use client";
 
 import { LESSON_TYPES, TITLE_MAX_LENGTH, type LessonType, type Outline } from "@reanit/core/catalog";
+import { holdsMedia } from "@reanit/core/media";
 import { Button } from "@reanit/ui/components/button";
 import { cn } from "@reanit/ui/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
@@ -151,7 +152,7 @@ function SectionEditor({
                     value={lesson.type}
                     onChange={(lessonType) => dispatch({ type: "setLessonType", sectionId, lessonId, lessonType })}
                   />
-                  {lesson.type === "text" ? null : (
+                  {holdsMedia(lesson.type) ? (
                     <LessonMediaUpload
                       lessonId={lessonId}
                       lessonType={lesson.type}
@@ -159,7 +160,7 @@ function SectionEditor({
                       hasMedia={lessonsWithMedia.includes(lessonId)}
                       actions={mediaActions}
                     />
-                  )}
+                  ) : null}
                   <RemoveButton
                     label={t("removeLesson", { title: lessonName })}
                     onClick={() => dispatch({ type: "removeLesson", sectionId, lessonId })}

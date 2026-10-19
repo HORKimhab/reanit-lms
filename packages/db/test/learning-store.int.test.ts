@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { createCatalogStore, createDbClient, createLearningStore } from "../src";
-import { openTestSchool } from "../src/test/schools";
+import { enrollTestStudent, openTestSchool } from "../src/test/schools";
 
 const db = createDbClient(inject("databaseUrl"));
 const LESSONS = [randomUUID(), randomUUID()] as const;
@@ -27,8 +27,7 @@ beforeAll(async () => {
       },
     ],
   });
-  studentId = (await db.user.create({ data: { email: "learning-student@example.com" } })).id;
-  enrollmentId = (await db.enrollment.create({ data: { schoolId: alphaId, userId: studentId, courseId, source: "manual" } })).id;
+  ({ studentId, enrollmentId } = await enrollTestStudent(db, { schoolId: alphaId, courseId }, "learning-student@example.com"));
 });
 
 afterAll(async () => {

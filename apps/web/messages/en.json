@@ -111,7 +111,8 @@
     "lessonTypes": {
       "text": "Text",
       "video": "Video",
-      "pdf": "PDF"
+      "pdf": "PDF",
+      "quiz": "Quiz"
     }
   },
   "Students": {

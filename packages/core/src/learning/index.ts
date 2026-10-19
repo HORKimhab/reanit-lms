@@ -1,5 +1,21 @@
-export { NotEnrolledError } from "./errors";
-export type { Enrollment, LearningStore, LessonProgress, ProgressUpdate } from "./ports";
+export { NotEnrolledError, QuizNotFoundError } from "./errors";
+export type { Enrollment, LearningStore, LessonProgress, ProgressUpdate, QuizAttemptSummary, QuizStore } from "./ports";
+export {
+  DEFAULT_PASS_PERCENT,
+  gradeQuiz,
+  MAX_QUESTION_OPTIONS,
+  MAX_QUIZ_QUESTIONS,
+  OPTION_MAX_LENGTH,
+  PROMPT_MAX_LENGTH,
+  QUESTION_KINDS,
+  quizAnswersSchema,
+  quizSchema,
+  toStudentQuiz,
+  type Quiz,
+  type QuizAnswers,
+  type QuizResult,
+  type StudentQuiz,
+} from "./quizzes";
 export {
   playerLessons,
   progressSchema,

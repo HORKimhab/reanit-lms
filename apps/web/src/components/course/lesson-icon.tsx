@@ -1,8 +1,8 @@
-import { AlignLeft, FileText, PlayCircle } from "lucide-react";
+import { AlignLeft, FileText, ListChecks, PlayCircle } from "lucide-react";
 
 import type { LessonType } from "@reanit/core/catalog";
 
-const ICONS: Record<LessonType, typeof PlayCircle> = { video: PlayCircle, text: AlignLeft, pdf: FileText };
+const ICONS: Record<LessonType, typeof PlayCircle> = { video: PlayCircle, text: AlignLeft, pdf: FileText, quiz: ListChecks };
 
 /**
  * Shows the icon for a lesson's content type.

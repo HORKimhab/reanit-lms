@@ -10,7 +10,7 @@ export const DESCRIPTION_MAX_LENGTH = 5000;
 const FALLBACK_SLUG = "course";
 
 /** Every kind of content a lesson can hold. */
-export const LESSON_TYPES = ["video", "text", "pdf"] as const;
+export const LESSON_TYPES = ["video", "text", "pdf", "quiz"] as const;
 
 /** Whether students can see a course. */
 export const COURSE_STATUSES = ["draft", "published"] as const;

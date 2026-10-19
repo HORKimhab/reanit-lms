@@ -150,7 +150,7 @@ describe("buildOpenApiDocument", () => {
       properties: {
         sections: {
           type: "array",
-          items: { properties: { lessons: { type: "array", items: { properties: { type: { enum: ["video", "text", "pdf"] } } } } } },
+          items: { properties: { lessons: { type: "array", items: { properties: { type: { enum: ["video", "text", "pdf", "quiz"] } } } } } },
         },
       },
     });

@@ -97,3 +97,41 @@ describe("PUT .../lessons/:lessonId/progress", () => {
     expect(testApp.clients.learning.recordProgress).not.toHaveBeenCalled();
   });
 });
+
+describe("quiz routes", () => {
+  const QUESTION_ID = "1c2b3a49-8f7e-4d6c-9b5a-4e3d2c1b0a21";
+  const OPTION_ID = "1c2b3a49-8f7e-4d6c-9b5a-4e3d2c1b0a22";
+
+  it("gives the student the quiz with their last attempt's time as an ISO date", async () => {
+    const headers = signInAs(testApp.clients);
+    const quiz = { passPercent: 70, questions: [{ id: QUESTION_ID, prompt: "Pick red", kind: "single", options: [{ id: OPTION_ID, text: "Red" }] }] };
+    testApp.clients.learning.getQuiz.mockResolvedValue({ ...quiz, lastAttempt: { scorePercent: 50, isPassed: false, at: new Date("2026-10-20T01:00:00Z") } });
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/lessons/${LESSON_ID}/quiz`, headers });
+
+    expect(response.json()).toEqual({ quiz: { ...quiz, lastAttempt: { scorePercent: 50, isPassed: false, at: "2026-10-20T01:00:00.000Z" } } });
+    expect(testApp.clients.learning.getQuiz).toHaveBeenCalledWith(TEST_USER.id, LESSON_ID);
+  });
+
+  it("grades the signed-in student's answers", async () => {
+    const headers = signInAs(testApp.clients);
+    const result = { scorePercent: 100, isPassed: true, questions: [{ questionId: QUESTION_ID, isCorrect: true }] };
+    testApp.clients.learning.submitQuiz.mockResolvedValue(result);
+    const answers = [{ questionId: QUESTION_ID, optionIds: [OPTION_ID] }];
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/lessons/${LESSON_ID}/quiz/attempts`, headers, payload: { answers } });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({ result });
+    expect(testApp.clients.learning.submitQuiz).toHaveBeenCalledWith(TEST_USER.id, LESSON_ID, answers);
+  });
+
+  it("answers 403 to a student who is not enrolled", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.learning.submitQuiz.mockRejectedValue(new NotEnrolledError());
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/lessons/${LESSON_ID}/quiz/attempts`, headers, payload: { answers: [] } });
+
+    expect(response.statusCode).toBe(403);
+  });
+});

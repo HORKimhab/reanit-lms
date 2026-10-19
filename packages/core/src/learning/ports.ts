@@ -1,3 +1,6 @@
+import type { LessonType } from "../catalog";
+import type { Quiz, QuizAnswers, QuizResult } from "./quizzes";
+
 /** A student's access to one course. */
 export interface Enrollment {
   id: string;
@@ -34,4 +37,23 @@ export interface LearningStore {
    * a repeat for an enrollment already completed changes nothing.
    */
   completeCourse(enrollment: Enrollment, at: Date): Promise<void>;
+}
+
+/** A student's latest go at a quiz. */
+export interface QuizAttemptSummary {
+  scorePercent: number;
+  isPassed: boolean;
+  at: Date;
+}
+
+/** One school's quizzes and attempts. `@reanit/db` implements it with `createQuizStore`. */
+export interface QuizStore {
+  /** Null when the school has no such lesson. */
+  findLessonType(lessonId: string): Promise<LessonType | null>;
+  /** Null until the lesson's quiz is first saved. */
+  findQuiz(lessonId: string): Promise<Quiz | null>;
+  saveQuiz(lessonId: string, quiz: Quiz): Promise<void>;
+  recordAttempt(attempt: { enrollmentId: string; lessonId: string; answers: QuizAnswers; result: QuizResult; at: Date }): Promise<void>;
+  /** The enrollment's most recent attempt at the lesson's quiz, or null before the first. */
+  findLastAttempt(enrollmentId: string, lessonId: string): Promise<QuizAttemptSummary | null>;
 }
