@@ -26,7 +26,7 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 | Business rule | `packages/core/<module>/`, no Next/Nest/Prisma/BullMQ imports |
 | Table / column / RLS | `packages/db` |
 | Page / server action | `apps/web` |
-| API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config\|context\|logging>/`; request state goes through `ClsService<RequestContext>`, never REQUEST-scoped providers |
+| API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config\|context\|logging\|http>/`. Request bodies: `class X extends createZodDto(coreSchema) {}`. A new core error gets its status in `apps/api/src/http/problem.ts`; request state goes through `ClsService<RequestContext>`, never REQUEST-scoped providers |
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |
 | Script | `scripts/`, run with `pnpm tsx` |

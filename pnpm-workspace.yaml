@@ -59,6 +59,7 @@ catalog:
   pino: 10.4.0
   pino-http: 11.0.0
   "@fastify/helmet": 13.2.0
+  fastify: 5.12.5
 
 # Install scripts: true = allowed, false = skipped (prebuilt binaries are enough).
 allowBuilds:

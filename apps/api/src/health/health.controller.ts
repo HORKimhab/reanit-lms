@@ -1,6 +1,7 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, Inject, Res, ServiceUnavailableException } from "@nestjs/common";
 import { HealthCheck, HealthCheckService } from "@nestjs/terminus";
 import type { DbClient } from "@reanit/db";
+import type { FastifyReply } from "fastify";
 import type { Redis } from "ioredis";
 
 import { DB_CLIENT } from "../db/db.module";
@@ -29,17 +30,24 @@ export class HealthController {
   ) {}
 
   /**
-   * Checks every dependency the API needs to serve requests.
+   * Checks every dependency the API needs to serve requests. A failed check is a report, not an
+   * error, so it answers 503 with Terminus's body instead of going through the problem+json filter.
    *
+   * @param reply Lets the handler set the 503 status.
    * @returns Each dependency's status.
-   * @throws {ServiceUnavailableException} When any dependency is down (Terminus answers 503).
    */
   @Get()
   @HealthCheck()
-  check() {
-    return this.health.check([
-      () => this.ping.pingCheck("postgres", () => this.db.$queryRaw`SELECT 1`, PING_TIMEOUT_MS),
-      () => this.ping.pingCheck("redis", () => this.redis.ping(), PING_TIMEOUT_MS),
-    ]);
+  async check(@Res({ passthrough: true }) reply: FastifyReply) {
+    try {
+      return await this.health.check([
+        () => this.ping.pingCheck("postgres", () => this.db.$queryRaw`SELECT 1`, PING_TIMEOUT_MS),
+        () => this.ping.pingCheck("redis", () => this.redis.ping(), PING_TIMEOUT_MS),
+      ]);
+    } catch (error) {
+      if (!(error instanceof ServiceUnavailableException)) throw error;
+      void reply.status(error.getStatus());
+      return error.getResponse();
+    }
   }
 }

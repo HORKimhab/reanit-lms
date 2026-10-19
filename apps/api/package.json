@@ -19,6 +19,7 @@
     "@nestjs/terminus": "catalog:",
     "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
+    "fastify": "catalog:",
     "ioredis": "catalog:",
     "nestjs-cls": "catalog:",
     "nestjs-pino": "catalog:",
