@@ -1,12 +1,13 @@
 ---
 name: project-structure
-description: Reanit LMS folder map and where new code belongs. Use when creating/moving files, adding a package, feature, migration or worker job.
+description: Reanit LMS folder map and where new code belongs. Use when creating/moving files, adding a package, feature, API module, migration or worker job.
 ---
 
 # Layout
 
 ```
-apps/web        Next.js: school sites, dashboard, player, route handlers/tRPC
+apps/web        Next.js: school sites, dashboard, player (calls apps/api)
+apps/api        NestJS on Fastify: REST API, one Nest module per domain module
 apps/worker     BullMQ jobs: email, webhooks, video, certificates, stats
 packages/db     @reanit/db: Prisma schema, migrations, RLS, tenant client
 packages/core   @reanit/core: pure domain logic, one folder per module
@@ -22,9 +23,10 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 
 | Adding | Place |
 |---|---|
-| Business rule | `packages/core/<module>/`, no Next/Prisma/BullMQ imports |
+| Business rule | `packages/core/<module>/`, no Next/Nest/Prisma/BullMQ imports |
 | Table / column / RLS | `packages/db` |
-| Page / API / server action | `apps/web` |
+| Page / server action | `apps/web` |
+| API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config>/` |
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |
 | Script | `scripts/`, run with `pnpm tsx` |

@@ -56,10 +56,10 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
                 └───────┬───────────────┬────────┘
                         │               │
               ┌─────────▼──────┐  ┌─────▼───────────────┐
-              │  API layer     │  │  Background workers │
-              │  (route        │  │  (BullMQ)           │
-              │  handlers /    │  │  email, video jobs, │
-              │  tRPC)         │  │  certificates,      │
+              │  NestJS API    │  │  Background workers │
+              │  (apps/api,    │  │  (BullMQ)           │
+              │  Fastify,      │  │  email, video jobs, │
+              │  REST)         │  │  certificates,      │
               └──┬────┬────┬───┘  │  webhooks, stats    │
                  │    │    │      └──────────┬──────────┘
         ┌────────▼┐ ┌─▼────┐ ┌▼──────────┐   │
@@ -77,7 +77,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 
 ### Key decisions
 
-1. **Modular monolith first.** All code lives in one TypeScript codebase with strict module boundaries: `auth`, `schools`, `catalog`, `commerce`, `learning`, `media`, `notifications`, `analytics`. A module becomes its own service only when load or team size forces it.
+1. **Modular monolith first.** All code lives in one TypeScript codebase with strict module boundaries: `auth`, `schools`, `catalog`, `commerce`, `learning`, `media`, `notifications`, `analytics`. Domain logic sits in `packages/core` and data access in `packages/db`; the NestJS API (`apps/api`) exposes them over HTTP with one Nest module per domain module, and the web app is a client of that API. A module becomes its own service only when load or team size forces it.
 2. **Multi-tenancy.** All schools share one Postgres database, and every tenant table carries a `school_id`. Isolation is enforced by **Postgres Row-Level Security** and a tenant-scoped data-access layer. Middleware works out the tenant from the subdomain or custom domain, and that lookup is cached in Redis. Very large tenants can be moved to separate shards later.
 3. **Video is outsourced.** Mux or Cloudflare Stream handles upload, transcoding, adaptive HLS and signed playback URLs, so only enrolled students can stream.
 4. **Payments run through Stripe Connect.** Each creator is a connected account and the platform takes an application fee. Webhooks are processed idempotently through a queue. A student is enrolled **only when a confirmed webhook arrives**, never on the client-side redirect.
@@ -94,7 +94,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 | Monorepo | Turborepo + pnpm workspaces | Apps and packages share code and build caching; strict dependency rules |
 | Runtime | Node.js 24 LTS (development and production) | The runtime Next.js, NestJS and the main libraries are built and tested on |
 | Web | Next.js (App Router), Tailwind, shadcn/ui | SSR for sales-page SEO; fast UI development |
-| API | Next.js route handlers / tRPC, with NestJS as an option if the API splits out | Type-safe client–server calls |
+| API | NestJS on Fastify (`apps/api`), OpenAPI spec + generated typed client | One API for web, mobile and partners; modules, DI and guards that scale with the team |
 | Database | PostgreSQL + Prisma | Relational data, RLS, mature tooling |
 | Cache / queue | Redis + BullMQ | Background jobs, rate limiting, caching |
 | Auth | Better Auth or Auth.js (email/password, Google, magic link) | Supports tenant-aware student accounts |
@@ -165,6 +165,7 @@ User ─┬─< Membership >─ School ──< Domain
 reanit-lms/
 ├─ apps/
 │  ├─ web/          # Next.js: marketing site, school sites, dashboard, player
+│  ├─ api/          # NestJS (Fastify): REST API over packages/core and packages/db
 │  └─ worker/       # BullMQ consumers: email, webhooks, certificates, stats
 ├─ packages/
 │  ├─ db/           # Prisma schema, migrations, tenant-scoped client
@@ -219,15 +220,22 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 
 ## 9. Local development
 
-_Not set up yet; this section will be filled in by Milestone 1._ The planned flow:
-
 ```bash
 corepack enable          # one-time: provides the pinned pnpm version
 pnpm install
-docker compose -f infra/docker-compose.yml up -d
-pnpm db:migrate && pnpm db:seed
-pnpm dev
+docker compose -f infra/docker-compose.yml up -d --wait   # Postgres, Redis, Mailpit
+cp packages/db/.env.example packages/db/.env
+cp apps/web/.env.example apps/web/.env.local
+cp apps/api/.env.example apps/api/.env
+pnpm db:migrate
+pnpm dev                 # web on http://localhost:3000, API on http://localhost:4000
+curl localhost:4000/health
 ```
+
+- Mailpit's inbox (magic-link emails) is at http://localhost:8025.
+- Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
+- If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in the three env files to match.
+- Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.
 
 ### pnpm usage
 
@@ -259,7 +267,7 @@ Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `W
 | Skill | Purpose |
 |---|---|
 | `task-runner` | Builds TODO tasks by ID to the rules in [`quality.md`](.claude/skills/task-runner/quality.md), refactors the diff, verifies, updates TODO.md and commits |
-| `project-structure` | Folder map and where new code goes; Claude uses it automatically when it creates or moves files |
+| `project-structure` | Folder map (web, api, worker, packages) and where new code goes, including Nest modules; Claude uses it automatically when it creates or moves files |
 
 ### task-runner commands
 

@@ -1,0 +1,10 @@
+{
+  "extends": "@reanit/config/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // Nest resolves constructor dependencies from decorator metadata.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src", "tsup.config.ts", "vitest.config.ts"]
+}
