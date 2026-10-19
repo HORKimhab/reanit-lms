@@ -1,4 +1,5 @@
 import { CourseDetails } from "@/components/course/course-details";
+import { getOffer } from "@/server/commerce/checkout";
 import { getSiteCourse, getSiteSchool } from "@/server/schools/site";
 
 /**
@@ -11,6 +12,14 @@ import { getSiteCourse, getSiteSchool } from "@/server/schools/site";
  */
 export default async function CoursePage({ params }: PageProps<"/[locale]/s/[school]/courses/[course]">) {
   const { school: subdomain, course: slug } = await params;
-  const [school, course] = await Promise.all([getSiteSchool(subdomain), getSiteCourse(subdomain, decodeURIComponent(slug))]);
-  return <CourseDetails course={course} instructorName={school.ownerName ?? school.name} />;
+  const courseSlug = decodeURIComponent(slug);
+  const [school, course, offer] = await Promise.all([getSiteSchool(subdomain), getSiteCourse(subdomain, courseSlug), getOffer(subdomain, courseSlug)]);
+  return (
+    <CourseDetails
+      course={course}
+      instructorName={school.ownerName ?? school.name}
+      price={offer.price}
+      checkoutHref={`/s/${subdomain}/checkout/${course.slug}`}
+    />
+  );
 }

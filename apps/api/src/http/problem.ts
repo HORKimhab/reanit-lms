@@ -17,6 +17,7 @@ import {
   MediaTooLargeError,
   UnsupportedMediaError,
 } from "@reanit/core/media";
+import { NotEnrolledError } from "@reanit/core/learning";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
@@ -66,6 +67,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: InvalidMediaKeyError, status: HttpStatus.BAD_REQUEST, code: "invalid-media-key", detail: "This file does not belong to the lesson." },
   { error: MediaNotUploadedError, status: HttpStatus.CONFLICT, code: "media-not-uploaded", detail: "The upload has not finished." },
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
+  { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },
 ];
 
 /**

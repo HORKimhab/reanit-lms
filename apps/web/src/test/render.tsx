@@ -1,6 +1,5 @@
-import { act, render, type RenderResult } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { Component, Suspense } from "react";
 import type * as React from "react";
 
 import type { Locale } from "@/i18n/routing";
@@ -44,75 +43,6 @@ type RenderOptions = { locale?: Locale };
  */
 export function renderWithIntl(ui: React.ReactElement, { locale = "en" }: RenderOptions = {}) {
   return render(ui, { wrapper: intlWrapper(locale) });
-}
-
-/**
- * Renders a page that reads its `params` with `use()`, waiting until the params have resolved.
- *
- * @param ui - The page element.
- * @param options - Render options.
- * @param options.locale - UI locale; defaults to English.
- * @returns Testing Library's render result, once the page has rendered.
- */
-async function renderRoute(ui: React.ReactElement, { locale = "en" }: RenderOptions = {}) {
-  let result: RenderResult | undefined;
-  await act(async () => {
-    result = renderWithIntl(<Suspense fallback={null}>{ui}</Suspense>, { locale });
-  });
-  // act() above has run, so the render result is set.
-  return result as RenderResult;
-}
-
-/** Catches a render error and hands it to the test instead of failing the render. */
-class Catch extends Component<{ onError: (error: unknown) => void; children: React.ReactNode }, { failed: boolean }> {
-  override state = { failed: false };
-
-  /**
-   * Switches to the failed state so nothing more renders.
-   *
-   * @returns The failed state.
-   */
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  /**
-   * Reports the caught error.
-   *
-   * @param error - What the child threw.
-   */
-  override componentDidCatch(error: unknown) {
-    this.props.onError(error);
-  }
-
-  /**
-   * Renders the children until one throws.
-   *
-   * @returns The children, or nothing after an error.
-   */
-  override render() {
-    return this.state.failed ? null : this.props.children;
-  }
-}
-
-/**
- * Renders a page that is expected to throw while rendering, such as one that calls `notFound()`.
- *
- * @param ui - The page element.
- * @returns What the page threw.
- */
-export async function renderError(ui: React.ReactElement): Promise<unknown> {
-  let caught: unknown;
-  await renderRoute(
-    <Catch
-      onError={(error) => {
-        caught = error;
-      }}
-    >
-      {ui}
-    </Catch>,
-  );
-  return caught;
 }
 
 /**

@@ -151,7 +151,7 @@ export function courseStats(course: MockCourse) {
 }
 
 /** A lesson placed in course order, with the section it belongs to. */
-export type FlatLesson = MockLesson & {
+type FlatLesson = MockLesson & {
   /** Stable id: "1-2" is section 1, lesson 2. */
   id: string;
   /** 0-based position across the whole course. */

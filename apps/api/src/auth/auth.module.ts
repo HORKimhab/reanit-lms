@@ -1,23 +1,14 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
-import { createAuthService, type Clock, type Mailer } from "@reanit/core/auth";
+import { createAuthService, type Mailer } from "@reanit/core/auth";
 import { createAuthStore, type DbClient } from "@reanit/db";
 
 import { DB_CLIENT } from "@reanit/nest";
+import { systemClock } from "../context/clock";
 import { MAILER } from "../mail/mail.module";
 import { AuthController } from "./auth.controller";
 import { AUTH_SERVICE } from "./auth.tokens";
 import { SessionGuard } from "./session.guard";
-
-/** The real clock; tests replace the whole auth service instead. */
-const systemClock: Clock = {
-  /**
-   * Reads the system time.
-   *
-   * @returns The current time.
-   */
-  now: () => new Date(),
-};
 
 /**
  * Wires the auth use cases to Postgres, SMTP and the system clock.

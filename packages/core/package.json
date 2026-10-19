@@ -8,7 +8,9 @@
     "./schools": "./src/schools/index.ts",
     "./catalog": "./src/catalog/index.ts",
     "./media": "./src/media/index.ts",
-    "./commerce": "./src/commerce/index.ts"
+    "./commerce": "./src/commerce/index.ts",
+    "./learning": "./src/learning/index.ts",
+    "./analytics": "./src/analytics/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

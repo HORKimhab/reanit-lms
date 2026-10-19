@@ -1,4 +1,5 @@
 import type { DbClient } from "./client";
+import { recordSale } from "./daily-stats";
 import type { PaymentMethod } from "./generated/prisma/client";
 import { forSchool, inSchoolTransaction } from "./tenant";
 
@@ -174,8 +175,8 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
 export function createPaymentConfirmationStore(db: DbClient) {
   return {
     /**
-     * Marks an order paid and enrolls its buyer, once. Concurrent confirmations of the same
-     * order are safe: only the one that moves it out of `pending` enrolls.
+     * Marks an order paid, enrolls its buyer and counts the sale in the daily stats, once. Concurrent
+     * confirmations of the same order are safe: only the one that moves it out of `pending` enrolls.
      *
      * @param method The gateway that confirmed the payment.
      * @param providerRef The gateway's reference.
@@ -188,18 +189,20 @@ export function createPaymentConfirmationStore(db: DbClient) {
       });
       if (!order || order.paymentMethod !== method) return null;
       return inSchoolTransaction(db, order.schoolId, async (tx) => {
+        const paidAt = new Date();
         const { count } = await tx.order.updateMany({
           where: { id: order.id, status: "pending" },
-          data: { status: "paid", paidAt: new Date() },
+          data: { status: "paid", paidAt },
         });
         if (count === 0) return { orderId: order.id, isNewlyPaid: false };
-        const items = await tx.orderItem.findMany({ where: { orderId: order.id }, select: { courseId: true } });
-        for (const { courseId } of items) {
+        const items = await tx.orderItem.findMany({ where: { orderId: order.id }, select: { courseId: true, amount: true, currency: true } });
+        for (const { courseId, amount, currency } of items) {
           await tx.enrollment.upsert({
             where: { userId_courseId: { userId: order.userId, courseId } },
             create: { schoolId: order.schoolId, userId: order.userId, courseId, orderId: order.id, source: "purchase" },
             update: {},
           });
+          await recordSale(tx, { schoolId: order.schoolId, courseId, amount, currency, at: paidAt });
         }
         return { orderId: order.id, isNewlyPaid: true };
       });

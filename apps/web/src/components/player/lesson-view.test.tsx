@@ -1,72 +1,93 @@
+import type { PlayerLesson } from "@reanit/core/learning";
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
-import { flattenLessons, getMockCourse, type FlatLesson, type MockCourse } from "@/mocks/courses";
-import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
+import { PLAYER_BASE, PLAYER_LESSONS } from "@/test/player";
 import { renderWithIntl } from "@/test/render";
 
 import { LessonView } from "./lesson-view";
 
-const BASE = `/s/${MOCK_SCHOOL_SLUG}/learn/brand-design-basics`;
-const LESSONS = flattenLessons(getMockCourse(MOCK_SCHOOL_SLUG, "brand-design-basics") as MockCourse);
+const [welcome, workbook, sketching] = PLAYER_LESSONS as [PlayerLesson, PlayerLesson, PlayerLesson];
+const TEXT_LESSON: PlayerLesson = { ...workbook, type: "text", hasMedia: false };
 
 /**
- * Renders a lesson of the Brand Design Basics course.
+ * Renders a lesson of the test course.
  *
- * @param lesson - The lesson id, such as "2-1".
- * @param locale - UI locale.
- * @returns Testing Library's render result.
+ * @param lesson - The lesson to show.
+ * @param options - Render options.
+ * @param options.fileUrl - Its signed file URL.
+ * @param options.locale - UI locale.
+ * @returns The complete action spy.
  */
-function renderLesson(lesson: string, locale: "en" | "km" = "en") {
-  const current = LESSONS.find((l) => l.id === lesson) as FlatLesson;
-  return renderWithIntl(
-    <LessonView school={MOCK_SCHOOL_SLUG} courseSlug="brand-design-basics" lessons={LESSONS} lesson={current} />,
+function renderLesson(lesson: PlayerLesson, { fileUrl = null, locale = "en" }: { fileUrl?: string | null; locale?: "en" | "km" } = {}) {
+  const complete = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  renderWithIntl(
+    <LessonView lessons={PLAYER_LESSONS} lesson={lesson} base={PLAYER_BASE} fileUrl={fileUrl} savePosition={vi.fn()} complete={complete} />,
     { locale },
   );
+  return complete;
 }
 
 describe("LessonView", () => {
   it("shows the lesson title and where it sits in the course", async () => {
-    renderLesson("2-2");
-    expect(await screen.findByRole("heading", { level: 1, name: "Sketching ideas fast" })).toBeInTheDocument();
-    expect(screen.getByText("Lesson 5 of 9 · Logo design")).toBeInTheDocument();
+    renderLesson(workbook);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Workbook" })).toBeInTheDocument();
+    expect(screen.getByText("Lesson 2 of 3 · Getting started")).toBeInTheDocument();
   });
 
-  it("links to the previous and next lessons", async () => {
-    renderLesson("2-2");
-    expect(await screen.findByRole("link", { name: "Previous" })).toHaveAttribute("href", `${BASE}/2-1`);
-    expect(screen.getByRole("link", { name: "Complete and continue" })).toHaveAttribute("href", `${BASE}/2-3`);
+  it("links to the previous lesson and completes this one to continue", async () => {
+    const user = userEvent.setup();
+    const complete = renderLesson(workbook);
+
+    expect(await screen.findByRole("link", { name: "Previous" })).toHaveAttribute("href", `${PLAYER_BASE}/${welcome.id}`);
+    await user.click(screen.getByRole("button", { name: "Complete and continue" }));
+
+    expect(complete).toHaveBeenCalledOnce();
   });
 
   it("has no previous link on the first lesson", async () => {
-    renderLesson("1-1");
-    await screen.findByRole("link", { name: "Complete and continue" });
+    renderLesson(welcome, { fileUrl: "https://storage.test/welcome.mp4" });
+
+    await screen.findByRole("button", { name: "Complete and continue" });
     expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
   });
 
-  it("finishes back to my courses on the last lesson", async () => {
-    renderLesson("3-3");
-    expect(await screen.findByRole("link", { name: "Finish course" })).toHaveAttribute("href", `/s/${MOCK_SCHOOL_SLUG}/my-courses`);
+  it("finishes the course on the last lesson", async () => {
+    renderLesson(sketching, { fileUrl: "https://storage.test/sketching.mp4" });
+
+    expect(await screen.findByRole("button", { name: "Finish course" })).toBeInTheDocument();
   });
 
-  it("offers a download for a PDF lesson", async () => {
-    renderLesson("1-3");
-    expect(await screen.findByRole("button", { name: "Download" })).toBeInTheDocument();
-    expect(screen.getByText("Course workbook.pdf")).toBeInTheDocument();
+  it("plays a video lesson from its signed URL", async () => {
+    renderLesson(sketching, { fileUrl: "https://storage.test/sketching.mp4" });
+
+    expect(await screen.findByLabelText("Sketching")).toHaveAttribute("src", "https://storage.test/sketching.mp4");
+  });
+
+  it("offers a PDF lesson's file for download", async () => {
+    renderLesson(workbook, { fileUrl: "https://storage.test/workbook.pdf" });
+
+    expect(await screen.findByRole("link", { name: "Download" })).toHaveAttribute("href", "https://storage.test/workbook.pdf");
+  });
+
+  it("says when a lesson's file is not ready yet", async () => {
+    renderLesson(workbook);
+
+    expect(await screen.findByText("This lesson's file is not ready yet. Check back soon.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Download" })).not.toBeInTheDocument();
   });
 
   it("shows the lesson text for a text lesson", async () => {
-    renderLesson("3-3");
+    renderLesson(TEXT_LESSON);
+
     expect(await screen.findByText("The lesson text written by the instructor appears here.")).toBeInTheDocument();
   });
 
-  it("shows the running time on a video lesson", async () => {
-    renderLesson("2-2");
-    expect(await screen.findByText("16 min")).toBeInTheDocument();
-  });
-
   it("uses Khmer labels when the locale is km", async () => {
-    renderLesson("2-2", "km");
-    expect(await screen.findByText("មេរៀនទី 5 នៃ 9 · Logo design")).toBeInTheDocument();
+    renderLesson(workbook, { locale: "km" });
+
+    expect(await screen.findByText("មេរៀនទី 2 នៃ 3 · Getting started")).toBeInTheDocument();
   });
 });

@@ -22,7 +22,7 @@ export type SiteSchool = MockSchool & {
  * @param response The API's response.
  * @throws {Error} Next's not-found signal, or an unexpected-response error.
  */
-function checkPublicResponse(response: Response) {
+export function checkPublicResponse(response: Response) {
   if (response.ok) return;
   if (response.status === 404 || response.status === 400) notFound();
   throw unexpectedResponse(response);

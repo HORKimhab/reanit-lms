@@ -2,15 +2,18 @@
 import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModuleBuilder } from "@nestjs/testing";
+import type { AnalyticsService } from "@reanit/core/analytics";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
+import type { LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { SchoolService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 
+import { ANALYTICS_FOR_SCHOOL } from "../analytics/analytics.tokens";
 import { AppModule } from "../app.module";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
@@ -22,6 +25,7 @@ import type { Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
 import { DB_CLIENT } from "@reanit/nest";
 import { loggerOptions } from "@reanit/nest";
+import { LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
@@ -69,6 +73,12 @@ export type FakeClients = {
   commerceFor: Mock<(schoolId: string) => CommerceService>;
   /** Stands in for the payment confirmation that enrolls. */
   confirmation: { confirm: Mock };
+  /** Stands in for every school's learning service; `learningFor` records which school was asked for. */
+  learning: Record<keyof LearningService, Mock>;
+  learningFor: Mock<(schoolId: string) => LearningService>;
+  /** Stands in for every school's stats service; `analyticsFor` records which school was asked for. */
+  analytics: Record<keyof AnalyticsService, Mock>;
+  analyticsFor: Mock<(schoolId: string) => AnalyticsService>;
 };
 
 /** Extras a test can boot the app with. */
@@ -98,6 +108,8 @@ const CATALOG_METHODS = [
 ] as const satisfies readonly (keyof CatalogService)[];
 const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as const satisfies readonly (keyof MediaService)[];
 const COMMERCE_METHODS = ["setPrice", "getOffer", "checkout", "getOrder"] as const satisfies readonly (keyof CommerceService)[];
+const LEARNING_METHODS = ["getCourse", "getLessonMedia", "recordProgress"] as const satisfies readonly (keyof LearningService)[];
+const ANALYTICS_METHODS = ["getCourseStats"] as const satisfies readonly (keyof AnalyticsService)[];
 
 /**
  * Creates a fake of a core service with one spy per use case.
@@ -112,7 +124,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, catalog, media and commerce services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, catalog, media, commerce, learning and stats services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -120,6 +132,8 @@ export function createFakeClients(): FakeClients {
   const catalog = fakeService(CATALOG_METHODS);
   const media = fakeService(MEDIA_METHODS);
   const commerce = fakeService(COMMERCE_METHODS);
+  const learning = fakeService(LEARNING_METHODS);
+  const analytics = fakeService(ANALYTICS_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
@@ -132,6 +146,10 @@ export function createFakeClients(): FakeClients {
     commerce,
     commerceFor: vi.fn(() => commerce as unknown as CommerceService),
     confirmation: { confirm: vi.fn() },
+    learning,
+    learningFor: vi.fn(() => learning as unknown as LearningService),
+    analytics,
+    analyticsFor: vi.fn(() => analytics as unknown as AnalyticsService),
   };
 }
 
@@ -164,7 +182,11 @@ export async function createTestApp(
     .overrideProvider(COMMERCE_FOR_SCHOOL)
     .useValue(clients.commerceFor)
     .overrideProvider(PAYMENT_CONFIRMATION)
-    .useValue(clients.confirmation);
+    .useValue(clients.confirmation)
+    .overrideProvider(LEARNING_FOR_SCHOOL)
+    .useValue(clients.learningFor)
+    .overrideProvider(ANALYTICS_FOR_SCHOOL)
+    .useValue(clients.analyticsFor);
   for (const { provide, useValue } of options.overrides ?? []) builder = builder.overrideProvider(provide).useValue(useValue);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });

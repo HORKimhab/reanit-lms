@@ -9,7 +9,7 @@ import { MEDIA_FOR_SCHOOL, type MediaForSchool } from "./media.tokens";
 /** The staff school `@Roles` resolved for the request. */
 type StaffSchool = NonNullable<RequestContext["school"]>;
 
-/** A lesson's video or PDF: upload straight to storage, attach, and preview. Students' playback comes with API-06. */
+/** A lesson's video or PDF: upload straight to storage, attach, and preview. Students play it through the learning routes. */
 @Controller("lessons/:lessonId/media")
 @Roles("owner", "admin", "instructor")
 export class MediaController {

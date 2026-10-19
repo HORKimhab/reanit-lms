@@ -1,7 +1,7 @@
-import { flattenLessons, getMockCourse, type FlatLesson, type MockCourse } from "./courses";
+import { flattenLessons, getMockCourse, type MockCourse } from "./courses";
 import { MOCK_SCHOOL_SLUG } from "./schools";
 
-// Mock enrollments for MOCK_USER until API-06 (learning) lands.
+// Mock enrollments for MOCK_USER on "My courses" until it is connected to the learning API (the player already is).
 const ENROLLMENTS = [
   { schoolSlug: MOCK_SCHOOL_SLUG, courseSlug: "brand-design-basics", completedLessons: 4 },
   { schoolSlug: MOCK_SCHOOL_SLUG, courseSlug: "social-media-content", completedLessons: 4 },
@@ -50,26 +50,4 @@ export function toEnrollment(course: MockCourse, completedLessons: number): Mock
     percent: totalLessons === 0 ? 0 : (completedLessons / totalLessons) * PERCENT,
     isCompleted: completedLessons >= totalLessons,
   };
-}
-
-/**
- * Looks up the signed-in student's enrollment in one course.
- *
- * @param schoolSlug - The school's slug.
- * @param courseSlug - The course's slug.
- * @returns The enrollment, or `undefined` when the student is not enrolled.
- */
-export function getMockEnrollment(schoolSlug: string, courseSlug: string) {
-  return getMockEnrollments(schoolSlug).find((e) => e.course.slug === courseSlug);
-}
-
-/**
- * Picks where the player resumes: the first unfinished lesson, or the last one when all are done.
- *
- * @param enrollment - The student's enrollment.
- * @returns The lesson to open, or `undefined` when the course has no lessons.
- */
-export function getResumeLesson(enrollment: MockEnrollment): FlatLesson | undefined {
-  const lessons = flattenLessons(enrollment.course);
-  return lessons[Math.min(enrollment.completedLessons, lessons.length - 1)];
 }

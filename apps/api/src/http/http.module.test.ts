@@ -10,6 +10,7 @@ import {
   MediaTooLargeError,
   UnsupportedMediaError,
 } from "@reanit/core/media";
+import { NotEnrolledError } from "@reanit/core/learning";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -41,6 +42,7 @@ const DOMAIN_ERRORS: Record<string, new () => Error> = {
   MediaTooLargeError,
   InvalidMediaKeyError,
   MediaNotUploadedError,
+  NotEnrolledError,
 };
 
 /** An internal error whose message must never reach the caller. */
@@ -159,6 +161,7 @@ describe("errors", () => {
     ["MediaTooLargeError", 413, "media-too-large"],
     ["InvalidMediaKeyError", 400, "invalid-media-key"],
     ["MediaNotUploadedError", 409, "media-not-uploaded"],
+    ["NotEnrolledError", 403, "not-enrolled"],
   ])("answers %s with %i and its problem type", async (name, status, code) => {
     const response = await app.inject({ method: "GET", url: `/edge-probe/throw/${name}` });
 

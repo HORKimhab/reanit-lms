@@ -1,3 +1,4 @@
+import { summarizeProgress, type PlayerLesson } from "@reanit/core/learning";
 import { Progress } from "@reanit/ui/components/progress";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -5,7 +6,6 @@ import type * as React from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "@/i18n/navigation";
-import type { MockEnrollment } from "@/mocks/enrollments";
 
 import { LessonList } from "./lesson-list";
 
@@ -14,24 +14,30 @@ import { LessonList } from "./lesson-list";
  * (sidebar on desktop, collapsible on mobile).
  *
  * @param props - Component props.
- * @param props.school - The school's slug.
- * @param props.enrollment - The student's enrollment in the course being played.
+ * @param props.school - The school's subdomain.
+ * @param props.title - The course's title.
+ * @param props.lessons - The course's lessons in order, with the student's progress.
+ * @param props.base - The course's player path.
  * @param props.children - The lesson.
  * @returns The player shell.
  */
 export function PlayerShell({
   school,
-  enrollment,
+  title,
+  lessons,
+  base,
   children,
 }: {
   school: string;
-  enrollment: MockEnrollment;
+  title: string;
+  lessons: PlayerLesson[];
+  base: string;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Player");
-  const { course, percent, completedLessons } = enrollment;
-  const outline = <LessonList course={course} completedLessons={completedLessons} />;
-  const progressText = t("progress", { percent: Math.round(percent) });
+  const { percent } = summarizeProgress(lessons);
+  const outline = <LessonList lessons={lessons} base={base} />;
+  const progressText = t("progress", { percent });
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -43,7 +49,7 @@ export function PlayerShell({
         >
           <ArrowLeft aria-hidden className="size-4" />
         </Link>
-        <span className="truncate font-medium">{course.title}</span>
+        <span className="truncate font-medium">{title}</span>
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden w-40 flex-col gap-1 sm:flex">
             <Progress value={percent} aria-label={t("progressLabel")} />

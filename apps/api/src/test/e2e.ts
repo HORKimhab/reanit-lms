@@ -216,3 +216,33 @@ export async function openSchool(
   const response = await agent.post("/schools").send({ name, subdomain: name }).expect(201);
   return { agent, school: response.body.school };
 }
+
+/**
+ * Creates a draft course with one section holding a one-minute video lesson and a text lesson.
+ *
+ * @param agent The school owner's agent.
+ * @param title The course title.
+ * @param lessons The lesson ids to use.
+ * @param lessons.video The video lesson's id.
+ * @param lessons.text The text lesson's id.
+ * @returns The new course.
+ */
+export async function createVideoCourse(agent: Agent, title: string, lessons: { video: string; text: string }): Promise<{ id: string; slug: string }> {
+  const { course } = (await agent.post("/courses").send({ title }).expect(201)).body;
+  await agent
+    .put(`/courses/${course.id}/outline`)
+    .send({
+      sections: [
+        {
+          id: randomUUID(),
+          title: "One",
+          lessons: [
+            { id: lessons.video, title: "Intro", type: "video", durationSeconds: 60 },
+            { id: lessons.text, title: "Notes", type: "text", durationSeconds: 0 },
+          ],
+        },
+      ],
+    })
+    .expect(204);
+  return course;
+}

@@ -1,23 +1,42 @@
 import { outlineStats, type CourseWithOutline } from "@reanit/core/catalog";
+import type { PriceInput } from "@reanit/core/commerce";
 import { Button } from "@reanit/ui/components/button";
 import { Card } from "@reanit/ui/components/card";
 import { Check, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+import { useMoney } from "@/i18n/format";
+import { Link } from "@/i18n/navigation";
 
 import { Duration } from "./duration";
 import { LessonIcon } from "./lesson-icon";
 
 const INCLUDES = ["lifetime", "certificate", "anyDevice"] as const;
 
+/** A course's price; null while it is not for sale. */
+type CoursePrice = PriceInput | null;
+
 /**
- * Course sales page body: hero, curriculum and instructor, with a buy box. Prices come with checkout (API-05).
+ * Course sales page body: hero, curriculum and instructor, with a buy box.
  *
  * @param props - Component props.
  * @param props.course - The published course with its curriculum.
  * @param props.instructorName - Who teaches it.
+ * @param props.price - Its price, or null when it is not for sale yet.
+ * @param props.checkoutHref - The course's checkout page.
  * @returns The sales page, with a sticky buy box on desktop and a pinned enroll bar on mobile.
  */
-export function CourseDetails({ course, instructorName }: { course: CourseWithOutline; instructorName: string }) {
+export function CourseDetails({
+  course,
+  instructorName,
+  price,
+  checkoutHref,
+}: {
+  course: CourseWithOutline;
+  instructorName: string;
+  price: CoursePrice;
+  checkoutHref: string;
+}) {
   const t = useTranslations("Course");
   const stats = outlineStats(course);
 
@@ -32,7 +51,7 @@ export function CourseDetails({ course, instructorName }: { course: CourseWithOu
             <Duration seconds={stats.durationSeconds} />
           </p>
         </div>
-        <BuyBox className="hidden lg:flex lg:row-span-2 lg:self-start lg:sticky lg:top-24" />
+        <BuyBox price={price} checkoutHref={checkoutHref} className="hidden lg:flex lg:row-span-2 lg:self-start lg:sticky lg:top-24" />
 
         <div className="flex flex-col gap-12">
           <section className="flex flex-col gap-4">
@@ -77,29 +96,62 @@ export function CourseDetails({ course, instructorName }: { course: CourseWithOu
       </section>
 
       {/* Mobile: enroll pinned to the bottom. */}
-      <div className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-end gap-4 border-t bg-background px-4 py-3 lg:hidden">
-        <Button>{t("enroll")}</Button>
+      <div className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 py-3 lg:hidden">
+        <PriceTag price={price} />
+        <EnrollButton price={price} checkoutHref={checkoutHref} />
       </div>
     </div>
   );
 }
 
 /**
- * Enroll button and what the purchase includes; the price joins it with checkout (API-05).
+ * The price, or "coming soon" when the course is not for sale.
  *
  * @param props - Component props.
+ * @param props.price - The price, or null.
+ * @returns The localized price.
+ */
+function PriceTag({ price }: { price: CoursePrice }) {
+  const t = useTranslations("Course");
+  const money = useMoney();
+  return <span className="text-2xl font-bold">{price ? money(price.amount, price.currency) : t("notForSale")}</span>;
+}
+
+/**
+ * Link to checkout; nothing while the course is not for sale.
+ *
+ * @param props - Component props.
+ * @param props.price - The price, or null.
+ * @param props.checkoutHref - The course's checkout page.
+ * @param props.className - Extra classes for the button.
+ * @returns The enroll button, or null.
+ */
+function EnrollButton({ price, checkoutHref, className }: { price: CoursePrice; checkoutHref: string; className?: string }) {
+  const t = useTranslations("Course");
+  if (!price) return null;
+  return (
+    <Button asChild size="lg" className={className}>
+      <Link href={checkoutHref}>{t("enroll")}</Link>
+    </Button>
+  );
+}
+
+/**
+ * Price, enroll button and what the purchase includes.
+ *
+ * @param props - Component props.
+ * @param props.price - The price, or null when not for sale.
+ * @param props.checkoutHref - The course's checkout page.
  * @param props.className - Extra classes for the card.
  * @returns The buy card.
  */
-function BuyBox({ className }: { className?: string }) {
+function BuyBox({ price, checkoutHref, className }: { price: CoursePrice; checkoutHref: string; className?: string }) {
   const t = useTranslations("Course");
   return (
     <Card className={className}>
       <div className="aspect-video rounded-lg bg-primary/15" />
-      {/* Checkout is built in WEB-14. */}
-      <Button size="lg" className="w-full">
-        {t("enroll")}
-      </Button>
+      <PriceTag price={price} />
+      <EnrollButton price={price} checkoutHref={checkoutHref} className="w-full" />
       <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
         {INCLUDES.map((key) => (
           <li key={key} className="flex gap-2">

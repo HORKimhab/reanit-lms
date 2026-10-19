@@ -6,20 +6,11 @@ import { createLessonMediaStore, type DbClient } from "@reanit/db";
 import { DB_CLIENT, ENV } from "@reanit/nest";
 
 import type { Env } from "../config/env";
+import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
 import { MediaController } from "./media.controller";
 import { MEDIA_FOR_SCHOOL, OBJECT_STORAGE, type MediaForSchool } from "./media.tokens";
 import { createS3Storage } from "./s3-storage";
-
-/** The real clock. */
-const systemClock = {
-  /**
-   * Reads the system time.
-   *
-   * @returns The current time.
-   */
-  now: () => new Date(),
-};
 
 /**
  * Wires per-school media services to Postgres (tenant client) and object storage.
@@ -43,10 +34,11 @@ function provideStorage(env: Env): ObjectStorage {
   return createS3Storage(env);
 }
 
-/** Lesson file uploads and previews for staff. */
+/** Lesson file uploads and previews for staff; other modules sign lesson files through `MEDIA_FOR_SCHOOL`. */
 @Module({
   imports: [SchoolsModule],
   controllers: [MediaController],
+  exports: [MEDIA_FOR_SCHOOL],
   providers: [
     { provide: OBJECT_STORAGE, inject: [ENV], useFactory: provideStorage },
     { provide: MEDIA_FOR_SCHOOL, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideMediaForSchool },

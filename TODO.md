@@ -51,10 +51,10 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-05 Checkout + WRK-01 webhook enrollment. Decided: dynamic payment methods — ABA PayWay (KHQR + cards), Bakong KHQR and Stripe behind one `PaymentGateway` port in `@reanit/core/commerce`; a method is offered when its credentials are configured and it supports the course's currency, and the student picks one at checkout. This task: course prices (staff, integer minor units + USD/KHR), the method list on the public course, `POST /checkout` creating a pending order, the Stripe gateway (Checkout Session + signed webhook), and enrollment from a confirmed payment, exactly once (idempotent).
 - [x] API-20 ABA PayWay gateway (KHQR + cards): purchase request with its HMAC hash, pushback webhook confirmed through the check-transaction API, enrollment through the same confirmation path. Needs API-05.
 - [x] API-21 Bakong KHQR gateway: KHQR made with the official `bakong-khqr` library, payment confirmed by polling Bakong's check-by-md5 API (Bakong has no webhook), enrollment through the same confirmation path. Needs API-05.
-- [ ] WEB-14 Checkout page: price on the sales page, payment method picker from the course's enabled methods, redirect or KHQR code, then the order's status. Needs API-05.
-- [ ] API-06 Learning: access check, progress heartbeat
-- [ ] WEB-15 Connect player. Needs API-06.
-- [ ] API-07 Dashboard stats (pre-aggregated)
+- [x] WEB-14 Checkout page: price on the sales page, payment method picker from the course's enabled methods, redirect or KHQR code, then the order's status. Needs API-05.
+- [x] API-06 Learning: access check, progress heartbeat
+- [x] WEB-15 Connect player. Needs API-06.
+- [x] API-07 Dashboard stats (pre-aggregated)
 - [ ] WEB-16 Connect dashboard. Needs API-07.
 - [ ] API-08 Students + school settings: list/search students, update logo/color/name
 - [ ] WEB-17 Connect students list + settings. Needs API-08.

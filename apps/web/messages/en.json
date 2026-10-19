@@ -157,7 +157,8 @@
       "lifetime": "Lifetime access",
       "certificate": "Certificate of completion",
       "anyDevice": "Watch on any device"
-    }
+    },
+    "notForSale": "Coming soon"
   },
   "MyCourses": {
     "title": "My courses",
@@ -183,7 +184,8 @@
     "finish": "Finish course",
     "pdfHint": "Download the file to read it offline.",
     "download": "Download",
-    "textPlaceholder": "The lesson text written by the instructor appears here."
+    "textPlaceholder": "The lesson text written by the instructor appears here.",
+    "fileNotReady": "This lesson's file is not ready yet. Check back soon."
   },
   "ThemeToggle": {
     "label": "Toggle theme"
@@ -261,5 +263,35 @@
     "deleteWarning": "This deletes the course with all its sections and lessons. It cannot be undone.",
     "deleting": "Deleting…",
     "curriculum": "Curriculum"
+  },
+  "Checkout": {
+    "title": "Checkout",
+    "methodLegend": "How do you want to pay?",
+    "methods": {
+      "stripe": "Card",
+      "aba_payway": "ABA PayWay",
+      "bakong_khqr": "Bakong KHQR"
+    },
+    "pay": "Pay {price}",
+    "paying": "Starting payment…",
+    "noMethods": "No payment method takes this course's currency yet.",
+    "unavailable": "This payment method can't take this payment. Choose another one.",
+    "enrolled": "You already have this course.",
+    "goToCourse": "Go to the course",
+    "toGateway": "Taking you to the payment page…",
+    "continue": "Continue to payment",
+    "scanTitle": "Scan to pay in any banking app",
+    "qrLabel": "KHQR code to pay {price}",
+    "expiresAt": "The code works until {time}.",
+    "waiting": "Waiting for your payment…"
+  },
+  "Order": {
+    "title": "Your order",
+    "pending": "Waiting for your payment…",
+    "paid": "Payment received. You're enrolled!",
+    "failed": "The payment didn't go through.",
+    "refunded": "This order was refunded.",
+    "myCourses": "Go to my courses",
+    "browse": "Browse courses"
   }
 }

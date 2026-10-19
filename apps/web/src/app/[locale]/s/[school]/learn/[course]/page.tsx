@@ -1,20 +1,21 @@
+import { playerLessons, summarizeProgress } from "@reanit/core/learning";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 
 import { redirect } from "@/i18n/navigation";
-import { getMockEnrollment, getResumeLesson } from "@/mocks/enrollments";
+import { getPlayerCourse } from "@/server/learning/player";
 
 /**
  * Sends the student to the lesson they should resume. 404s when not enrolled or the course is empty.
  *
  * @param props - Page props.
- * @param props.params - Route params with the school and course slugs.
+ * @param props.params - Route params with the school's subdomain and the course slug.
  * @returns Never; it always redirects or 404s.
  */
 export default async function ResumeCourse({ params }: PageProps<"/[locale]/s/[school]/learn/[course]">) {
-  const { school, course } = await params;
-  const enrollment = getMockEnrollment(school, course);
-  const lesson = enrollment && getResumeLesson(enrollment);
-  if (!lesson) notFound();
-  redirect({ href: `/s/${school}/learn/${course}/${lesson.id}`, locale: await getLocale() });
+  const { school, course: slug } = await params;
+  const course = await getPlayerCourse(school, decodeURIComponent(slug));
+  const { resume } = summarizeProgress(playerLessons(course, course.progress));
+  if (!resume) notFound();
+  redirect({ href: `/s/${school}/learn/${course.slug}/${resume.id}`, locale: await getLocale() });
 }

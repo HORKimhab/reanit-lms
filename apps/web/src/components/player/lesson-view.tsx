@@ -1,53 +1,58 @@
+import type { PlayerLesson } from "@reanit/core/learning";
 import { Button } from "@reanit/ui/components/button";
-import { ArrowLeft, ArrowRight, Download, FileText, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Duration } from "@/components/course/duration";
 import { Link } from "@/i18n/navigation";
-import type { FlatLesson } from "@/mocks/courses";
+
+import { LessonVideo } from "./lesson-video";
 
 /**
- * One lesson in the player: content, position in the course, and previous / next navigation.
+ * One lesson in the player: content, position in the course, and previous / complete-and-continue navigation.
  *
  * @param props - Component props.
- * @param props.school - The school's slug.
- * @param props.courseSlug - The course's slug.
  * @param props.lessons - Every lesson in the course, in order.
  * @param props.lesson - The lesson to show; one of `lessons`.
+ * @param props.base - The course's player path.
+ * @param props.fileUrl - Signed URL of the lesson's video or PDF; null for text lessons and files not uploaded yet.
+ * @param props.savePosition - The video heartbeat, bound to the lesson.
+ * @param props.complete - Marks the lesson completed and moves on, bound to the lesson and the next page.
  * @returns The lesson's content, title and position, and links to the previous and next lessons.
  */
 export function LessonView({
-  school,
-  courseSlug,
   lessons,
   lesson,
+  base,
+  fileUrl,
+  savePosition,
+  complete,
 }: {
-  school: string;
-  courseSlug: string;
-  lessons: FlatLesson[];
-  lesson: FlatLesson;
+  lessons: PlayerLesson[];
+  lesson: PlayerLesson;
+  base: string;
+  fileUrl: string | null;
+  savePosition: (positionSeconds: number) => Promise<void>;
+  complete: () => Promise<void>;
 }) {
   const t = useTranslations("Player");
-  const prev = lessons[lesson.index - 1];
-  const next = lessons[lesson.index + 1];
-  const base = `/s/${school}/learn/${courseSlug}`;
+  const previous = lessons[lesson.index - 1];
+  const isLast = lesson.index === lessons.length - 1;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 sm:p-6">
-      <LessonBody lesson={lesson} />
+      <LessonBody lesson={lesson} fileUrl={fileUrl} savePosition={savePosition} />
 
       <div className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">
-          {t("lessonOf", { n: lesson.index + 1, total: lessons.length })} ·{" "}
-          {lesson.sectionTitle}
+          {t("lessonOf", { n: lesson.index + 1, total: lessons.length })} · {lesson.sectionTitle}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">{lesson.title}</h1>
       </div>
 
       <nav className="flex items-center justify-between gap-3 border-t pt-4">
-        {prev ? (
+        {previous ? (
           <Button asChild variant="ghost">
-            <Link href={`${base}/${prev.id}`}>
+            <Link href={`${base}/${previous.id}`}>
               <ArrowLeft aria-hidden />
               {t("previous")}
             </Link>
@@ -55,13 +60,12 @@ export function LessonView({
         ) : (
           <span />
         )}
-        {/* Marking complete is wired to the API in WEB-15; for now it only moves on. */}
-        <Button asChild>
-          <Link href={next ? `${base}/${next.id}` : `/s/${school}/my-courses`}>
-            {next ? t("completeAndContinue") : t("finish")}
+        <form action={complete}>
+          <Button type="submit">
+            {isLast ? t("finish") : t("completeAndContinue")}
             <ArrowRight aria-hidden />
-          </Link>
-        </Button>
+          </Button>
+        </form>
       </nav>
     </div>
   );
@@ -72,41 +76,46 @@ export function LessonView({
  *
  * @param props - Component props.
  * @param props.lesson - The lesson to show.
- * @returns A video stand-in, a PDF download card, or the lesson text.
+ * @param props.fileUrl - Signed URL of its video or PDF, or null.
+ * @param props.savePosition - The video heartbeat.
+ * @returns The video, a PDF download card, a not-ready notice, or the lesson text.
  */
-function LessonBody({ lesson }: { lesson: FlatLesson }) {
+function LessonBody({
+  lesson,
+  fileUrl,
+  savePosition,
+}: {
+  lesson: PlayerLesson;
+  fileUrl: string | null;
+  savePosition: (positionSeconds: number) => Promise<void>;
+}) {
   const t = useTranslations("Player");
-  if (lesson.type === "video") {
-    // Real playback (signed HLS from the video provider) arrives with API-04.
+  if (lesson.type === "text") {
     return (
-      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-neutral-950 text-white">
-        <span className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Play aria-hidden className="size-7 translate-x-0.5" />
-        </span>
-        <span className="absolute right-3 bottom-3 rounded bg-black/60 px-2 py-0.5 text-xs">
-          <Duration seconds={lesson.durationSec} />
-        </span>
-      </div>
+      <article className="flex flex-col gap-3 rounded-xl border p-6 leading-relaxed">
+        <p>{t("textPlaceholder")}</p>
+      </article>
     );
   }
-  if (lesson.type === "pdf") {
-    return (
-      <div className="flex items-center gap-4 rounded-xl border p-6">
-        <FileText aria-hidden className="size-10 shrink-0 text-primary" />
-        <div className="flex-1">
-          <p className="font-medium">{lesson.title}.pdf</p>
-          <p className="text-sm text-muted-foreground">{t("pdfHint")}</p>
-        </div>
-        <Button variant="outline">
-          <Download aria-hidden />
-          {t("download")}
-        </Button>
-      </div>
-    );
+  if (!fileUrl) {
+    return <p className="rounded-xl border p-6 text-muted-foreground">{t("fileNotReady")}</p>;
+  }
+  if (lesson.type === "video") {
+    return <LessonVideo src={fileUrl} title={lesson.title} startAt={lesson.positionSeconds} savePosition={savePosition} />;
   }
   return (
-    <article className="flex flex-col gap-3 rounded-xl border p-6 leading-relaxed">
-      <p>{t("textPlaceholder")}</p>
-    </article>
+    <div className="flex items-center gap-4 rounded-xl border p-6">
+      <FileText aria-hidden className="size-10 shrink-0 text-primary" />
+      <div className="flex-1">
+        <p className="font-medium">{lesson.title}.pdf</p>
+        <p className="text-sm text-muted-foreground">{t("pdfHint")}</p>
+      </div>
+      <Button asChild variant="outline">
+        <a href={fileUrl} download>
+          <Download aria-hidden />
+          {t("download")}
+        </a>
+      </Button>
+    </div>
   );
 }

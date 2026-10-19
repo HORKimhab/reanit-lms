@@ -47,7 +47,8 @@ const loadedSectionSchema = sectionSchema.extend({
   lessons: z.array(sectionSchema.shape.lessons.element.extend({ hasMedia: z.boolean() })),
 });
 
+/** A course with its sections and lessons in order; each lesson says whether a file is attached. */
+export const courseWithOutlineSchema = z.object({ ...courseSchema.shape, sections: z.array(loadedSectionSchema) });
+
 /** One course with its sections and lessons in order; each lesson says whether a file is attached. */
-export class CourseWithOutlineResponse extends createZodDto(
-  z.object({ course: z.object({ ...courseSchema.shape, sections: z.array(loadedSectionSchema) }) }),
-) {}
+export class CourseWithOutlineResponse extends createZodDto(z.object({ course: courseWithOutlineSchema })) {}

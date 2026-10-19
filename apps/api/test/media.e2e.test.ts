@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { openSchool, uniqueName, useE2eApp } from "../src/test/e2e";
+import { createVideoCourse, openSchool, uniqueName, useE2eApp } from "../src/test/e2e";
 
 const e2e = useE2eApp();
 const videoLesson = randomUUID();
@@ -13,22 +13,7 @@ let beta: Awaited<ReturnType<typeof openSchool>>;
 beforeAll(async () => {
   alpha = await openSchool(e2e().app, uniqueName("media-alpha"));
   beta = await openSchool(e2e().app, uniqueName("media-beta"));
-  const course = (await alpha.agent.post("/courses").send({ title: "Video course" }).expect(201)).body.course;
-  await alpha.agent
-    .put(`/courses/${course.id}/outline`)
-    .send({
-      sections: [
-        {
-          id: randomUUID(),
-          title: "One",
-          lessons: [
-            { id: videoLesson, title: "Intro", type: "video", durationSeconds: 60 },
-            { id: textLesson, title: "Notes", type: "text", durationSeconds: 0 },
-          ],
-        },
-      ],
-    })
-    .expect(204);
+  await createVideoCourse(alpha.agent, "Video course", { video: videoLesson, text: textLesson });
 });
 
 describe("lesson media", () => {

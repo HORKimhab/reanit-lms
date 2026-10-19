@@ -100,15 +100,17 @@ model School {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  memberships    Membership[]
-  courses        Course[]
-  sections       Section[]
-  lessons        Lesson[]
-  prices         Price[]
-  orders         Order[]
-  orderItems     OrderItem[]
-  enrollments    Enrollment[]
-  lessonProgress LessonProgress[]
+  memberships      Membership[]
+  courses          Course[]
+  sections         Section[]
+  lessons          Lesson[]
+  prices           Price[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  enrollments      Enrollment[]
+  lessonProgress   LessonProgress[]
+  dailySales       DailySales[]
+  dailyCompletions DailyCompletions[]
 
   @@map("schools")
 }
@@ -138,11 +140,13 @@ model Course {
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
-  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  sections    Section[]
-  prices      Price[]
-  orderItems  OrderItem[]
-  enrollments Enrollment[]
+  school           School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections         Section[]
+  prices           Price[]
+  orderItems       OrderItem[]
+  enrollments      Enrollment[]
+  dailySales       DailySales[]
+  dailyCompletions DailyCompletions[]
 
   @@unique([schoolId, slug])
   @@map("courses")
@@ -247,14 +251,16 @@ model OrderItem {
 }
 
 model Enrollment {
-  id        String           @id @default(uuid()) @db.Uuid
-  schoolId  String           @map("school_id") @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  courseId  String           @map("course_id") @db.Uuid
-  orderId   String?          @map("order_id") @db.Uuid
-  source    EnrollmentSource
-  expiresAt DateTime?        @map("expires_at")
-  createdAt DateTime         @default(now()) @map("created_at")
+  id          String           @id @default(uuid()) @db.Uuid
+  schoolId    String           @map("school_id") @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  courseId    String           @map("course_id") @db.Uuid
+  orderId     String?          @map("order_id") @db.Uuid
+  source      EnrollmentSource
+  expiresAt   DateTime?        @map("expires_at")
+  /// Set once, when the student completes the course's last lesson.
+  completedAt DateTime?        @map("completed_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
 
   school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -285,4 +291,40 @@ model LessonProgress {
   @@index([schoolId])
   @@index([lessonId])
   @@map("lesson_progress")
+}
+
+/// Pre-aggregated sales for the dashboard: one row per course, UTC day and currency, bumped when an order is confirmed paid.
+model DailySales {
+  id       String   @id @default(uuid()) @db.Uuid
+  schoolId String   @map("school_id") @db.Uuid
+  courseId String   @map("course_id") @db.Uuid
+  day      DateTime @db.Date
+  currency String   @db.Char(3)
+  /// Paid orders, one student each.
+  sales    Int      @default(0)
+  /// Sum of the paid amounts in minor units; bigint, since riel totals pass 2^31 quickly.
+  revenue  BigInt   @default(0)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, courseId, day, currency])
+  @@index([courseId])
+  @@map("daily_sales")
+}
+
+/// Pre-aggregated course completions for the dashboard: one row per course and UTC day.
+model DailyCompletions {
+  id          String   @id @default(uuid()) @db.Uuid
+  schoolId    String   @map("school_id") @db.Uuid
+  courseId    String   @map("course_id") @db.Uuid
+  day         DateTime @db.Date
+  completions Int      @default(0)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, courseId, day])
+  @@index([courseId])
+  @@map("daily_completions")
 }

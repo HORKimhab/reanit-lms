@@ -1,23 +1,22 @@
-import { notFound } from "next/navigation";
+import { playerLessons } from "@reanit/core/learning";
 
 import { PlayerShell } from "@/components/player/player-shell";
-import { getMockEnrollment } from "@/mocks/enrollments";
+import { getPlayerCourse } from "@/server/learning/player";
 
 /**
- * Player layout. 404s when the student is not enrolled.
+ * Player layout for an enrolled student. Signed-out visitors log in first; anyone else 404s.
  *
  * @param props - Layout props.
  * @param props.children - The lesson page.
- * @param props.params - Route params with the school and course slugs.
+ * @param props.params - Route params with the school's subdomain and the course slug.
  * @returns The player shell around the lesson.
- * @throws {Error} Next's not-found signal when the student is not enrolled in the course.
+ * @throws {Error} Next's redirect signal when signed out, or its not-found signal when the student does not have the course.
  */
 export default async function PlayerLayout({ children, params }: LayoutProps<"/[locale]/s/[school]/learn/[course]">) {
-  const { school, course } = await params;
-  const enrollment = getMockEnrollment(school, course);
-  if (!enrollment) notFound();
+  const { school, course: slug } = await params;
+  const course = await getPlayerCourse(school, decodeURIComponent(slug));
   return (
-    <PlayerShell school={school} enrollment={enrollment}>
+    <PlayerShell school={school} title={course.title} lessons={playerLessons(course, course.progress)} base={`/s/${school}/learn/${course.slug}`}>
       {children}
     </PlayerShell>
   );
