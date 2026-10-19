@@ -21,3 +21,13 @@ export class LessonLockedError extends Error {
     super(`Lesson opens at ${unlocksAt.toISOString()}`);
   }
 }
+
+/** The school has no such comment, or students cannot see it. */
+export class CommentNotFoundError extends Error {
+  override readonly name = "CommentNotFoundError";
+}
+
+/** Only a comment's author may delete it. */
+export class NotCommentAuthorError extends Error {
+  override readonly name = "NotCommentAuthorError";
+}

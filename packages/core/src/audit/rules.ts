@@ -16,6 +16,8 @@ export const AUDIT_ACTIONS = [
   "bundle.price.set",
   "lesson.media.attach",
   "lesson.quiz.save",
+  "comment.reply",
+  "comment.moderate",
   "school.settings.update",
 ] as const;
 

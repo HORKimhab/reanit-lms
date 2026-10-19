@@ -142,3 +142,28 @@ describe("drip lessons", () => {
     expect(locked.body.type).toBe("urn:reanit:problem:lesson-locked");
   });
 });
+
+describe("comments", () => {
+  it("lets a buyer ask under a lesson, staff answer and hide, and keeps other students' comments theirs", async () => {
+    const { agent: student } = await signUp(e2e().app, uniqueName("comment-student"));
+    await student.post(`${base}/lessons/${textLesson}/comments`).send({ body: "Too early?" }).expect(403);
+    await buyCourse(e2e(), student, alpha.school.subdomain, course.slug);
+
+    const { comment } = (await student.post(`${base}/lessons/${textLesson}/comments`).send({ body: "Where are the notes?" }).expect(201)).body;
+    const inbox = (await alpha.agent.get("/comments").expect(200)).body;
+    expect(inbox.threads.map(({ id }: { id: string }) => id)).toContain(comment.id);
+
+    await alpha.agent.post(`/comments/${comment.id}/replies`).send({ body: "Below the video" }).expect(201);
+    expect((await alpha.agent.get("/comments").expect(200)).body.threads.map(({ id }: { id: string }) => id)).not.toContain(comment.id);
+    const [thread] = (await student.get(`${base}/lessons/${textLesson}/comments`).expect(200)).body.threads;
+    expect(thread.replies).toMatchObject([{ body: "Below the video", author: { isStaff: true } }]);
+
+    const { agent: classmate } = await signUp(e2e().app, uniqueName("comment-classmate"));
+    await buyCourse(e2e(), classmate, alpha.school.subdomain, course.slug);
+    await classmate.delete(`${base}/comments/${comment.id}`).expect(403);
+
+    await alpha.agent.patch(`/comments/${comment.id}`).send({ isHidden: true }).expect(204);
+    expect((await classmate.get(`${base}/lessons/${textLesson}/comments`).expect(200)).body.threads).toEqual([]);
+    await student.delete(`${base}/comments/${comment.id}`).expect(204);
+  });
+});

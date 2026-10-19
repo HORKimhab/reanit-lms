@@ -68,6 +68,7 @@ model User {
   enrollments Enrollment[]
   sessions    Session[]
   auditEvents AuditEvent[]
+  comments    LessonComment[]
 
   @@map("users")
 }
@@ -126,6 +127,7 @@ model School {
   bundleCourses    BundleCourse[]
   quizzes          Quiz[]
   quizAttempts     QuizAttempt[]
+  lessonComments   LessonComment[]
 
   @@map("schools")
 }
@@ -205,6 +207,7 @@ model Lesson {
   progress     LessonProgress[]
   quiz         Quiz?
   quizAttempts QuizAttempt[]
+  comments     LessonComment[]
 
   @@index([schoolId])
   @@index([sectionId, position])
@@ -501,4 +504,29 @@ model QuizAttempt {
   @@index([schoolId])
   @@index([enrollmentId, lessonId, createdAt])
   @@map("quiz_attempts")
+}
+
+/// A student's or staff member's comment under a lesson: a thread, or a reply to one (`parent_id`, one level deep).
+model LessonComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  lessonId  String   @map("lesson_id") @db.Uuid
+  /// Null once the author's account is deleted; the comment stays.
+  authorId  String?  @map("author_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  body      String
+  /// Hidden by staff: students no longer see it.
+  isHidden  Boolean  @default(false) @map("is_hidden")
+  createdAt DateTime @map("created_at")
+
+  school  School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson  Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  author  User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  parent  LessonComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies LessonComment[] @relation("CommentReplies")
+
+  @@index([schoolId, parentId, createdAt])
+  @@index([lessonId, createdAt])
+  @@index([parentId])
+  @@map("lesson_comments")
 }

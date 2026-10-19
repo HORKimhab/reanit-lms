@@ -1,9 +1,11 @@
 import type { Clock } from "../auth";
 import { CourseNotFoundError, type CatalogStore, type CourseWithOutline } from "../catalog";
 import type { MediaService } from "../media";
+import { findThreadRoot } from "./comment-threads";
+import type { CommentInput, CommentThread, LessonComment } from "./comments";
 import { lockedUntil } from "./drip";
-import { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
-import type { Enrollment, LearningStore, LessonProgress, QuizAttemptSummary, QuizStore } from "./ports";
+import { CommentNotFoundError, LessonLockedError, NotCommentAuthorError, NotEnrolledError, QuizNotFoundError } from "./errors";
+import type { CommentStore, Enrollment, LearningStore, LessonProgress, QuizAttemptSummary, QuizStore } from "./ports";
 import { DEFAULT_PASS_PERCENT, gradeQuiz, toStudentQuiz, type Quiz, type QuizAnswers, type QuizResult, type StudentQuiz } from "./quizzes";
 import type { ProgressInput } from "./rules";
 
@@ -14,6 +16,8 @@ export interface LearningDependencies {
   store: LearningStore;
   /** The school's quizzes and attempts. */
   quizzes: QuizStore;
+  /** The school's lesson comments. */
+  comments: CommentStore;
   /** Signs URLs to the school's lesson files. */
   media: Pick<MediaService, "getPlaybackUrl">;
   clock: Clock;
@@ -23,20 +27,21 @@ export interface LearningDependencies {
 export type PlayerCourse = CourseWithOutline & { progress: LessonProgress[]; enrolledAt: Date };
 
 /**
- * Builds one school's learning use cases: the player's course, lesson files, progress and quizzes.
+ * Builds one school's learning use cases: the player's course, lesson files, progress, quizzes and comments.
  * Every student use case first checks that the student holds a current enrollment in the course.
  *
  * @param dependencies Catalog, stores, media and clock.
  * @param dependencies.catalog The school's courses.
  * @param dependencies.store The school's enrollments and progress.
  * @param dependencies.quizzes The school's quizzes and attempts.
+ * @param dependencies.comments The school's lesson comments.
  * @param dependencies.media Signs lesson file URLs.
  * @param dependencies.clock Source of the current time.
- * @returns Player, file, progress and quiz operations.
+ * @returns Player, file, progress, quiz and comment operations.
  * @example
- * const learning = createLearningService({ catalog: createCatalogStore(db, schoolId), store: createLearningStore(db, schoolId), quizzes, media, clock });
+ * const learning = createLearningService({ catalog: createCatalogStore(db, schoolId), store: createLearningStore(db, schoolId), quizzes, comments, media, clock });
  */
-export function createLearningService({ catalog, store, quizzes, media, clock }: LearningDependencies) {
+export function createLearningService({ catalog, store, quizzes, comments, media, clock }: LearningDependencies) {
   /**
    * Keeps an enrollment only while it gives access.
    *
@@ -206,6 +211,53 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
         await completeCourseWhenDone(enrollment);
       }
       return result;
+    },
+
+    /**
+     * Lists a lesson's comments for its student; comments staff hid are left out.
+     *
+     * @param userId The student.
+     * @param lessonId The lesson.
+     * @returns The threads, newest first, replies oldest first.
+     * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
+     */
+    async listComments(userId: string, lessonId: string): Promise<CommentThread[]> {
+      await requireLessonAccess(userId, lessonId);
+      return comments.listThreads(lessonId, { includeHidden: false });
+    },
+
+    /**
+     * Posts a student's comment under a lesson, or their reply to one of its threads.
+     *
+     * @param userId The student.
+     * @param lessonId The lesson.
+     * @param input The text, and the comment replied to, if any.
+     * @returns The comment.
+     * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
+     * @throws {CommentNotFoundError} When the comment replied to is not under this lesson.
+     */
+    async postComment(userId: string, lessonId: string, input: CommentInput): Promise<LessonComment> {
+      await requireLessonAccess(userId, lessonId);
+      const root = input.parentId ? await findThreadRoot(comments, input.parentId) : null;
+      if (root && root.lessonId !== lessonId) throw new CommentNotFoundError();
+      return comments.createComment({ lessonId, authorId: userId, parentId: root?.id ?? null, body: input.body, at: clock.now() });
+    },
+
+    /**
+     * Deletes one of the student's own comments, with its replies.
+     *
+     * @param userId The student.
+     * @param commentId The comment.
+     * @throws {CommentNotFoundError} When the school has no such comment.
+     * @throws {NotCommentAuthorError} When someone else wrote it.
+     */
+    async deleteComment(userId: string, commentId: string): Promise<void> {
+      const comment = await comments.findComment(commentId);
+      if (!comment) throw new CommentNotFoundError();
+      if (comment.authorId !== userId) throw new NotCommentAuthorError();
+      await comments.deleteComment(commentId);
     },
   };
 }

@@ -1,5 +1,5 @@
 import { LessonMediaMissingError } from "@reanit/core/media";
-import { LessonLockedError, NotEnrolledError } from "@reanit/core/learning";
+import { LessonLockedError, NotCommentAuthorError, NotEnrolledError } from "@reanit/core/learning";
 import { describe, expect, it } from "vitest";
 
 import { type FakeClients, useTestApp } from "../test/app";
@@ -142,5 +142,50 @@ describe("quiz routes", () => {
     const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/lessons/${LESSON_ID}/quiz/attempts`, headers, payload: { answers: [] } });
 
     expect(response.statusCode).toBe(403);
+  });
+});
+
+describe("comment routes", () => {
+  const COMMENT_ID = "1c2b3a49-8f7e-4d6c-9b5a-4e3d2c1b0a31";
+  const AT = new Date("2026-10-20T01:00:00Z");
+  const COMMENT = { id: COMMENT_ID, body: "Hello", author: { id: TEST_USER.id, name: "Dara", isStaff: false }, isHidden: false, createdAt: AT };
+
+  it("lists the lesson's threads for the signed-in student", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.learning.listComments.mockResolvedValue([{ ...COMMENT, lessonId: LESSON_ID, replies: [COMMENT] }]);
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/lessons/${LESSON_ID}/comments`, headers });
+
+    expect(response.json().threads[0].replies[0].createdAt).toBe(AT.toISOString());
+    expect(testApp.clients.learning.listComments).toHaveBeenCalledWith(TEST_USER.id, LESSON_ID);
+  });
+
+  it("posts the student's comment, trimmed", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.learning.postComment.mockResolvedValue(COMMENT);
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/lessons/${LESSON_ID}/comments`, headers, payload: { body: " Hello " } });
+
+    expect(response.statusCode).toBe(201);
+    expect(testApp.clients.learning.postComment).toHaveBeenCalledWith(TEST_USER.id, LESSON_ID, { body: "Hello" });
+  });
+
+  it("answers 400 for a blank comment", async () => {
+    const headers = signInAs(testApp.clients);
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/lessons/${LESSON_ID}/comments`, headers, payload: { body: "  " } });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("deletes the student's own comment and answers 403 for someone else's", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.learning.deleteComment.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new NotCommentAuthorError());
+
+    const mine = await testApp.app.inject({ method: "DELETE", url: `${BASE_URL}/comments/${COMMENT_ID}`, headers });
+    const theirs = await testApp.app.inject({ method: "DELETE", url: `${BASE_URL}/comments/${COMMENT_ID}`, headers });
+
+    expect(mine.statusCode).toBe(204);
+    expect(theirs.json()).toMatchObject({ status: 403, type: "urn:reanit:problem:not-comment-author" });
   });
 });

@@ -83,7 +83,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-23 Drip settings in builder + locked lessons in player. Needs API-15.
 - [ ] API-16 Custom domains: DNS ownership verification, TLS
 - [ ] WEB-24 Custom domain settings screen. Needs API-16.
-- [ ] API-17 Lesson comments + instructor replies, moderation
+- [x] API-17 Lesson comments + instructor replies, moderation
 - [ ] WEB-25 Comments under lessons + dashboard inbox. Needs API-17.
 - [ ] WRK-04 Email notifications: new sale, new comment, course completed, preferences + unsubscribe
 - [ ] API-18 Sales analytics: revenue by day/course/currency, refunds, completion funnel

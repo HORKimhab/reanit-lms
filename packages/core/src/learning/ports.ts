@@ -1,4 +1,5 @@
 import type { LessonType } from "../catalog";
+import type { CommentThread, InboxThread, LessonComment } from "./comments";
 import type { LessonUnlock } from "./drip";
 import type { Quiz, QuizAnswers, QuizResult } from "./quizzes";
 
@@ -61,4 +62,19 @@ export interface QuizStore {
   recordAttempt(attempt: { enrollmentId: string; lessonId: string; answers: QuizAnswers; result: QuizResult; at: Date }): Promise<void>;
   /** The enrollment's most recent attempt at the lesson's quiz, or null before the first. */
   findLastAttempt(enrollmentId: string, lessonId: string): Promise<QuizAttemptSummary | null>;
+}
+
+/** One school's lesson comments. `@reanit/db` implements it with `createCommentStore`. */
+export interface CommentStore {
+  /** Threads newest first, replies oldest first; hidden threads and replies only when asked for. */
+  listThreads(lessonId: string, options: { includeHidden: boolean }): Promise<CommentThread[]>;
+  /** Where a comment sits; null when the school has no such comment. */
+  findComment(commentId: string): Promise<{ id: string; lessonId: string; authorId: string | null; parentId: string | null } | null>;
+  createComment(comment: { lessonId: string; authorId: string; parentId: string | null; body: string; at: Date }): Promise<LessonComment>;
+  /** Removes a comment and its replies. */
+  deleteComment(commentId: string): Promise<void>;
+  /** Returns false when the school has no such comment. */
+  setHidden(commentId: string, isHidden: boolean): Promise<boolean>;
+  /** Threads newest first, all or only those without a staff reply, hidden ones included. */
+  listInbox(query: { isUnansweredOnly: boolean; limit: number; offset: number }): Promise<{ threads: InboxThread[]; total: number }>;
 }

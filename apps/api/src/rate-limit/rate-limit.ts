@@ -15,7 +15,7 @@ type Limit = { limit: number; ttl: number };
 
 /**
  * Limits per route: `ip` counts every caller from one address; `account` counts attempts on one
- * email (sign-in) or by one user (checkout), wherever they come from.
+ * email (sign-in) or by one user (checkout, comments), wherever they come from.
  */
 export const RATE_LIMITS = {
   signUp: { ip: { limit: 10, ttl: 60 * MINUTE_MS } },
@@ -23,6 +23,7 @@ export const RATE_LIMITS = {
   magicLink: { ip: { limit: 10, ttl: 15 * MINUTE_MS }, account: { limit: 5, ttl: 60 * MINUTE_MS } },
   verifyMagicLink: { ip: { limit: 30, ttl: 15 * MINUTE_MS } },
   checkout: { ip: { limit: 30, ttl: 10 * MINUTE_MS }, account: { limit: 10, ttl: 10 * MINUTE_MS } },
+  comment: { ip: { limit: 60, ttl: 10 * MINUTE_MS }, account: { limit: 20, ttl: 10 * MINUTE_MS } },
 } satisfies Record<string, { ip: Limit; account?: Limit }>;
 
 /**

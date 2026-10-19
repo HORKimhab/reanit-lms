@@ -15,6 +15,8 @@ type AuditAction =
   | "bundle.price.set"
   | "lesson.media.attach"
   | "lesson.quiz.save"
+  | "comment.reply"
+  | "comment.moderate"
   | "school.settings.update";
 
 /**

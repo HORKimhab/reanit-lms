@@ -7,7 +7,7 @@ import type { AuditLog } from "@reanit/core/audit";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
-import type { LearningService } from "@reanit/core/learning";
+import type { CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { SchoolService, StudentService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
@@ -27,7 +27,7 @@ import type { Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
 import { DB_CLIENT } from "@reanit/nest";
 import { loggerOptions } from "@reanit/nest";
-import { LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
+import { COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
@@ -84,6 +84,9 @@ export type FakeClients = {
   /** Stands in for every school's learning service; `learningFor` records which school was asked for. */
   learning: Record<keyof LearningService, Mock>;
   learningFor: Mock<(schoolId: string) => LearningService>;
+  /** Stands in for every school's comment moderation; `moderationFor` records which school was asked for. */
+  moderation: Record<keyof CommentModeration, Mock>;
+  moderationFor: Mock<(schoolId: string) => CommentModeration>;
   /** Stands in for every school's stats service; `analyticsFor` records which school was asked for. */
   analytics: Record<keyof AnalyticsService, Mock>;
   analyticsFor: Mock<(schoolId: string) => AnalyticsService>;
@@ -143,7 +146,19 @@ const COMMERCE_METHODS = [
   "checkoutBundle",
   "getOrder",
 ] as const satisfies readonly (keyof CommerceService)[];
-const LEARNING_METHODS = ["getCourse", "getLessonMedia", "recordProgress", "getQuizForEditing", "saveQuiz", "getQuiz", "submitQuiz"] as const satisfies readonly (keyof LearningService)[];
+const LEARNING_METHODS = [
+  "getCourse",
+  "getLessonMedia",
+  "recordProgress",
+  "getQuizForEditing",
+  "saveQuiz",
+  "getQuiz",
+  "submitQuiz",
+  "listComments",
+  "postComment",
+  "deleteComment",
+] as const satisfies readonly (keyof LearningService)[];
+const MODERATION_METHODS = ["listInbox", "listLessonComments", "reply", "setHidden"] as const satisfies readonly (keyof CommentModeration)[];
 const ANALYTICS_METHODS = ["getCourseStats"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
 
@@ -160,7 +175,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, stats and audit services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, moderation, stats and audit services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -169,6 +184,7 @@ export function createFakeClients(): FakeClients {
   const media = fakeService(MEDIA_METHODS);
   const commerce = fakeService(COMMERCE_METHODS);
   const learning = fakeService(LEARNING_METHODS);
+  const moderation = fakeService(MODERATION_METHODS);
   const analytics = fakeService(ANALYTICS_METHODS);
   const students = fakeService(STUDENT_METHODS);
   const audit = fakeService(AUDIT_METHODS);
@@ -188,6 +204,8 @@ export function createFakeClients(): FakeClients {
     confirmation: { confirm: vi.fn() },
     learning,
     learningFor: vi.fn(() => learning as unknown as LearningService),
+    moderation,
+    moderationFor: vi.fn(() => moderation as unknown as CommentModeration),
     analytics,
     analyticsFor: vi.fn(() => analytics as unknown as AnalyticsService),
     audit,
@@ -231,6 +249,8 @@ export async function createTestApp(
     .useValue(clients.confirmation)
     .overrideProvider(LEARNING_FOR_SCHOOL)
     .useValue(clients.learningFor)
+    .overrideProvider(COMMENT_MODERATION_FOR_SCHOOL)
+    .useValue(clients.moderationFor)
     .overrideProvider(ANALYTICS_FOR_SCHOOL)
     .useValue(clients.analyticsFor)
     .overrideProvider(AUDIT_FOR_SCHOOL)

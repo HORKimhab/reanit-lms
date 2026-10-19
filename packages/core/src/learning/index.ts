@@ -1,6 +1,23 @@
+export { createCommentModeration, type CommentModeration } from "./comment-moderation";
+export {
+  COMMENT_INBOX_FILTERS,
+  COMMENT_INBOX_PAGE_SIZE,
+  COMMENT_MAX_LENGTH,
+  commentInboxQuerySchema,
+  commentSchema,
+  moderationSchema,
+  replySchema,
+  type CommentAuthor,
+  type CommentInboxQuery,
+  type CommentInput,
+  type CommentThread,
+  type InboxPage,
+  type InboxThread,
+  type LessonComment,
+} from "./comments";
 export { lessonUnlocksAt, lockedUntil, type LessonUnlock } from "./drip";
-export { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
-export type { Enrollment, LearningStore, LessonProgress, ProgressUpdate, QuizAttemptSummary, QuizStore } from "./ports";
+export { CommentNotFoundError, LessonLockedError, NotCommentAuthorError, NotEnrolledError, QuizNotFoundError } from "./errors";
+export type { CommentStore, Enrollment, LearningStore, LessonProgress, ProgressUpdate, QuizAttemptSummary, QuizStore } from "./ports";
 export {
   DEFAULT_PASS_PERCENT,
   gradeQuiz,

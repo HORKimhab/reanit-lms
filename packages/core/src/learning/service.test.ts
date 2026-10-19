@@ -4,9 +4,9 @@ import { CourseNotFoundError, type CourseWithOutline } from "../catalog";
 import { LessonMediaMissingError, createMediaService } from "../media";
 import { FakeClock } from "../test/auth-fakes";
 import { FakeCatalogStore } from "../test/catalog-fakes";
-import { FakeLearningStore, FakeQuizStore } from "../test/learning-fakes";
+import { FakeCommentStore, FakeLearningStore, FakeQuizStore } from "../test/learning-fakes";
 import { FakeLessonMediaStore, FakeObjectStorage } from "../test/media-fakes";
-import { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
+import { CommentNotFoundError, LessonLockedError, NotCommentAuthorError, NotEnrolledError, QuizNotFoundError } from "./errors";
 import type { Quiz } from "./quizzes";
 import { createLearningService, type LearningService } from "./service";
 
@@ -49,6 +49,7 @@ function newId() {
 
 let store: FakeLearningStore;
 let quizzes: FakeQuizStore;
+let comments: FakeCommentStore;
 let lessonMedia: FakeLessonMediaStore;
 let clock: FakeClock;
 let learning: LearningService;
@@ -65,7 +66,8 @@ beforeEach(() => {
   clock = new FakeClock(NOW);
   const media = createMediaService({ schoolId: "s", lessons: lessonMedia, storage: new FakeObjectStorage(), clock, newId });
   quizzes = new FakeQuizStore();
-  learning = createLearningService({ catalog, store, quizzes, media, clock });
+  comments = new FakeCommentStore();
+  learning = createLearningService({ catalog, store, quizzes, comments, media, clock });
 });
 
 describe("getCourse", () => {
@@ -242,5 +244,42 @@ describe("drip lessons", () => {
     await expect(learning.getLessonMedia(STUDENT, "l1")).rejects.toThrow(LessonLockedError);
     store.lessonUnlocks.set("l1", { unlockAfterDays: null, unlockAt: NOW.toISOString() });
     await expect(learning.getLessonMedia(STUDENT, "l1")).resolves.toMatchObject({ url: expect.any(String) });
+  });
+});
+
+describe("comments", () => {
+  it("posts a student's comment and a reply to a reply into the same thread", async () => {
+    const question = await learning.postComment(STUDENT, "l1", { body: "How long is the course?" });
+    const answer = await learning.postComment(STUDENT, "l1", { body: "About an hour", parentId: question.id });
+    await learning.postComment(STUDENT, "l1", { body: "Thanks", parentId: answer.id });
+
+    const [thread] = await learning.listComments(STUDENT, "l1");
+
+    expect(thread?.body).toBe("How long is the course?");
+    expect(thread?.replies.map((reply) => reply.body)).toEqual(["About an hour", "Thanks"]);
+    expect(comments.comments.at(-1)?.createdAt).toEqual(NOW);
+  });
+
+  it("refuses a reply to a comment under another lesson", async () => {
+    const elsewhere = await learning.postComment(STUDENT, "l2", { body: "Elsewhere" });
+
+    await expect(learning.postComment(STUDENT, "l1", { body: "Reply", parentId: elsewhere.id })).rejects.toThrow(CommentNotFoundError);
+  });
+
+  it("keeps comments to students who can open the lesson", async () => {
+    await expect(learning.listComments("user-2", "l1")).rejects.toThrow(NotEnrolledError);
+    store.lessonUnlocks.set("l1", { unlockAfterDays: 30, unlockAt: null });
+    await expect(learning.postComment(STUDENT, "l1", { body: "Early" })).rejects.toThrow(LessonLockedError);
+    expect(comments.comments).toEqual([]);
+  });
+
+  it("lets a student delete only their own comment", async () => {
+    const mine = await learning.postComment(STUDENT, "l1", { body: "Mine" });
+    const theirs = await comments.createComment({ lessonId: "l1", authorId: "user-2", parentId: null, body: "Theirs", at: NOW });
+
+    await expect(learning.deleteComment(STUDENT, theirs.id)).rejects.toThrow(NotCommentAuthorError);
+    await learning.deleteComment(STUDENT, mine.id);
+    await expect(learning.deleteComment(STUDENT, mine.id)).rejects.toThrow(CommentNotFoundError);
+    expect(comments.comments.map(({ body }) => body)).toEqual(["Theirs"]);
   });
 });

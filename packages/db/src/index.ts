@@ -1,6 +1,7 @@
 export { createAuditStore } from "./audit-store";
 export { createAuthStore } from "./auth-store";
 export { createCatalogStore } from "./catalog-store";
+export { createCommentStore } from "./comment-store";
 export { createCommerceStore, createPaymentConfirmationStore } from "./commerce-store";
 export { createDbClient, type DbClient } from "./client";
 export { createLearningStore } from "./learning-store";
