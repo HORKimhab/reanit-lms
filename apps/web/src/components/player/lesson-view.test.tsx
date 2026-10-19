@@ -119,4 +119,11 @@ describe("LessonView", () => {
 
     expect(await screen.findByRole("link", { name: "Continue" })).toHaveAttribute("href", NEXT_HREF);
   });
+
+  it("shows when a drip lesson opens instead of its content, with nothing to complete", async () => {
+    renderLesson({ ...TEXT_LESSON, lockedUntil: new Date("2026-11-05T09:00:00Z") });
+
+    expect(await screen.findByText("This lesson opens on November 5, 2026 at 9:00 AM.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete and continue" })).not.toBeInTheDocument();
+  });
 });

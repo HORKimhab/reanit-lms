@@ -1,7 +1,7 @@
 import type { Clock } from "../auth";
 import { CourseNotFoundError, type CatalogStore, type CourseWithOutline } from "../catalog";
 import type { MediaService } from "../media";
-import { lessonUnlocksAt } from "./drip";
+import { lockedUntil } from "./drip";
 import { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
 import type { Enrollment, LearningStore, LessonProgress, QuizAttemptSummary, QuizStore } from "./ports";
 import { DEFAULT_PASS_PERCENT, gradeQuiz, toStudentQuiz, type Quiz, type QuizAnswers, type QuizResult, type StudentQuiz } from "./quizzes";
@@ -61,8 +61,8 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
   async function requireLessonAccess(userId: string, lessonId: string): Promise<Enrollment> {
     const enrollment = requireCurrent(await store.findEnrollmentForLesson(userId, lessonId));
     const unlock = await store.findLessonUnlock(lessonId);
-    const opensAt = unlock && lessonUnlocksAt(unlock, enrollment.enrolledAt);
-    if (opensAt && opensAt > clock.now()) throw new LessonLockedError(opensAt);
+    const opensAt = unlock && lockedUntil(unlock, enrollment.enrolledAt, clock.now());
+    if (opensAt) throw new LessonLockedError(opensAt);
     return enrollment;
   }
 

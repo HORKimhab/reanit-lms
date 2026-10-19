@@ -31,4 +31,17 @@ describe("LessonPage", () => {
     expect(page.props.quiz.view).toEqual(STUDENT_QUIZ);
     expect(requestTo(`GET /schools/by-subdomain/angkor/lessons/${quizLesson.id}/media`)).toBeUndefined();
   });
+
+  it("loads nothing for a drip lesson that has not opened", async () => {
+    const [section] = PLAYER_COURSE.sections;
+    const lesson = { ...section!.lessons[0]!, unlockAt: "2999-01-01T00:00:00.000Z" };
+    const course = { ...PLAYER_COURSE, sections: [{ ...section!, lessons: [lesson, ...section!.lessons.slice(1)] }, ...PLAYER_COURSE.sections.slice(1)] };
+    onApi("GET /schools/by-subdomain/angkor/learn/brand-design-basics", Response.json({ course }));
+
+    const page = await LessonPage(routeProps({ school: "angkor", course: "brand-design-basics", lesson: lesson.id }));
+
+    expect(page.props.lesson.lockedUntil).toEqual(new Date("2999-01-01T00:00:00.000Z"));
+    expect(page.props.fileUrl).toBeNull();
+    expect(requestTo(`GET /schools/by-subdomain/angkor/lessons/${lesson.id}/media`)).toBeUndefined();
+  });
 });

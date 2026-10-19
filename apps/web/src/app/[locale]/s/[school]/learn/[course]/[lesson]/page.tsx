@@ -17,16 +17,20 @@ import { getStudentQuiz } from "@/server/learning/quizzes";
 export default async function LessonPage({ params }: PageProps<"/[locale]/s/[school]/learn/[course]/[lesson]">) {
   const { school, course: slug, lesson: lessonId } = await params;
   const course = await getPlayerCourse(school, decodeURIComponent(slug));
-  const lessons = playerLessons(course, course.progress);
+  const lessons = playerLessons(course, course.progress, new Date());
   const lesson = lessons.find((candidate) => candidate.id === lessonId);
   if (!lesson) notFound();
   const base = `/s/${school}/learn/${course.slug}`;
   const next = lessons[lesson.index + 1];
   const nextHref = next ? `${base}/${next.id}` : `/s/${school}/my-courses`;
   const lessonPath = `${base}/${lesson.id}`;
-  const fileUrl = lesson.type !== "text" && lesson.hasMedia ? await getLessonFileUrl(school, lesson.id, lessonPath) : null;
+  // A drip lesson not open yet has nothing to load: the API refuses its file and quiz until it opens.
+  const isOpen = lesson.lockedUntil === null;
+  const fileUrl = isOpen && lesson.type !== "text" && lesson.hasMedia ? await getLessonFileUrl(school, lesson.id, lessonPath) : null;
   const quiz =
-    lesson.type === "quiz" ? { view: await getStudentQuiz(school, lesson.id, lessonPath), submit: submitQuizAnswers.bind(null, school, lesson.id) } : null;
+    isOpen && lesson.type === "quiz"
+      ? { view: await getStudentQuiz(school, lesson.id, lessonPath), submit: submitQuizAnswers.bind(null, school, lesson.id) }
+      : null;
   return (
     <LessonView
       lessons={lessons}

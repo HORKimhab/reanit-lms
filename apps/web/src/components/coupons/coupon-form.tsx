@@ -7,24 +7,9 @@ import { useActionState, useState } from "react";
 
 import type { CouponField, CouponFormState } from "@/app/[locale]/dashboard/coupons/actions";
 import { Field, INPUT_CLASS } from "@/components/form/field";
+import { END_OF_DAY, localDayToIso } from "@/components/form/local-day";
 
 const INITIAL_STATE: CouponFormState = { status: "idle", invalidFields: [] };
-/** Last millisecond of a day: a coupon's last day counts in full. */
-const END_OF_DAY = [23, 59, 59, 999] as const;
-
-/**
- * Turns the last day picked in the browser into the moment the coupon stops working: the end of that
- * day in the creator's own time zone.
- *
- * @param day - The date input's value, `YYYY-MM-DD`.
- * @returns The ISO date-time, or the input unchanged when it is not a date (the server rejects it).
- */
-function endOfDayIso(day: string): string {
-  const [year, month, date] = day.split("-").map(Number);
-  if (!year || !month || !date) return day;
-  return new Date(year, month - 1, date, ...END_OF_DAY).toISOString();
-}
-
 /**
  * Creates a coupon: its code, a percent or an amount off in one currency, an optional last day and
  * an optional usage limit.
@@ -47,7 +32,8 @@ export function CouponForm({ action }: { action: (state: CouponFormState, formDa
    */
   async function submit(previous: CouponFormState, formData: FormData): Promise<CouponFormState> {
     const lastDay = String(formData.get("expiresAt") ?? "");
-    if (lastDay) formData.set("expiresAt", endOfDayIso(lastDay));
+    // A coupon's last day counts in full; a value that is not a date goes on as typed, and the server rejects it.
+    if (lastDay) formData.set("expiresAt", localDayToIso(lastDay, END_OF_DAY) ?? lastDay);
     return action(previous, formData);
   }
 

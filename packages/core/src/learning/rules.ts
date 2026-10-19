@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { CourseWithOutline } from "../catalog";
+import { lockedUntil } from "./drip";
 import type { LessonProgress } from "./ports";
 
 /** Longest video position accepted: no lesson runs a day. */
@@ -29,6 +30,8 @@ export type PlayerLesson = CourseWithOutline["sections"][number]["lessons"][numb
   sectionTitle: string;
   positionSeconds: number;
   isCompleted: boolean;
+  /** When a drip lesson opens for the student while it is still closed; null once open. */
+  lockedUntil: Date | null;
 };
 
 /** How far a student is through a course. */
@@ -42,21 +45,29 @@ export interface ProgressSummary {
 }
 
 /**
- * Lists a course's lessons in order with the student's progress on each.
+ * Lists a course's lessons in order with the student's progress on each, and until when each drip
+ * lesson stays closed to them.
  *
- * @param course The course with its outline.
+ * @param course The course with its outline and when the student enrolled.
  * @param progress The student's saved progress; lessons without any are not started.
+ * @param now The current time, for drip lessons.
  * @returns The lessons, flattened across sections.
  * @example
- * playerLessons(course, [{ lessonId: "l1", positionSeconds: 0, isCompleted: true }])[0].isCompleted; // true
+ * playerLessons(course, [{ lessonId: "l1", positionSeconds: 0, isCompleted: true }], new Date())[0].isCompleted; // true
  */
-export function playerLessons(course: Pick<CourseWithOutline, "sections">, progress: readonly LessonProgress[]): PlayerLesson[] {
+export function playerLessons(course: Pick<CourseWithOutline, "sections"> & { enrolledAt: Date }, progress: readonly LessonProgress[], now: Date): PlayerLesson[] {
   const byLesson = new Map(progress.map((entry) => [entry.lessonId, entry]));
   return course.sections
     .flatMap((section) => section.lessons.map((lesson) => ({ ...lesson, sectionId: section.id, sectionTitle: section.title })))
     .map((lesson, index) => {
       const saved = byLesson.get(lesson.id);
-      return { ...lesson, index, positionSeconds: saved?.positionSeconds ?? 0, isCompleted: saved?.isCompleted ?? false };
+      return {
+        ...lesson,
+        index,
+        positionSeconds: saved?.positionSeconds ?? 0,
+        isCompleted: saved?.isCompleted ?? false,
+        lockedUntil: lockedUntil(lesson, course.enrolledAt, now),
+      };
     });
 }
 

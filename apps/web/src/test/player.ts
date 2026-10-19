@@ -16,7 +16,7 @@ export const PLAYER_COURSE: PlayerCourse = {
 };
 
 /** Its lessons in order: Welcome (video), Workbook (PDF, no file yet), Sketching (video). */
-export const PLAYER_LESSONS = playerLessons(PLAYER_COURSE, PLAYER_COURSE.progress);
+export const PLAYER_LESSONS = playerLessons(PLAYER_COURSE, PLAYER_COURSE.progress, new Date("2026-10-01T00:00:00Z"));
 
 /** The course's player path. */
 export const PLAYER_BASE = `/s/${SITE_SCHOOL.slug}/learn/${PLAYER_COURSE.slug}`;

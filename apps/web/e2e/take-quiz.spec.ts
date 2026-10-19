@@ -4,7 +4,7 @@ import { createCourse, openSchool, publishCourse, RUN, signUp } from "./support"
 
 const PRICE = { amount: 1500, currency: "USD" } as const;
 
-test("a creator writes a quiz and a student fails it, tries again and passes", async ({ page, browser }) => {
+test("a creator writes a quiz and drips a lesson; a student fails the quiz, passes it, and waits for the lesson", async ({ page, browser }) => {
   const subdomain = `e2e-quiz-${RUN}`;
 
   await test.step("the creator adds a quiz lesson and writes its question", async () => {
@@ -15,6 +15,10 @@ test("a creator writes a quiz and a student fails it, tries again and passes", a
     await page.getByRole("button", { name: "Add lesson" }).click();
     await page.getByLabel("Lesson title").fill("Primary colors");
     await page.getByLabel("Lesson type").selectOption({ label: "Quiz" });
+    await page.getByRole("button", { name: "Add lesson" }).click();
+    await page.getByLabel("Lesson title").nth(1).fill("Mixing");
+    await page.getByRole("combobox", { name: "When Mixing opens" }).selectOption({ label: "Opens days after enrolling" });
+    await expect(page.getByRole("spinbutton", { name: "Days after enrolling, for Mixing" })).toHaveValue("7");
     await page.getByRole("button", { name: "Edit quiz for Primary colors" }).click();
 
     await page.getByRole("button", { name: "Add question" }).click();
@@ -49,12 +53,18 @@ test("a creator writes a quiz and a student fails it, tries again and passes", a
     await student.getByRole("radio", { name: "Green" }).check();
     await student.getByRole("button", { name: "Check answers" }).click();
     await expect(student.getByText("You scored 0%. You need 70% to pass.")).toBeVisible();
-    await expect(student.getByRole("link", { name: "Finish" })).toHaveCount(0);
+    await expect(student.getByRole("link", { name: "Continue" })).toHaveCount(0);
 
     await student.getByRole("button", { name: "Try again" }).click();
     await student.getByRole("radio", { name: "Red" }).check();
     await student.getByRole("button", { name: "Check answers" }).click();
     await expect(student.getByText("You passed with 100%.")).toBeVisible();
-    await expect(student.getByRole("link", { name: "Finish" })).toBeVisible();
+    await expect(student.getByRole("link", { name: "Continue" })).toBeVisible();
+  });
+
+  await test.step("the dripped lesson stays closed for a week", async () => {
+    await student.getByRole("link", { name: "Continue" }).click();
+    await expect(student.getByText(/^This lesson opens on /)).toBeVisible();
+    await expect(student.getByRole("link", { name: /Mixing/ })).toContainText("Opens");
   });
 });

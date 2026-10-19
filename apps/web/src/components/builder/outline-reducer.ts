@@ -1,5 +1,6 @@
 import { arrayMove } from "@dnd-kit/sortable";
 import type { LessonType, Outline } from "@reanit/core/catalog";
+import type { LessonUnlock } from "@reanit/core/learning";
 
 /** A section and its lessons, in order, as the builder edits it. */
 export type OutlineSection = Outline["sections"][number];
@@ -16,6 +17,8 @@ export type OutlineAction =
   | { type: "addLesson"; sectionId: string; id: string; title: string }
   | { type: "renameLesson"; sectionId: string; lessonId: string; title: string }
   | { type: "setLessonType"; sectionId: string; lessonId: string; lessonType: LessonType }
+  /** Sets when a drip lesson opens: some days after enrolling, on a date, or (both null) at once. */
+  | { type: "setLessonUnlock"; sectionId: string; lessonId: string; unlock: LessonUnlock }
   | { type: "removeLesson"; sectionId: string; lessonId: string }
   /** Drops the dragged lesson `activeId` where lesson `overId` is, inside one section. */
   | { type: "moveLesson"; sectionId: string; activeId: string; overId: string };
@@ -105,6 +108,8 @@ export function outlineReducer(outline: Outline, action: OutlineAction): Outline
       return updateLesson(outline, action, { title: action.title });
     case "setLessonType":
       return updateLesson(outline, action, { type: action.lessonType });
+    case "setLessonUnlock":
+      return updateLesson(outline, action, action.unlock);
     case "removeLesson":
       return updateLessons(outline, action.sectionId, (lessons) => lessons.filter((l) => l.id !== action.lessonId));
     case "moveLesson":

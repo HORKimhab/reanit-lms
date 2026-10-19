@@ -12,6 +12,7 @@ import { LessonIcon } from "@/components/course/lesson-icon";
 import { useRouter } from "@/i18n/navigation";
 
 import { LessonMediaUpload, type LessonMediaActions } from "./lesson-media-upload";
+import { LessonSchedule } from "./lesson-schedule";
 import { outlineReducer, type OutlineAction, type OutlineSection } from "./outline-reducer";
 import { RemoveButton } from "./remove-button";
 import { SortableItem, SortableList } from "./sortable-list";
@@ -202,6 +203,11 @@ function SectionEditor({
                       actions={mediaActions}
                     />
                   ) : null}
+                  <LessonSchedule
+                    lessonTitle={lessonName}
+                    unlock={lesson}
+                    onChange={(unlock) => dispatch({ type: "setLessonUnlock", sectionId, lessonId, unlock })}
+                  />
                   {lesson.type === "quiz" ? (
                     <EditQuizButton href={`${quizBase}/${lessonId}`} lessonTitle={lessonName} saveNow={mediaActions.saveNow} />
                   ) : null}

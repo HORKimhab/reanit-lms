@@ -1,13 +1,15 @@
 import type { PlayerLesson } from "@reanit/core/learning";
 import { cn } from "@reanit/ui/lib/utils";
-import { Check } from "lucide-react";
+import { Check, Lock } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 
 import { Duration } from "@/components/course/duration";
 import { LessonIcon } from "@/components/course/lesson-icon";
 import { NavLink } from "@/components/shells/nav-link";
 
 /**
- * Course outline for the player: sections, lessons with done marks, and the current lesson highlighted.
+ * Course outline for the player: sections, lessons with done marks (or a lock and opening date for
+ * drip lessons not open yet), and the current lesson highlighted.
  *
  * @param props - Component props.
  * @param props.lessons - The course's lessons in order, with the student's progress.
@@ -15,6 +17,8 @@ import { NavLink } from "@/components/shells/nav-link";
  * @returns One headed list per section, each lesson linking to its player page.
  */
 export function LessonList({ lessons, base }: { lessons: PlayerLesson[]; base: string }) {
+  const t = useTranslations("Player");
+  const format = useFormatter();
   const sections = new Map<string, PlayerLesson[]>();
   for (const lesson of lessons) sections.set(lesson.sectionId, [...(sections.get(lesson.sectionId) ?? []), lesson]);
 
@@ -41,8 +45,14 @@ export function LessonList({ lessons, base }: { lessons: PlayerLesson[]; base: s
                     )}
                   >
                     {lesson.isCompleted ? <Check aria-hidden className="size-3" /> : null}
+                    {lesson.lockedUntil && !lesson.isCompleted ? <Lock aria-hidden className="size-3 text-muted-foreground" /> : null}
                   </span>
-                  <span className="flex-1">{lesson.title}</span>
+                  <span className="flex flex-1 flex-col">
+                    {lesson.title}
+                    {lesson.lockedUntil ? (
+                      <span className="text-xs text-muted-foreground">{t("opensOn", { date: format.dateTime(lesson.lockedUntil, { dateStyle: "medium" }) })}</span>
+                    ) : null}
+                  </span>
                   <LessonIcon type={lesson.type} className="size-4 shrink-0 text-muted-foreground" />
                   <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
                     <Duration seconds={lesson.durationSeconds} />

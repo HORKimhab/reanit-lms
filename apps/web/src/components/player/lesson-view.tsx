@@ -1,7 +1,7 @@
 import type { PlayerLesson, QuizAnswers, QuizResult } from "@reanit/core/learning";
 import { Button } from "@reanit/ui/components/button";
-import { ArrowLeft, ArrowRight, Download, FileText } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ArrowLeft, ArrowRight, Download, FileText, Lock } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 import type { StudentQuizView } from "@/server/learning/quizzes";
@@ -14,7 +14,8 @@ type LessonQuiz = { view: StudentQuizView | null; submit: (answers: QuizAnswers)
 
 /**
  * One lesson in the player: content, position in the course, and previous / complete-and-continue navigation.
- * A quiz lesson is completed by passing it, so it offers "continue" only once passed.
+ * A quiz lesson is completed by passing it, so it offers "continue" only once passed; a drip lesson
+ * not open yet shows when it opens instead of its content, and cannot be completed.
  *
  * @param props - Component props.
  * @param props.lessons - Every lesson in the course, in order.
@@ -52,7 +53,13 @@ export function LessonView({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 sm:p-6">
-      {quiz ? <QuizPlayer quiz={quiz.view} submit={quiz.submit} /> : <LessonBody lesson={lesson} fileUrl={fileUrl} savePosition={savePosition} />}
+      {lesson.lockedUntil ? (
+        <LockedNotice opensAt={lesson.lockedUntil} />
+      ) : quiz ? (
+        <QuizPlayer quiz={quiz.view} submit={quiz.submit} />
+      ) : (
+        <LessonBody lesson={lesson} fileUrl={fileUrl} savePosition={savePosition} />
+      )}
 
       <div className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">
@@ -72,7 +79,7 @@ export function LessonView({
         ) : (
           <span />
         )}
-        {quiz ? (
+        {lesson.lockedUntil ? null : quiz ? (
           lesson.isCompleted ? (
             <Button asChild>
               <Link href={nextHref}>
@@ -90,6 +97,25 @@ export function LessonView({
           </form>
         )}
       </nav>
+    </div>
+  );
+}
+
+/**
+ * Stands in for a drip lesson's content until it opens.
+ *
+ * @param props - Component props.
+ * @param props.opensAt - When it opens for the student.
+ * @returns The notice with the opening date.
+ */
+function LockedNotice({ opensAt }: { opensAt: Date }) {
+  const t = useTranslations("Player");
+  const format = useFormatter();
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-10 text-center">
+      <Lock aria-hidden className="size-8 text-muted-foreground" />
+      <p className="font-medium">{t("lockedTitle", { date: format.dateTime(opensAt, { dateStyle: "long", timeStyle: "short" }) })}</p>
+      <p className="text-sm text-muted-foreground">{t("lockedText")}</p>
     </div>
   );
 }

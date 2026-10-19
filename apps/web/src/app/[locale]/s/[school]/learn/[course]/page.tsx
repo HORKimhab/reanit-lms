@@ -16,7 +16,7 @@ import { getPlayerCourse } from "@/server/learning/player";
 export default async function ResumeCourse({ params }: PageProps<"/[locale]/s/[school]/learn/[course]">) {
   const { school, course: slug } = await params;
   const course = await getPlayerCourse(school, decodeURIComponent(slug));
-  const { resume } = summarizeProgress(playerLessons(course, course.progress));
+  const { resume } = summarizeProgress(playerLessons(course, course.progress, new Date()));
   if (!resume) {
     const t = await getTranslations("Player");
     return <EmptyState title={t("emptyCourseTitle")} text={t("emptyCourseText")} />;

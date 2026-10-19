@@ -36,4 +36,13 @@ describe("LessonList", () => {
     expect(screen.getByRole("link", { name: /Sketching/ }).querySelector(".bg-success")).toBeNull();
     expect(screen.getByRole("link", { name: /Sketching/ })).toHaveTextContent("1 h 30 min");
   });
+
+  it("shows when a drip lesson not open yet opens", async () => {
+    const lessons = PLAYER_LESSONS.map((lesson) => (lesson.id === sketching?.id ? { ...lesson, lockedUntil: new Date("2026-11-05T00:00:00Z") } : lesson));
+
+    renderWithIntl(<LessonList lessons={lessons} base={PLAYER_BASE} />);
+
+    expect(await screen.findByRole("link", { name: /Sketching/ })).toHaveTextContent("Opens Nov 5, 2026");
+    expect(screen.getByRole("link", { name: /Welcome/ })).not.toHaveTextContent("Opens");
+  });
 });

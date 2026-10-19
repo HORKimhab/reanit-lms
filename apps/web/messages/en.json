@@ -113,7 +113,15 @@
       "video": "Video",
       "pdf": "PDF",
       "quiz": "Quiz"
-    }
+    },
+    "schedule": "When {title} opens",
+    "schedules": {
+      "now": "Opens at once",
+      "days": "Opens days after enrolling",
+      "date": "Opens on a date"
+    },
+    "afterDays": "Days after enrolling, for {title}",
+    "unlockDate": "Opening date of {title}"
   },
   "Students": {
     "caption": "Students",
@@ -247,7 +255,10 @@
     "textPlaceholder": "The lesson text written by the instructor appears here.",
     "fileNotReady": "This lesson's file is not ready yet. Check back soon.",
     "emptyCourseTitle": "No lessons yet",
-    "emptyCourseText": "This course has no lessons yet. Your access is saved, so come back once the instructor adds them."
+    "emptyCourseText": "This course has no lessons yet. Your access is saved, so come back once the instructor adds them.",
+    "opensOn": "Opens {date}",
+    "lockedTitle": "This lesson opens on {date}.",
+    "lockedText": "It is released on a schedule. Come back then to continue."
   },
   "Quiz": {
     "edit": "Edit quiz for {title}",

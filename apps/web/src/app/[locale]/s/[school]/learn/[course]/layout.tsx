@@ -16,7 +16,7 @@ export default async function PlayerLayout({ children, params }: LayoutProps<"/[
   const { school, course: slug } = await params;
   const course = await getPlayerCourse(school, decodeURIComponent(slug));
   return (
-    <PlayerShell school={school} title={course.title} lessons={playerLessons(course, course.progress)} base={`/s/${school}/learn/${course.slug}`}>
+    <PlayerShell school={school} title={course.title} lessons={playerLessons(course, course.progress, new Date())} base={`/s/${school}/learn/${course.slug}`}>
       {children}
     </PlayerShell>
   );

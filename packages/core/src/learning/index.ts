@@ -1,4 +1,4 @@
-export { lessonUnlocksAt, type LessonUnlock } from "./drip";
+export { lessonUnlocksAt, lockedUntil, type LessonUnlock } from "./drip";
 export { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
 export type { Enrollment, LearningStore, LessonProgress, ProgressUpdate, QuizAttemptSummary, QuizStore } from "./ports";
 export {

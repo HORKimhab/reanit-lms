@@ -80,6 +80,12 @@ describe("outlineReducer", () => {
     expect(next.sections[1]?.lessons).toEqual([{ id: "b1", title: "New lesson", type: "text", durationSeconds: 0, unlockAfterDays: null, unlockAt: null }]);
   });
 
+  it("sets when only the given lesson opens", () => {
+    const next = outlineReducer(OUTLINE, { type: "setLessonUnlock", sectionId: "a", lessonId: "a2", unlock: { unlockAfterDays: 3, unlockAt: null } });
+
+    expect(next.sections[0]?.lessons.map((l) => l.unlockAfterDays)).toEqual([null, 3, null]);
+  });
+
   it("renames only the given lesson", () => {
     const next = outlineReducer(OUTLINE, { type: "renameLesson", sectionId: "a", lessonId: "a2", title: "Install" });
     expect(next.sections[0]?.lessons.map((l) => l.title)).toEqual(["Welcome", "Install", "Workbook"]);
