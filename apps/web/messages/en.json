@@ -166,5 +166,11 @@
   },
   "ThemeToggle": {
     "label": "Toggle theme"
+  },
+  "Auth": {
+    "magicLinkEmail": {
+      "subject": "Your sign-in link",
+      "body": "Use this link to sign in:\n\n{url}\n\nIt expires in {minutes} minutes and works once. If you didn't ask for it, you can ignore this email."
+    }
   }
 }

@@ -97,6 +97,13 @@ describe("tenant client RLS isolation", () => {
     expect(() => forSchool(db, "alpha")).toThrow(ZodError);
   });
 
+  it("denies the tenant client any access to sessions and magic links", async () => {
+    const tenant = forSchool(db, alpha.schoolId);
+
+    await expect(tenant.session.findMany()).rejects.toThrow(/permission denied/);
+    await expect(tenant.magicLinkToken.findMany()).rejects.toThrow(/permission denied/);
+  });
+
   it("has RLS enabled on every table with a school_id column", async () => {
     const unprotected = await db.$queryRaw<{ table_name: string }[]>`
       SELECT c.relname AS table_name
