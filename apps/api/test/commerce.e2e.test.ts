@@ -44,11 +44,12 @@ describe("checkout", () => {
     const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
     const anonymous = request(e2e().app.getHttpServer());
 
-    expect((await anonymous.get(`${base}/courses/${course.slug}/offer`).expect(200)).body).toEqual({ price: null, methods: [] });
+    expect((await anonymous.get(`${base}/courses/${course.slug}/offer`).expect(200)).body).toEqual({ price: null, methods: [], discount: null });
     await alpha.agent.put(`/courses/${course.id}/price`).send({ amount: 4900, currency: "USD" }).expect(200);
     expect((await anonymous.get(`${base}/courses/${course.slug}/offer`).expect(200)).body).toEqual({
       price: { amount: 4900, currency: "USD" },
       methods: ["aba_payway", "stripe"],
+      discount: null,
     });
 
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer"));
@@ -110,5 +111,36 @@ describe("checkout", () => {
       .set("stripe-signature", "t=1,v1=forged")
       .send(payload)
       .expect(400);
+  });
+});
+
+describe("coupons", () => {
+  it("discounts checkout, counts paid uses towards the limit, and stays inside its school", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const coupon = { code: "launch", kind: "percent", percentOff: 20, maxRedemptions: 1 };
+    const { id: couponId } = (await alpha.agent.post("/coupons").send({ coupon }).expect(201)).body.coupon;
+    await alpha.agent.post("/coupons").send({ coupon }).expect(409);
+
+    const offer = await request(e2e().app.getHttpServer()).get(`${base}/courses/${course.slug}/offer?coupon=LAUNCH`).expect(200);
+    expect(offer.body.discount).toEqual({ code: "LAUNCH", amountOff: 980, total: 3920 });
+
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-coupon"));
+    const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe", couponCode: "launch" }).expect(201)).body;
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.amount).toBe(3920);
+    await paidWebhook(orderId).expect(200);
+
+    expect((await alpha.agent.get("/coupons").expect(200)).body.coupons).toEqual([
+      { id: couponId, code: "LAUNCH", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: 1, redemptions: 1 },
+    ]);
+    const { agent: late } = await signUp(e2e().app, uniqueName("buyer-late"));
+    const refused = await late.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe", couponCode: "LAUNCH" }).expect(400);
+    expect(refused.body.type).toBe("urn:reanit:problem:invalid-coupon");
+
+    const beta = await openSchool(e2e().app, uniqueName("shop-coupon"));
+    await beta.agent.delete(`/coupons/${couponId}`).expect(404);
+    await alpha.agent.delete(`/coupons/${couponId}`).expect(204);
+    expect((await alpha.agent.get("/audit-events").expect(200)).body.entries.map(({ action }: { action: string }) => action)).toEqual(
+      expect.arrayContaining(["coupon.create", "coupon.delete"]),
+    );
   });
 });

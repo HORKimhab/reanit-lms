@@ -1,6 +1,7 @@
 import {
   AlreadyEnrolledError,
   CourseNotForSaleError,
+  InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
 } from "@reanit/core/commerce";
@@ -25,20 +26,43 @@ const testApp = useTestApp(resolveTestSchool);
 
 describe("GET .../courses/:slug/offer", () => {
   it("tells anyone the price and the methods for its currency", async () => {
-    testApp.clients.commerce.getOffer.mockResolvedValue({ price: { id: "p", amount: 4900, currency: "USD" }, methods: ["stripe", "bakong_khqr"] });
+    testApp.clients.commerce.getOffer.mockResolvedValue({
+      price: { id: "p", amount: 4900, currency: "USD" },
+      methods: ["stripe", "bakong_khqr"],
+      discount: null,
+    });
 
     const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/courses/intro/offer` });
 
-    expect(response.json()).toEqual({ price: { amount: 4900, currency: "USD" }, methods: ["stripe", "bakong_khqr"] });
+    expect(response.json()).toEqual({ price: { amount: 4900, currency: "USD" }, methods: ["stripe", "bakong_khqr"], discount: null });
     expect(testApp.clients.commerceFor).toHaveBeenCalledWith(TEST_SCHOOL.id);
   });
 
   it("says a course without a price is not for sale", async () => {
-    testApp.clients.commerce.getOffer.mockResolvedValue({ price: null, methods: [] });
+    testApp.clients.commerce.getOffer.mockResolvedValue({ price: null, methods: [], discount: null });
 
     const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/courses/free/offer` });
 
-    expect(response.json()).toEqual({ price: null, methods: [] });
+    expect(response.json()).toEqual({ price: null, methods: [], discount: null });
+  });
+
+  it("prices the course with the coupon in the query, normalized to upper case", async () => {
+    const discount = { code: "SAVE20", amountOff: 980, total: 3920 };
+    testApp.clients.commerce.getOffer.mockResolvedValue({ price: { id: "p", amount: 4900, currency: "USD" }, methods: ["stripe"], discount });
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/courses/intro/offer?coupon=save20` });
+
+    expect(response.json().discount).toEqual(discount);
+    expect(testApp.clients.commerce.getOffer).toHaveBeenCalledWith("intro", { coupon: "SAVE20" });
+  });
+
+  it("answers 400 invalid-coupon for a coupon that cannot be used", async () => {
+    testApp.clients.commerce.getOffer.mockRejectedValue(new InvalidCouponError("expired"));
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/courses/intro/offer?coupon=OLD20` });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().type).toBe("urn:reanit:problem:invalid-coupon");
   });
 });
 
@@ -72,6 +96,15 @@ describe("POST .../checkout", () => {
     await testApp.app.inject({ method: "POST", url: `${BASE_URL}/checkout`, headers, payload: { ...BODY, locale: "km" } });
 
     expect(testApp.clients.commerce.checkout.mock.calls[0]?.[1]).toMatchObject({ locale: "km" });
+  });
+
+  it("passes the coupon code on, normalized to upper case", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.checkout.mockResolvedValue({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://pay.test", providerRef: "cs_1" } });
+
+    await testApp.app.inject({ method: "POST", url: `${BASE_URL}/checkout`, headers, payload: { ...BODY, couponCode: " save20 " } });
+
+    expect(testApp.clients.commerce.checkout.mock.calls[0]?.[1]).toMatchObject({ couponCode: "SAVE20" });
   });
 
   it("returns a KHQR code with its expiry, never the gateway reference", async () => {

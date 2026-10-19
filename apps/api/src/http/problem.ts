@@ -6,7 +6,10 @@ import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from 
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import {
   AlreadyEnrolledError,
+  CouponCodeTakenError,
+  CouponNotFoundError,
   CourseNotForSaleError,
+  InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
 } from "@reanit/core/commerce";
@@ -60,6 +63,9 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: CourseNotForSaleError, status: HttpStatus.CONFLICT, code: "course-not-for-sale", detail: "This course has no price yet." },
   { error: AlreadyEnrolledError, status: HttpStatus.CONFLICT, code: "already-enrolled", detail: "You already have this course." },
   { error: PaymentMethodUnavailableError, status: HttpStatus.BAD_REQUEST, code: "payment-method-unavailable", detail: "This payment method cannot take this payment." },
+  { error: InvalidCouponError, status: HttpStatus.BAD_REQUEST, code: "invalid-coupon", detail: "This coupon cannot be used on this course." },
+  { error: CouponCodeTakenError, status: HttpStatus.CONFLICT, code: "coupon-code-taken", detail: "The school already has a coupon with this code." },
+  { error: CouponNotFoundError, status: HttpStatus.NOT_FOUND, code: "coupon-not-found", detail: "The coupon does not exist." },
   { error: OrderNotFoundError, status: HttpStatus.NOT_FOUND, code: "order-not-found", detail: "The order does not exist." },
   { error: LessonNotFoundError, status: HttpStatus.NOT_FOUND, code: "lesson-not-found", detail: "The lesson does not exist." },
   { error: LessonMediaMissingError, status: HttpStatus.NOT_FOUND, code: "lesson-media-missing", detail: "The lesson has no file yet." },

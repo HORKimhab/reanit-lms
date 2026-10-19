@@ -145,7 +145,7 @@ describe("worker", () => {
     const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD" });
     const buyer = await db.user.create({ data: { email: "worker-buyer@example.com", name: "Sokha" } });
     // setPrice found the course it just created.
-    const { id } = await commerce.createOrder({ userId: buyer.id, courseId, price: price!, method: "stripe", locale: "km" });
+    const { id } = await commerce.createOrder({ userId: buyer.id, courseId, price: price!, amount: price!.amount, couponId: null, method: "stripe", locale: "km" });
     await commerce.setProviderRef(id, `cs_worker_${id}`);
 
     await createPaymentConfirmationStore(db).confirm("stripe", `cs_worker_${id}`);

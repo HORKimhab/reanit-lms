@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
 import type { CommerceService, PaymentStart } from "@reanit/core/commerce";
@@ -9,7 +9,7 @@ import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 import { RateLimit } from "../rate-limit/rate-limit";
-import { CheckoutBody, CheckoutResponse, OfferParams, OfferResponse, OrderParams, OrderResponse, SchoolParams } from "./commerce.dto";
+import { CheckoutBody, CheckoutResponse, OfferParams, OfferQuery, OfferResponse, OrderParams, OrderResponse, SchoolParams } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
 /**
@@ -57,31 +57,35 @@ export class CheckoutController {
   }
 
   /**
-   * Says how a published course can be bought: its price and the payment methods for its currency.
+   * Says how a published course can be bought: its price, the payment methods for its currency, and
+   * what a coupon takes off, so the checkout page can show the total before paying.
    *
    * @param params The school's subdomain and the course's slug.
-   * @returns The price (null when not for sale) and the methods.
+   * @param query The coupon code, if any.
+   * @returns The price (null when not for sale), the methods and the discount (null without a coupon).
    * @throws {SchoolNotFoundError} When no school has the subdomain (404).
    * @throws {CourseNotFoundError} When the school sells no such course (404).
+   * @throws {InvalidCouponError} When the coupon is unknown, expired, used up or not for this price (400).
    */
   @Public()
   @Get("courses/:slug/offer")
   @ApiOkResponse({ type: OfferResponse })
-  async offer(@Param() params: OfferParams): Promise<OfferResponse> {
-    const { price, methods } = await (await this.commerce(params.subdomain)).getOffer(params.slug);
-    return { price: price && { amount: price.amount, currency: price.currency }, methods };
+  async offer(@Param() params: OfferParams, @Query() query: OfferQuery): Promise<OfferResponse> {
+    const { price, methods, discount } = await (await this.commerce(params.subdomain)).getOffer(params.slug, query);
+    return { price: price && { amount: price.amount, currency: price.currency }, methods, discount };
   }
 
   /**
-   * Starts buying a course with the chosen method. Enrollment follows only the gateway's confirmation.
+   * Starts buying a course with the chosen method and coupon. Enrollment follows only the gateway's confirmation.
    *
    * @param params The school's subdomain.
-   * @param body The course and payment method.
+   * @param body The course, payment method and coupon code.
    * @param user The signed-in buyer.
    * @returns The order and what the browser does next.
    * @throws {CourseNotForSaleError} When the course has no price (409).
    * @throws {AlreadyEnrolledError} When the buyer has the course (409).
    * @throws {PaymentMethodUnavailableError} When the method cannot take the payment (400).
+   * @throws {InvalidCouponError} When the coupon cannot be used on this course (400).
    */
   @Post("checkout")
   @RateLimit("checkout")

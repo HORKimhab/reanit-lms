@@ -14,23 +14,81 @@ const MAX_AMOUNT = 100_000_000;
 /** Minor units per major unit; riel have no coins below one, so KHR prices are whole riel. */
 const MINOR_PER_MAJOR = 100;
 
+/**
+ * Smallest step an amount moves in, per currency, in minor units.
+ *
+ * @param currency The currency.
+ * @returns 100 for riel (no coins below one riel), 1 otherwise.
+ */
+export function minorStep(currency: Currency): number {
+  return currency === "KHR" ? MINOR_PER_MAJOR : 1;
+}
+
+/**
+ * Tells whether an amount can be charged in a currency, i.e. it is a whole number of the currency's step.
+ *
+ * @param amount Amount in minor units.
+ * @param currency The currency.
+ * @returns True for whole riel and any USD amount.
+ */
+function isChargeableAmount(amount: number, currency: Currency): boolean {
+  return amount % minorStep(currency) === 0;
+}
+
 /** A course price as the creator sets it. */
 export const priceSchema = z
   .object({
     amount: z.number().int().positive().max(MAX_AMOUNT),
     currency: z.enum(CURRENCIES),
   })
-  .refine(({ amount, currency }) => currency !== "KHR" || amount % MINOR_PER_MAJOR === 0, {
+  .refine(({ amount, currency }) => isChargeableAmount(amount, currency), {
     message: "KHR prices are whole riel",
     path: ["amount"],
   });
 
-/** What the student picks at checkout, and the language they bought in, for their receipt. */
+/** Highest percent a coupon takes off: an order always charges something, since only a confirmed payment enrolls. */
+const MAX_PERCENT_OFF = 99;
+
+/** Letters, digits, `-` and `_`, 3 to 32 long; compared in upper case. */
+const COUPON_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
+
+/** A coupon code as a student or creator types it, normalized to upper case. */
+const couponCodeSchema = z.string().trim().toUpperCase().regex(COUPON_CODE_PATTERN, "Use 3 to 32 letters, digits, - or _");
+
+/** When a coupon stops working and how often it can be used, shared by both kinds. */
+const couponLimitsSchema = z.object({
+  code: couponCodeSchema,
+  /** ISO date-time, read into a Date; null: never expires. */
+  expiresAt: z.iso
+    .datetime({ offset: true })
+    .transform((value) => new Date(value))
+    .nullable()
+    .default(null),
+  /** Null: unlimited. Counts paid orders. */
+  maxRedemptions: z.number().int().positive().max(MAX_AMOUNT).nullable().default(null),
+});
+
+/** A coupon as the creator sets it up: a share of the price off, or a set amount in one currency. */
+export const couponSchema = z
+  .discriminatedUnion("kind", [
+    couponLimitsSchema.extend({ kind: z.literal("percent"), percentOff: z.number().int().min(1).max(MAX_PERCENT_OFF) }),
+    couponLimitsSchema.extend({ kind: z.literal("fixed"), amountOff: z.number().int().positive().max(MAX_AMOUNT), currency: z.enum(CURRENCIES) }),
+  ])
+  .refine((coupon) => coupon.kind !== "fixed" || isChargeableAmount(coupon.amountOff, coupon.currency), {
+    message: "KHR amounts are whole riel",
+    path: ["amountOff"],
+  });
+
+/** What the student picks at checkout, the coupon they typed, and the language they bought in, for their receipt. */
 export const checkoutSchema = z.object({
   courseSlug: z.string().min(1).max(80),
   method: z.enum(PAYMENT_METHODS),
+  couponCode: couponCodeSchema.optional(),
   locale: z.enum(EMAIL_LOCALES).default("en"),
 });
+
+/** A course offer query: the coupon to price it with, if any. */
+export const offerQuerySchema = z.object({ coupon: couponCodeSchema.optional() });
 
 /** A currency courses are sold in. */
 export type Currency = (typeof CURRENCIES)[number];
@@ -38,5 +96,9 @@ export type Currency = (typeof CURRENCIES)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 /** Parsed price input. */
 export type PriceInput = z.infer<typeof priceSchema>;
+/** Parsed coupon input. */
+export type CouponInput = z.infer<typeof couponSchema>;
+/** Parsed offer query. */
+export type OfferQuery = z.infer<typeof offerQuerySchema>;
 /** Parsed checkout input. */
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

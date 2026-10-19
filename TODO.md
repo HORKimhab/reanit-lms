@@ -71,7 +71,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [ ] OPS-03 Production smoke: first real paid enrollment end to end. Done when M1 is live.
 
 ## M2 growth (backlog, refine before starting)
-- [ ] API-12 Coupons: percent/fixed, expiry, usage limit, applied at checkout
+- [x] API-12 Coupons: percent/fixed, expiry, usage limit, applied at checkout
 - [ ] WEB-19 Coupon management + checkout coupon field. Needs API-12.
 - [ ] API-13 Bundles: multiple courses, one price, enroll all on payment
 - [ ] WEB-20 Bundle builder + bundle sales page. Needs API-13.

@@ -126,7 +126,7 @@ const CATALOG_METHODS = [
   "saveOutline",
 ] as const satisfies readonly (keyof CatalogService)[];
 const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as const satisfies readonly (keyof MediaService)[];
-const COMMERCE_METHODS = ["setPrice", "getOffer", "checkout", "getOrder"] as const satisfies readonly (keyof CommerceService)[];
+const COMMERCE_METHODS = ["setPrice", "createCoupon", "listCoupons", "deleteCoupon", "getOffer", "checkout", "getOrder"] as const satisfies readonly (keyof CommerceService)[];
 const LEARNING_METHODS = ["getCourse", "getLessonMedia", "recordProgress"] as const satisfies readonly (keyof LearningService)[];
 const ANALYTICS_METHODS = ["getCourseStats"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];

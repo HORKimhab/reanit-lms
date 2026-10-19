@@ -1,5 +1,5 @@
 import type { EmailLocale } from "../notifications/rules";
-import type { Currency, PaymentMethod, PriceInput } from "./rules";
+import type { CouponInput, Currency, PaymentMethod, PriceInput } from "./rules";
 
 /** A course's current price. */
 export interface Price {
@@ -15,6 +15,23 @@ export interface SellableCourse {
   isPublished: boolean;
   /** Null until the creator sets one. */
   price: Price | null;
+}
+
+/** A school's coupon with how often it has been used. */
+export type Coupon = CouponInput & {
+  id: string;
+  /** Paid orders that used it. */
+  redemptions: number;
+};
+
+/** What a coupon takes off a price, and what is left to pay. */
+export interface Discount {
+  /** The coupon's code. */
+  code: string;
+  /** Minor units taken off. */
+  amountOff: number;
+  /** Minor units left to pay; always above zero. */
+  total: number;
 }
 
 /** Where an order is. */
@@ -38,9 +55,26 @@ export interface CommerceStore {
   /** Returns the new price, or null when the school has no such course. */
   setPrice(courseId: string, price: PriceInput): Promise<Price | null>;
   isEnrolled(userId: string, courseId: string): Promise<boolean>;
-  createOrder(order: { userId: string; courseId: string; price: Price; method: PaymentMethod; locale: EmailLocale }): Promise<{ id: string }>;
+  /** `amount` is what the order charges: the price less any coupon. */
+  createOrder(order: {
+    userId: string;
+    courseId: string;
+    price: Price;
+    amount: number;
+    couponId: string | null;
+    method: PaymentMethod;
+    locale: EmailLocale;
+  }): Promise<{ id: string }>;
   setProviderRef(orderId: string, providerRef: string): Promise<void>;
   findOrder(orderId: string, userId: string): Promise<OrderSummary | null>;
+  /** Returns null when the school already has a coupon with the code. */
+  createCoupon(coupon: CouponInput): Promise<Coupon | null>;
+  /** The school's coupons, newest first. */
+  listCoupons(): Promise<Coupon[]>;
+  /** Finds a coupon by its upper-case code. */
+  findCoupon(code: string): Promise<Coupon | null>;
+  /** Returns false when the school has no such coupon. Orders that used it keep their discount. */
+  deleteCoupon(couponId: string): Promise<boolean>;
 }
 
 /**

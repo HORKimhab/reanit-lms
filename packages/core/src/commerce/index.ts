@@ -1,6 +1,9 @@
 export {
   AlreadyEnrolledError,
+  CouponCodeTakenError,
+  CouponNotFoundError,
   CourseNotForSaleError,
+  InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
   UnknownPaymentError,
@@ -8,6 +11,8 @@ export {
 export { moneyFormat } from "./money";
 export type {
   CommerceStore,
+  Coupon,
+  Discount,
   OrderStatus,
   OrderSummary,
   PaymentCheck,
@@ -20,10 +25,14 @@ export type {
 } from "./ports";
 export {
   checkoutSchema,
+  couponSchema,
   CURRENCIES,
+  offerQuerySchema,
   PAYMENT_METHODS,
   priceSchema,
   type CheckoutInput,
+  type CouponInput,
+  type OfferQuery,
   type Currency,
   type PaymentMethod,
   type PriceInput,

@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CourseNotFoundError } from "../catalog";
+import { FakeClock } from "../test/auth-fakes";
 import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway } from "../test/commerce-fakes";
 import {
   AlreadyEnrolledError,
+  CouponCodeTakenError,
+  CouponNotFoundError,
   CourseNotForSaleError,
+  InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
   UnknownPaymentError,
@@ -12,6 +16,8 @@ import {
 import { createCommerceService, createPaymentConfirmation, type CommerceService } from "./service";
 
 const BUYER = { userId: "user-1", email: "dara@example.com" };
+const NOW = new Date("2026-10-19T12:00:00Z");
+const SAVE20 = { code: "SAVE20", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: null } as const;
 
 /**
  * Builds the return URLs for an order.
@@ -36,17 +42,36 @@ beforeEach(() => {
   store.courses.set("c4", { id: "c4", slug: "draft", title: "Draft", isPublished: false, price: { id: "p4", amount: 100, currency: "USD" } });
   stripe = new FakeGateway("stripe", ["USD"]);
   khqr = new AskableFakeGateway("bakong_khqr", ["USD", "KHR"]);
-  commerce = createCommerceService({ store, gateways: [stripe, khqr], confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)) });
+  commerce = createCommerceService({
+    store,
+    gateways: [stripe, khqr],
+    confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)),
+    clock: new FakeClock(NOW),
+  });
 });
 
 describe("getOffer", () => {
   it("offers every configured method that takes the course's currency", async () => {
-    expect(await commerce.getOffer("intro")).toEqual({ price: { id: "p1", amount: 4900, currency: "USD" }, methods: ["stripe", "bakong_khqr"] });
+    expect(await commerce.getOffer("intro")).toEqual({
+      price: { id: "p1", amount: 4900, currency: "USD" },
+      methods: ["stripe", "bakong_khqr"],
+      discount: null,
+    });
     expect((await commerce.getOffer("riel")).methods).toEqual(["bakong_khqr"]);
   });
 
   it("offers nothing for a course without a price", async () => {
-    expect(await commerce.getOffer("free")).toEqual({ price: null, methods: [] });
+    expect(await commerce.getOffer("free")).toEqual({ price: null, methods: [], discount: null });
+  });
+
+  it("prices the course with the coupon the student typed", async () => {
+    await commerce.createCoupon(SAVE20);
+
+    expect((await commerce.getOffer("intro", { coupon: "SAVE20" })).discount).toEqual({ code: "SAVE20", amountOff: 980, total: 3920 });
+  });
+
+  it("throws InvalidCouponError for a code the school does not have", async () => {
+    await expect(commerce.getOffer("intro", { coupon: "NOPE" })).rejects.toThrow(InvalidCouponError);
   });
 
   it("throws CourseNotFoundError for a draft or missing course", async () => {
@@ -102,6 +127,65 @@ describe("checkout", () => {
 
     await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
     expect(store.orders).toEqual([]);
+  });
+});
+
+describe("checkout with a coupon", () => {
+  it("charges the price less the coupon and records the coupon on the order", async () => {
+    await commerce.createCoupon(SAVE20);
+
+    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
+
+    expect(stripe.requests[0]?.amount).toBe(3920);
+    expect(store.orders[0]).toMatchObject({ amount: 3920, currency: "USD", couponId: "coupon-1" });
+  });
+
+  it("counts only paid orders towards the usage limit", async () => {
+    await commerce.createCoupon({ ...SAVE20, maxRedemptions: 1 });
+    await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
+    await commerce.checkout({ userId: "user-2", email: "b@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
+    await createPaymentConfirmation(new FakeConfirmationStore(store)).confirm("stripe", "ref-order-1");
+
+    await expect(
+      commerce.checkout({ userId: "user-3", email: "c@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls),
+    ).rejects.toThrow(InvalidCouponError);
+    expect(store.orders).toHaveLength(2);
+  });
+
+  it("throws InvalidCouponError and creates no order for an expired coupon", async () => {
+    await commerce.createCoupon({ ...SAVE20, expiresAt: NOW });
+
+    await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls)).rejects.toThrow(
+      InvalidCouponError,
+    );
+    expect(store.orders).toEqual([]);
+  });
+});
+
+describe("coupons", () => {
+  it("creates a coupon and lists it with no uses yet", async () => {
+    const coupon = await commerce.createCoupon(SAVE20);
+
+    expect(coupon).toEqual({ ...SAVE20, id: "coupon-1", redemptions: 0 });
+    expect(await commerce.listCoupons()).toEqual([coupon]);
+  });
+
+  it("throws CouponCodeTakenError for a code the school already uses", async () => {
+    await commerce.createCoupon(SAVE20);
+
+    await expect(commerce.createCoupon({ ...SAVE20, percentOff: 50 })).rejects.toThrow(CouponCodeTakenError);
+  });
+
+  it("deletes a coupon so it can no longer be used", async () => {
+    const { id } = await commerce.createCoupon(SAVE20);
+
+    await commerce.deleteCoupon(id);
+
+    await expect(commerce.getOffer("intro", { coupon: "SAVE20" })).rejects.toThrow(InvalidCouponError);
+  });
+
+  it("throws CouponNotFoundError when deleting an unknown coupon", async () => {
+    await expect(commerce.deleteCoupon("missing")).rejects.toThrow(CouponNotFoundError);
   });
 });
 

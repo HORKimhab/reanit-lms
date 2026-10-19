@@ -1,4 +1,4 @@
-import { checkoutSchema, CURRENCIES, PAYMENT_METHODS, priceSchema } from "@reanit/core/commerce";
+import { checkoutSchema, couponSchema, CURRENCIES, offerQuerySchema, PAYMENT_METHODS, priceSchema } from "@reanit/core/commerce";
 import { subdomainSchema } from "@reanit/core/schools";
 import { z } from "zod";
 
@@ -16,6 +16,15 @@ export class SchoolParams extends createZodDto(z.object({ subdomain: subdomainSc
 /** Path of a course's offer. */
 export class OfferParams extends createZodDto(z.object({ subdomain: subdomainSchema, slug: z.string().min(1).max(80) })) {}
 
+/** Query of a course's offer: the coupon to price it with. */
+export class OfferQuery extends createZodDto(offerQuerySchema) {}
+
+/** `POST /coupons` body: the coupon, wrapped so its two kinds are documented as one field. */
+export class CreateCouponBody extends createZodDto(z.object({ coupon: couponSchema })) {}
+
+/** Path of a coupon. */
+export class CouponIdParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
 /** Path of an order. */
 export class OrderParams extends createZodDto(z.object({ subdomain: subdomainSchema, orderId: z.uuid() })) {}
 
@@ -24,10 +33,40 @@ const priceResponseSchema = z.object({ amount: z.number().int(), currency: z.enu
 /** A course's price, as the creator set it. */
 export class PriceResponse extends createZodDto(z.object({ price: priceResponseSchema })) {}
 
-/** How a course can be bought: its price (null when not for sale) and the methods that take its currency. */
+/** What a coupon takes off a price, and what is left to pay, in minor units. */
+const discountResponseSchema = z.object({ code: z.string(), amountOff: z.number().int(), total: z.number().int() });
+
+/**
+ * How a course can be bought: its price (null when not for sale), the methods that take its currency,
+ * and what the coupon in the query takes off (null without one).
+ */
 export class OfferResponse extends createZodDto(
-  z.object({ price: priceResponseSchema.nullable(), methods: z.array(z.enum(PAYMENT_METHODS)) }),
+  z.object({ price: priceResponseSchema.nullable(), methods: z.array(z.enum(PAYMENT_METHODS)), discount: discountResponseSchema.nullable() }),
 ) {}
+
+/** Fields both coupon kinds have. */
+const couponLimitsResponse = {
+  id: z.uuid(),
+  code: z.string(),
+  /** Null: never expires. */
+  expiresAt: z.iso.datetime().nullable(),
+  /** Null: unlimited. */
+  maxRedemptions: z.number().int().nullable(),
+  /** Paid orders that used it. */
+  redemptions: z.number().int(),
+};
+
+/** A coupon: a percent off, or a fixed amount off in one currency. */
+const couponResponseSchema = z.discriminatedUnion("kind", [
+  z.object({ ...couponLimitsResponse, kind: z.literal("percent"), percentOff: z.number().int() }),
+  z.object({ ...couponLimitsResponse, kind: z.literal("fixed"), amountOff: z.number().int(), currency: z.enum(CURRENCIES) }),
+]);
+
+/** A school's coupon with how often it was used. */
+export class CouponResponse extends createZodDto(z.object({ coupon: couponResponseSchema })) {}
+
+/** A school's coupons, newest first. */
+export class CouponsResponse extends createZodDto(z.object({ coupons: z.array(couponResponseSchema) })) {}
 
 /** The new order and what the browser does next: go to the gateway, post a form to it, or show a KHQR code. */
 export class CheckoutResponse extends createZodDto(

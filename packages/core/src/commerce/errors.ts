@@ -22,3 +22,30 @@ export class OrderNotFoundError extends Error {
 export class UnknownPaymentError extends Error {
   override readonly name = "UnknownPaymentError";
 }
+
+/** Why a coupon cannot be used on an order. */
+type CouponProblem = "unknown" | "expired" | "used_up" | "wrong_currency" | "covers_price";
+
+/** The coupon code cannot be used on this order; `reason` says why. */
+export class InvalidCouponError extends Error {
+  override readonly name = "InvalidCouponError";
+
+  /**
+   * Records why the coupon was refused.
+   *
+   * @param reason What is wrong with it.
+   */
+  constructor(readonly reason: CouponProblem) {
+    super(`Coupon refused: ${reason}`);
+  }
+}
+
+/** The school already has a coupon with this code. */
+export class CouponCodeTakenError extends Error {
+  override readonly name = "CouponCodeTakenError";
+}
+
+/** The school has no coupon with that id. */
+export class CouponNotFoundError extends Error {
+  override readonly name = "CouponNotFoundError";
+}

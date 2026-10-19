@@ -16,13 +16,24 @@ let buyerId: string;
  * Creates a buyer's pending order for the course with a fresh gateway reference.
  *
  * @param userId The buyer.
+ * @param coupon The coupon used and what the order charges with it; full price without one.
+ * @param coupon.id The coupon.
+ * @param coupon.amount What the order charges.
  * @returns The order's id and reference.
  */
-async function pendingOrder(userId: string) {
+async function pendingOrder(userId: string, coupon?: { id: string; amount: number }) {
   const store = createCommerceStore(db, alphaId);
   const price = (await store.findCourse("sold"))?.price;
   if (!price) throw new Error("The course has no price.");
-  const { id } = await store.createOrder({ userId, courseId, price, method: "stripe", locale: "en" });
+  const { id } = await store.createOrder({
+    userId,
+    courseId,
+    price,
+    amount: coupon?.amount ?? price.amount,
+    couponId: coupon?.id ?? null,
+    method: "stripe",
+    locale: "en",
+  });
   const providerRef = `cs_${randomUUID()}`;
   await store.setProviderRef(id, providerRef);
   return { id, providerRef };
@@ -102,5 +113,62 @@ describe("payment confirmation store", () => {
 
     expect(await confirmations.confirm("aba_payway", providerRef)).toBeNull();
     expect(await confirmations.confirm("stripe", "cs_unknown")).toBeNull();
+  });
+});
+
+describe("coupons", () => {
+  const SAVE20 = { code: "SAVE20", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: 5 } as const;
+
+  it("creates, finds and lists a school's coupons, refusing a code it already has", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const expiresAt = new Date("2027-01-01T00:00:00Z");
+
+    const percent = await store.createCoupon(SAVE20);
+    const fixed = await store.createCoupon({ code: "RIEL5K", kind: "fixed", amountOff: 500_000, currency: "KHR", expiresAt, maxRedemptions: null });
+
+    expect(percent).toEqual({ ...SAVE20, id: expect.any(String), redemptions: 0 });
+    expect(await store.findCoupon("RIEL5K")).toEqual({ ...fixed, expiresAt });
+    expect((await store.listCoupons()).map(({ code }) => code)).toEqual(["RIEL5K", "SAVE20"]);
+    expect(await store.createCoupon({ ...SAVE20, percentOff: 50 })).toBeNull();
+  });
+
+  it("hides a school's coupons from another school, which can reuse the code", async () => {
+    const beta = createCommerceStore(db, betaId);
+    const alphaCoupon = await createCommerceStore(db, alphaId).findCoupon("SAVE20");
+
+    expect(await beta.findCoupon("SAVE20")).toBeNull();
+    expect(await beta.deleteCoupon(alphaCoupon?.id ?? "")).toBe(false);
+    expect(await beta.createCoupon(SAVE20)).toMatchObject({ code: "SAVE20" });
+  });
+
+  it("refuses a percent coupon that would make a course free", async () => {
+    await expect(createCommerceStore(db, alphaId).createCoupon({ ...SAVE20, code: "FREE", percentOff: 100 })).rejects.toThrow();
+  });
+
+  it("counts paid orders as redemptions and charges the discounted amount", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const coupon = await store.createCoupon({ ...SAVE20, code: "COUNTED" });
+    if (!coupon) throw new Error("The code is taken.");
+    const buyer = (await db.user.create({ data: { email: "commerce-coupon@example.com" } })).id;
+    const paid = await pendingOrder(buyer, { id: coupon.id, amount: 3920 });
+    await pendingOrder((await db.user.create({ data: { email: "commerce-coupon-pending@example.com" } })).id, { id: coupon.id, amount: 3920 });
+    await confirmations.confirm("stripe", paid.providerRef);
+
+    expect((await store.findCoupon("COUNTED"))?.redemptions).toBe(1);
+    expect((await store.findOrder(paid.id, buyer))?.amount).toBe(3920);
+    expect(await db.orderItem.findFirst({ where: { orderId: paid.id }, select: { amount: true } })).toEqual({ amount: 3920 });
+  });
+
+  it("deletes a coupon and keeps the discounted orders that used it", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const coupon = await store.createCoupon({ ...SAVE20, code: "GONE" });
+    if (!coupon) throw new Error("The code is taken.");
+    const buyer = (await db.user.create({ data: { email: "commerce-gone@example.com" } })).id;
+    const order = await pendingOrder(buyer, { id: coupon.id, amount: 3920 });
+
+    expect(await store.deleteCoupon(coupon.id)).toBe(true);
+
+    expect(await store.findCoupon("GONE")).toBeNull();
+    expect(await db.order.findUnique({ where: { id: order.id }, select: { couponId: true, totalAmount: true } })).toEqual({ couponId: null, totalAmount: 3920 });
   });
 });

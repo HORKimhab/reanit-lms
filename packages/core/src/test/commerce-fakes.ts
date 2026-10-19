@@ -1,6 +1,8 @@
 // In-memory fakes of the commerce ports, for unit tests of checkout and confirmation.
 import type {
   CommerceStore,
+  Coupon,
+  CouponInput,
   Currency,
   OrderSummary,
   PaymentCheck,
@@ -14,8 +16,8 @@ import type {
 } from "../commerce";
 import type { EmailLocale } from "../notifications";
 
-/** A stored order with its buyer and gateway reference. */
-type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale };
+/** A stored order with its buyer, coupon and gateway reference. */
+type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale; couponId: string | null };
 
 /** In-memory `CommerceStore` for one school, whose rows tests can inspect. */
 export class FakeCommerceStore implements CommerceStore {
@@ -23,6 +25,18 @@ export class FakeCommerceStore implements CommerceStore {
   readonly orders: FakeOrder[] = [];
   /** `userId:courseId` pairs. */
   readonly enrollments = new Set<string>();
+  /** Coupons without their usage, newest first; `redemptions` is counted from paid orders. */
+  readonly coupons: (CouponInput & { id: string })[] = [];
+
+  /**
+   * Adds how often a coupon was used: its paid orders.
+   *
+   * @param coupon A stored coupon.
+   * @returns The coupon with its redemptions.
+   */
+  private withRedemptions(coupon: CouponInput & { id: string }): Coupon {
+    return { ...coupon, redemptions: this.orders.filter((order) => order.couponId === coupon.id && order.status === "paid").length };
+  }
 
   /**
    * Finds a course by slug.
@@ -66,13 +80,31 @@ export class FakeCommerceStore implements CommerceStore {
    * @param order.userId The buyer.
    * @param order.courseId The course.
    * @param order.price Its price.
+   * @param order.amount What it charges.
+   * @param order.couponId The coupon used, or null.
    * @param order.method The payment method.
    * @param order.locale The buyer's language.
    * @returns The order's id.
    */
-  async createOrder({ userId, courseId, price, method, locale }: { userId: string; courseId: string; price: Price; method: PaymentMethod; locale: EmailLocale }) {
+  async createOrder({
+    userId,
+    courseId,
+    price,
+    amount,
+    couponId,
+    method,
+    locale,
+  }: {
+    userId: string;
+    courseId: string;
+    price: Price;
+    amount: number;
+    couponId: string | null;
+    method: PaymentMethod;
+    locale: EmailLocale;
+  }) {
     const id = `order-${this.orders.length + 1}`;
-    this.orders.push({ id, userId, courseId, status: "pending", amount: price.amount, currency: price.currency, method, locale, providerRef: null });
+    this.orders.push({ id, userId, courseId, status: "pending", amount, currency: price.currency, method, locale, couponId, providerRef: null });
     return { id };
   }
 
@@ -99,6 +131,52 @@ export class FakeCommerceStore implements CommerceStore {
     if (!order) return null;
     const { userId: buyer, ...summary } = order;
     return buyer === userId ? { ...summary } : null;
+  }
+
+  /**
+   * Stores a coupon unless its code is taken.
+   *
+   * @param coupon The coupon.
+   * @returns The coupon, or null when the code is taken.
+   */
+  async createCoupon(coupon: CouponInput) {
+    if (this.coupons.some(({ code }) => code === coupon.code)) return null;
+    const stored = { ...coupon, id: `coupon-${this.coupons.length + 1}` };
+    this.coupons.unshift(stored);
+    return this.withRedemptions(stored);
+  }
+
+  /**
+   * Lists the coupons.
+   *
+   * @returns The coupons, newest first.
+   */
+  async listCoupons() {
+    return this.coupons.map((coupon) => this.withRedemptions(coupon));
+  }
+
+  /**
+   * Finds a coupon by code.
+   *
+   * @param code The code.
+   * @returns The coupon, or null.
+   */
+  async findCoupon(code: string) {
+    const coupon = this.coupons.find((candidate) => candidate.code === code);
+    return coupon ? this.withRedemptions(coupon) : null;
+  }
+
+  /**
+   * Deletes a coupon; orders keep their amount.
+   *
+   * @param couponId The coupon.
+   * @returns False for an unknown coupon.
+   */
+  async deleteCoupon(couponId: string) {
+    const index = this.coupons.findIndex(({ id }) => id === couponId);
+    if (index < 0) return false;
+    this.coupons.splice(index, 1);
+    return true;
   }
 }
 

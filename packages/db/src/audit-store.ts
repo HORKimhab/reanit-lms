@@ -8,6 +8,8 @@ type AuditAction =
   | "course.delete"
   | "course.outline.save"
   | "course.price.set"
+  | "coupon.create"
+  | "coupon.delete"
   | "lesson.media.attach"
   | "school.settings.update";
 

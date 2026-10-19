@@ -42,6 +42,11 @@ enum PaymentMethod {
   bakong_khqr
 }
 
+enum CouponKind {
+  percent
+  fixed
+}
+
 enum EnrollmentSource {
   purchase
   manual
@@ -115,6 +120,7 @@ model School {
   dailyCompletions DailyCompletions[]
   outboxEvents     OutboxEvent[]
   auditEvents      AuditEvent[]
+  coupons          Coupon[]
 
   @@map("schools")
 }
@@ -223,18 +229,45 @@ model Order {
   locale        String        @default("en")
   /// The gateway's id for this payment (Stripe session, PayWay tran_id, KHQR md5); set once payment starts.
   providerRef   String?       @unique @map("provider_ref")
+  /// The coupon used; null without one, or once the coupon is deleted (`total_amount` keeps the discount).
+  couponId      String?       @map("coupon_id") @db.Uuid
   paidAt        DateTime?     @map("paid_at")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
   school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  coupon      Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items       OrderItem[]
   enrollments Enrollment[]
 
   @@index([schoolId])
   @@index([userId])
+  @@index([couponId])
   @@map("orders")
+}
+
+/// A school's discount code. Percent coupons set `percent_off`; fixed ones set `amount_off` (minor units) and `currency`.
+model Coupon {
+  id             String     @id @default(uuid()) @db.Uuid
+  schoolId       String     @map("school_id") @db.Uuid
+  /// Upper case; unique per school.
+  code           String
+  kind           CouponKind
+  percentOff     Int?       @map("percent_off")
+  amountOff      Int?       @map("amount_off")
+  currency       String?    @db.Char(3)
+  expiresAt      DateTime?  @map("expires_at")
+  /// Paid orders allowed; null is unlimited.
+  maxRedemptions Int?       @map("max_redemptions")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+  @@map("coupons")
 }
 
 model OrderItem {

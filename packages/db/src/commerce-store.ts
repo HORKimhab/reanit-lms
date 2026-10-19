@@ -1,6 +1,6 @@
 import type { DbClient } from "./client";
 import { recordSale } from "./daily-stats";
-import type { PaymentMethod } from "./generated/prisma/client";
+import { Prisma, type PaymentMethod } from "./generated/prisma/client";
 import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction } from "./tenant";
 
@@ -9,6 +9,44 @@ type Currency = "USD" | "KHR";
 
 const PRICE_FIELDS = { id: true, amount: true, currency: true } as const;
 const NEWEST_FIRST = { createdAt: "desc" } as const;
+/** Prisma's error code for a unique constraint violation. */
+const UNIQUE_VIOLATION = "P2002";
+
+/** A coupon as the creator set it up; matches `CouponInput` in `@reanit/core/commerce`. */
+type CouponInput = { code: string; expiresAt: Date | null; maxRedemptions: number | null } & (
+  | { kind: "percent"; percentOff: number }
+  | { kind: "fixed"; amountOff: number; currency: Currency }
+);
+
+/** Coupon columns, with its paid orders counted. */
+const COUPON_FIELDS = {
+  id: true,
+  code: true,
+  kind: true,
+  percentOff: true,
+  amountOff: true,
+  currency: true,
+  expiresAt: true,
+  maxRedemptions: true,
+  _count: { select: { orders: { where: { status: "paid" } } } },
+} as const;
+
+/** A coupon row as `COUPON_FIELDS` selects it. */
+type CouponRow = Prisma.CouponGetPayload<{ select: typeof COUPON_FIELDS }>;
+
+/**
+ * Turns a coupon row into the coupon checkout uses; the table's check constraint guarantees each
+ * kind has its own fields, so the fallbacks never apply.
+ *
+ * @param row The stored coupon.
+ * @returns The coupon with how many paid orders used it.
+ */
+function toCoupon(row: CouponRow) {
+  const limits = { id: row.id, code: row.code, expiresAt: row.expiresAt, maxRedemptions: row.maxRedemptions, redemptions: row._count.orders };
+  return row.kind === "percent"
+    ? { ...limits, kind: "percent" as const, percentOff: row.percentOff ?? 0 }
+    : { ...limits, kind: "fixed" as const, amountOff: row.amountOff ?? 0, currency: (row.currency ?? "USD") as Currency };
+}
 
 /**
  * Narrows a stored currency code to the ones courses are sold in.
@@ -80,7 +118,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     },
 
     /**
-     * Creates a pending order for one course, at the given price.
+     * Creates a pending order for one course at the given price, charging `amount` (the price less any coupon).
      *
      * @param order The order.
      * @param order.userId The buyer.
@@ -89,6 +127,8 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * @param order.price.id Its id.
      * @param order.price.amount Amount in minor units.
      * @param order.price.currency ISO code.
+     * @param order.amount What the order charges, in minor units.
+     * @param order.couponId The coupon used, or null.
      * @param order.method The payment method chosen.
      * @param order.locale The language the buyer checked out in.
      * @returns The order's id.
@@ -97,12 +137,16 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
       userId,
       courseId,
       price,
+      amount,
+      couponId,
       method,
       locale,
     }: {
       userId: string;
       courseId: string;
       price: { id: string; amount: number; currency: Currency };
+      amount: number;
+      couponId: string | null;
       method: PaymentMethod;
       locale: string;
     }) {
@@ -111,11 +155,13 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
           data: {
             schoolId,
             userId,
-            totalAmount: price.amount,
+            totalAmount: amount,
             currency: price.currency,
             paymentMethod: method,
             locale,
-            items: { create: { schoolId, courseId, priceId: price.id, amount: price.amount, currency: price.currency } },
+            couponId,
+            // The item carries what was charged, so sales stats count the discounted amount.
+            items: { create: { schoolId, courseId, priceId: price.id, amount, currency: price.currency } },
           },
           select: { id: true },
         }),
@@ -163,6 +209,58 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
         method: order.paymentMethod,
         providerRef: order.providerRef,
       };
+    },
+
+    /**
+     * Creates a coupon.
+     *
+     * @param coupon Its code (upper case), discount, expiry and usage limit.
+     * @returns The coupon, or null when the school already has one with the code.
+     */
+    async createCoupon(coupon: CouponInput) {
+      const discount =
+        coupon.kind === "percent" ? { percentOff: coupon.percentOff } : { amountOff: coupon.amountOff, currency: coupon.currency };
+      try {
+        return toCoupon(
+          await tenant.coupon.create({
+            data: { schoolId, code: coupon.code, kind: coupon.kind, expiresAt: coupon.expiresAt, maxRedemptions: coupon.maxRedemptions, ...discount },
+            select: COUPON_FIELDS,
+          }),
+        );
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION) return null;
+        throw error;
+      }
+    },
+
+    /**
+     * Lists the school's coupons with their paid orders counted.
+     *
+     * @returns The coupons, newest first.
+     */
+    async listCoupons() {
+      return (await tenant.coupon.findMany({ orderBy: NEWEST_FIRST, select: COUPON_FIELDS })).map(toCoupon);
+    },
+
+    /**
+     * Finds a coupon by its code.
+     *
+     * @param code The upper-case code.
+     * @returns The coupon, or null when the school has none with the code.
+     */
+    async findCoupon(code: string) {
+      const coupon = await tenant.coupon.findUnique({ where: { schoolId_code: { schoolId, code } }, select: COUPON_FIELDS });
+      return coupon && toCoupon(coupon);
+    },
+
+    /**
+     * Deletes a coupon; its orders keep their amounts and lose the link.
+     *
+     * @param couponId The coupon.
+     * @returns False when the school has no such coupon.
+     */
+    async deleteCoupon(couponId: string) {
+      return (await tenant.coupon.deleteMany({ where: { id: couponId } })).count > 0;
     },
   };
 }
