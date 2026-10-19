@@ -234,6 +234,8 @@ curl localhost:4000/health
 ```
 
 - Mailpit's inbox (magic-link emails) is at http://localhost:8025.
+- The browser reaches the API through the web app: Next rewrites `/api/*` to `API_URL`, so there is one origin and one cookie.
+- To run the API as its production image instead of `pnpm dev`'s: `docker compose -f infra/docker-compose.yml --profile api up -d --build --wait` (multi-stage `apps/api/Dockerfile`, runs as `node`). Stop `pnpm dev`'s API first; both use port 4000.
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
 - If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in `packages/db/.env` and `apps/api/.env` to match.
 - Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.

@@ -1,0 +1,14 @@
+# Build context is the repo root; send only sources and the lockfile.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.claude
+packages/db/src/generated
+packages/api-client/src/generated

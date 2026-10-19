@@ -73,6 +73,8 @@ allowBuilds:
   "@swc/core": false
   esbuild: false
   "@prisma/engines": true
+  # Telemetry ping pulled in by @nestjs/swagger.
+  "@scarf/scarf": false
   prisma: true
   cpu-features: false
   protobufjs: false

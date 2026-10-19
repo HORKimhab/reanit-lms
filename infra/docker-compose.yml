@@ -1,6 +1,7 @@
 # Local development services: Postgres, Redis, Mailpit.
 # Start: docker compose -f infra/docker-compose.yml up -d --wait
-# Host ports can be overridden with POSTGRES_PORT, REDIS_PORT, MAILPIT_SMTP_PORT, MAILPIT_UI_PORT.
+# The API image too (instead of `pnpm dev`'s API): add `--profile api`; run `pnpm db:migrate` first.
+# Host ports can be overridden with POSTGRES_PORT, REDIS_PORT, MAILPIT_SMTP_PORT, MAILPIT_UI_PORT, API_PORT.
 name: reanit-lms
 
 services:
@@ -43,6 +44,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    profiles: [api]
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://reanit:reanit@postgres:5432/reanit
+      REDIS_URL: redis://redis:6379
+      APP_URL: http://localhost:3000
+      SMTP_URL: smtp://mailpit:1025
+      MAIL_FROM: "Reanit <no-reply@reanit.localhost>"
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
 
 volumes:
   postgres-data:

@@ -20,8 +20,6 @@
     "@nestjs/platform-fastify": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
-    "@reanit/core": "workspace:*",
-    "@reanit/db": "workspace:*",
     "fastify": "catalog:",
     "ioredis": "catalog:",
     "nestjs-cls": "catalog:",
@@ -36,6 +34,8 @@
   "devDependencies": {
     "@nestjs/testing": "catalog:",
     "@reanit/config": "workspace:*",
+    "@reanit/core": "workspace:*",
+    "@reanit/db": "workspace:*",
     "@swc/core": "catalog:",
     "@types/node": "catalog:",
     "@types/supertest": "catalog:",
