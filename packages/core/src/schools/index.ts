@@ -3,6 +3,7 @@ export type { MembershipRole, School, SchoolChanges, SchoolRecord, SchoolStore, 
 export {
   createSchoolSchema,
   LOGO_RULES,
+  SCHOOL_NAME_MAX_LENGTH,
   schoolSettingsSchema,
   studentSearchSchema,
   subdomainSchema,

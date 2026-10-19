@@ -1,24 +1,21 @@
+import type { StudentSummary } from "@reanit/core/schools";
 import { useFormatter, useTranslations } from "next-intl";
 
-import type { StudentSummary } from "@/mocks/students";
+import { Cell, DataTable, RowHeader } from "./data-table";
 
-import { Cell, DataTable, EmptyState, RowHeader } from "./data-table";
-
-// Join dates are calendar dates, so format them in UTC to keep the same day in every time zone.
-const CALENDAR_TIME_ZONE = "UTC";
+// Server and browser format the join day in the same zone, so the date never shifts between them.
+const JOIN_TIME_ZONE = "UTC";
 
 /**
  * The school's students with their email, course counts and join date.
  *
  * @param props - Component props.
- * @param props.rows - Students, in display order.
- * @returns A table of students, or an empty state when there are none.
+ * @param props.rows - Students, in display order; render an empty state instead when there are none.
+ * @returns A table of students.
  */
 export function StudentTable({ rows }: { rows: StudentSummary[] }) {
   const t = useTranslations("Students");
   const format = useFormatter();
-
-  if (rows.length === 0) return <EmptyState title={t("emptyTitle")} text={t("emptyText")} />;
 
   return (
     <DataTable
@@ -33,11 +30,11 @@ export function StudentTable({ rows }: { rows: StudentSummary[] }) {
     >
       {rows.map((student) => (
         <tr key={student.id}>
-          <RowHeader>{student.name}</RowHeader>
+          <RowHeader>{student.name ?? <span className="text-muted-foreground">{t("noName")}</span>}</RowHeader>
           <Cell>{student.email}</Cell>
           <Cell isNumeric>{format.number(student.courses)}</Cell>
           <Cell isNumeric>{format.number(student.completedCourses)}</Cell>
-          <Cell>{format.dateTime(new Date(student.joinedOn), { dateStyle: "medium", timeZone: CALENDAR_TIME_ZONE })}</Cell>
+          <Cell>{format.dateTime(student.joinedAt, { dateStyle: "medium", timeZone: JOIN_TIME_ZONE })}</Cell>
         </tr>
       ))}
     </DataTable>

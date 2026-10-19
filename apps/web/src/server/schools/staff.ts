@@ -1,8 +1,10 @@
+import type { MembershipRole, School } from "@reanit/core/schools";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
 import { ONBOARDING_PATH } from "@/app/[locale]/(auth)/onboarding/constants";
 
-import { unexpectedResponse } from "../api";
+import { getApi, unexpectedResponse } from "../api";
 import { loginPath } from "../auth/session";
 
 /** Where creator pages send signed-out visitors back to after logging in. */
@@ -22,3 +24,17 @@ export function checkStaffResponse(response: Response) {
   if (response.status === 404) notFound();
   throw unexpectedResponse(response);
 }
+
+/**
+ * Loads the school the signed-in creator runs, with their role in it. Cached per request, so the
+ * dashboard layout and its page share one call.
+ *
+ * @returns The school (brand color and signed logo URL included) and the creator's role.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export const getStaffSchool = cache(async (): Promise<{ school: School; role: MembershipRole }> => {
+  const { data, response } = await (await getApi()).GET("/schools/current");
+  checkStaffResponse(response);
+  // checkStaffResponse returned, so the API answered 2xx with the school.
+  return data!;
+});

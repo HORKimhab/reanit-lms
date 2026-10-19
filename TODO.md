@@ -57,7 +57,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-07 Dashboard stats (pre-aggregated)
 - [x] WEB-16 Connect dashboard. Needs API-07.
 - [x] API-08 Students + school settings: list/search students, update logo/color/name
-- [ ] WEB-17 Connect students list + settings. Needs API-08.
+- [x] WEB-17 Connect students list + settings. Needs API-08.
 
 ## Ship M1
 - [ ] WRK-02 Outbox relay + BullMQ worker app, retries, dead-letter queue. Done when a failed job lands in the DLQ.

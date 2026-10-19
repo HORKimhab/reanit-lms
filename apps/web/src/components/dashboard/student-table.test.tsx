@@ -1,20 +1,26 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
-import { getMockStudents } from "@/mocks/students";
 import { renderWithIntl } from "@/test/render";
+import { STUDENTS } from "@/test/staff";
 
 import { StudentTable } from "./student-table";
 
-const STUDENTS = getMockStudents(MOCK_SCHOOL_SLUG);
+/**
+ * Finds a student's row by the text of its row header.
+ *
+ * @param name - The student's name, or the no-name placeholder.
+ * @returns The row's cells.
+ */
+function rowOf(name: string) {
+  return within(screen.getByRole("rowheader", { name }).closest("tr") as HTMLElement);
+}
 
 describe("StudentTable", () => {
   it("shows each student's email, course counts and join date", async () => {
     renderWithIntl(<StudentTable rows={STUDENTS} />);
     await screen.findByRole("table", { name: "Students" });
-    const sokha = within(screen.getByRole("rowheader", { name: "Sokha Chan" }).closest("tr") as HTMLElement);
-    expect(sokha.getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+    expect(rowOf("Sokha Chan").getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
       "sokha@example.com",
       "2",
       "1",
@@ -22,23 +28,23 @@ describe("StudentTable", () => {
     ]);
   });
 
-  it("keeps the given row order", async () => {
+  it("marks a student who gave no name", async () => {
     renderWithIntl(<StudentTable rows={STUDENTS} />);
-    const names = (await screen.findAllByRole("rowheader")).map((h) => h.textContent);
-    expect(names).toEqual(["Dara Pich", "Vanna Lim", "Sokha Chan"]);
+    expect(await screen.findByRole("rowheader", { name: "No name" })).toBeInTheDocument();
+    expect(rowOf("No name").getByRole("cell", { name: "dara.pich@example.com" })).toBeInTheDocument();
   });
 
-  it("shows an empty state instead of a table when there are no students", async () => {
-    renderWithIntl(<StudentTable rows={[]} />);
-    expect(await screen.findByText("No students yet")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  it("keeps the given row order", async () => {
+    renderWithIntl(<StudentTable rows={STUDENTS.toReversed()} />);
+    const names = (await screen.findAllByRole("rowheader")).map((h) => h.textContent);
+    expect(names).toEqual(["Sokha Chan", "No name"]);
   });
 
   it("uses Khmer headings and dates when the locale is km", async () => {
     renderWithIntl(<StudentTable rows={STUDENTS} />, { locale: "km" });
     expect(await screen.findByRole("columnheader", { name: "ចូលរួមនៅ" })).toBeInTheDocument();
-    const sokha = within(screen.getByRole("rowheader", { name: "Sokha Chan" }).closest("tr") as HTMLElement);
-    expect(sokha.getAllByRole("cell").at(-1)?.textContent).toMatch(/2026/);
-    expect(sokha.getAllByRole("cell").at(-1)?.textContent).not.toBe("Mar 14, 2026");
+    const joined = rowOf("Sokha Chan").getAllByRole("cell").at(-1)?.textContent;
+    expect(joined).toMatch(/2026/);
+    expect(joined).not.toBe("Mar 14, 2026");
   });
 });

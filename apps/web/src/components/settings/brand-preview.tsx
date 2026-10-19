@@ -4,7 +4,6 @@ import { useId } from "react";
 import type * as React from "react";
 
 import { SchoolLogo } from "@/components/shells/school-logo";
-import type { SchoolSettings } from "@/mocks/schools";
 
 /**
  * A small mock of the school site in the settings being edited, so changes show before saving.
@@ -15,7 +14,7 @@ import type { SchoolSettings } from "@/mocks/schools";
  * @param props.logoUrl - The chosen logo, if any.
  * @returns A labelled region with a header, a course card and a buy button in the brand color.
  */
-export function BrandPreview({ name, brand, logoUrl }: SchoolSettings) {
+export function BrandPreview({ name, brand, logoUrl }: { name: string; brand: string; logoUrl?: string }) {
   const t = useTranslations("Settings");
   const course = useTranslations("Course");
   const headingId = useId();

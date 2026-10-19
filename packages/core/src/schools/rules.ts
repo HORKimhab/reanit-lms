@@ -5,7 +5,8 @@ import { slugify } from "../shared/slug";
 /** DNS label limits; 3 keeps out ambiguous one- and two-letter names. */
 const SUBDOMAIN_MIN_LENGTH = 3;
 const SUBDOMAIN_MAX_LENGTH = 63;
-const SCHOOL_NAME_MAX_LENGTH = 100;
+/** Longest school name accepted. */
+export const SCHOOL_NAME_MAX_LENGTH = 100;
 
 /** Lowercase letters, digits and inner hyphens: a valid DNS label. */
 const SUBDOMAIN_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;

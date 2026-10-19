@@ -120,7 +120,16 @@
     "completed": "Completed",
     "joined": "Joined",
     "emptyTitle": "No students yet",
-    "emptyText": "Students who enroll in your courses will show up here."
+    "emptyText": "Students who enroll in your courses will show up here.",
+    "noName": "No name",
+    "search": "Search students",
+    "searchButton": "Search",
+    "noMatchTitle": "No students found",
+    "noMatchText": "No student's name or email contains “{q}”.",
+    "pages": "Students pages",
+    "previous": "Previous page",
+    "next": "Next page",
+    "pageOf": "Page {page} of {pages}"
   },
   "Settings": {
     "name": "School name",
@@ -133,12 +142,14 @@
     "errors": {
       "name": "Enter a name of up to {max} characters.",
       "brand": "Pick a color.",
-      "logo": "Choose a PNG, JPEG or WebP image of up to {maxMb} MB."
+      "logo": "Choose a PNG, JPEG or WebP image of up to {maxMb} MB.",
+      "save": "Couldn't save. Try again."
     },
     "preview": "Live preview",
     "previewHint": "This is how your school site looks to students.",
     "logoPreview": "Logo preview",
-    "previewCourse": "Your course title"
+    "previewCourse": "Your course title",
+    "staffOnly": "Only the school's owner and admins can change its settings."
   },
   "School": {
     "coursesHeading": "Courses",

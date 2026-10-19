@@ -1,19 +1,34 @@
 import type { Course, CourseWithOutline } from "@reanit/core/catalog";
+import type { School } from "@reanit/core/schools";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
+import { DEFAULT_BRAND } from "@/components/shells/brand";
 import type { MockSchool } from "@/mocks/schools";
 
 import { getApi, unexpectedResponse } from "../api";
 
-/** Brand color of every school site until API-08 lets owners pick one. */
-export const DEFAULT_BRAND = "#008b52";
-
-/** A school as its public site shows it. Tagline and logo stay empty until API-08 stores them. */
+/** A school as its public site shows it. The tagline stays empty until the API stores one. */
 export type SiteSchool = MockSchool & {
   /** Whose courses these are, shown as the instructor; null when the owner gave no name. */
   ownerName: string | null;
 };
+
+/**
+ * Puts a school from the API in the shape the school shells and the dashboard mark show.
+ *
+ * @param school The school.
+ * @returns Its subdomain as the slug, its brand color (or the default) and its logo, if any.
+ */
+export function toBrandedSchool(school: School): MockSchool {
+  return {
+    slug: school.subdomain,
+    name: school.name,
+    tagline: "",
+    brand: school.brandColor ?? DEFAULT_BRAND,
+    ...(school.logoUrl && { logoUrl: school.logoUrl }),
+  };
+}
 
 /**
  * Turns an API answer for a public school page into the page's next step: a missing school or
@@ -32,7 +47,7 @@ export function checkPublicResponse(response: Response) {
  * Resolves the school a subdomain belongs to. Cached per request, so the layouts and the page share one call.
  *
  * @param subdomain The school's subdomain from the URL.
- * @returns The school, with the default brand until API-08.
+ * @returns The school with its brand and its owner's name.
  * @throws {Error} Next's not-found signal when no school has the subdomain, or an unexpected-response error.
  */
 export const getSiteSchool = cache(async (subdomain: string): Promise<SiteSchool> => {
@@ -42,7 +57,7 @@ export const getSiteSchool = cache(async (subdomain: string): Promise<SiteSchool
   checkPublicResponse(response);
   // checkPublicResponse returned, so the API answered 2xx with the school.
   const { school, owner } = data!;
-  return { slug: school.subdomain, name: school.name, tagline: "", brand: DEFAULT_BRAND, ownerName: owner.name };
+  return { ...toBrandedSchool(school), ownerName: owner.name };
 });
 
 /**
