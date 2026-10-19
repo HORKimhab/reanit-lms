@@ -28,3 +28,22 @@ export function getServerEnv(source: Record<string, string | undefined> = proces
   cached ??= serverEnvSchema.parse(source);
   return cached;
 }
+
+/** `host[:port]` that schools hang off, e.g. `reanit.com` or `localhost:3000`. */
+const rootDomainSchema = z
+  .string()
+  .toLowerCase()
+  .regex(/^[a-z0-9.-]+(:\d+)?$/)
+  .optional();
+
+/**
+ * Reads the root domain for school subdomains. Separate from `getServerEnv` because the
+ * proxy runs on every request and needs nothing else; unset disables subdomain routing.
+ *
+ * @param source Variables to read; `process.env` outside tests.
+ * @returns The root domain, or undefined when unset.
+ * @throws {z.ZodError} When `ROOT_DOMAIN` is not a host.
+ */
+export function getRootDomain(source: Record<string, string | undefined> = process.env): string | undefined {
+  return rootDomainSchema.parse(source.ROOT_DOMAIN || undefined);
+}

@@ -1,0 +1,59 @@
+import { afterAll, describe, expect, it, inject } from "vitest";
+
+import { createDbClient, createSchoolStore, forSchool } from "../src";
+
+const db = createDbClient(inject("databaseUrl"));
+const store = createSchoolStore(db);
+
+afterAll(async () => {
+  await db.$disconnect();
+});
+
+/**
+ * Creates a user to own schools.
+ *
+ * @param email Unique email.
+ * @returns The user's id.
+ */
+async function createOwner(email: string) {
+  return (await db.user.create({ data: { email } })).id;
+}
+
+describe("school store", () => {
+  it("creates a school owned by the creator, visible to that school's tenant client", async () => {
+    const ownerId = await createOwner("owner-1@example.com");
+
+    const school = await store.createSchoolWithOwner({ name: "Angkor", subdomain: "angkor-store", ownerId });
+
+    expect(school).toEqual({ id: expect.any(String), name: "Angkor", subdomain: "angkor-store" });
+    expect(await forSchool(db, school.id).membership.findMany({ select: { userId: true, role: true } })).toEqual([
+      { userId: ownerId, role: "owner" },
+    ]);
+  });
+
+  it("finds a school by subdomain", async () => {
+    const ownerId = await createOwner("owner-2@example.com");
+    const school = await store.createSchoolWithOwner({ name: "Bayon", subdomain: "bayon-store", ownerId });
+
+    expect(await store.findSchoolBySubdomain("bayon-store")).toEqual(school);
+  });
+
+  it("returns null for an unknown subdomain", async () => {
+    expect(await store.findSchoolBySubdomain("no-such-school")).toBeNull();
+  });
+
+  it("rejects a taken subdomain without creating a membership", async () => {
+    const ownerId = await createOwner("owner-3@example.com");
+    await store.createSchoolWithOwner({ name: "First", subdomain: "taken-store", ownerId });
+
+    await expect(store.createSchoolWithOwner({ name: "Second", subdomain: "taken-store", ownerId })).rejects.toThrow();
+    expect(await db.membership.count({ where: { userId: ownerId } })).toBe(1);
+  });
+
+  it("rejects an unknown owner without leaving a school behind", async () => {
+    const missingOwner = "00000000-0000-4000-8000-000000000000";
+
+    await expect(store.createSchoolWithOwner({ name: "Orphan", subdomain: "orphan-store", ownerId: missingOwner })).rejects.toThrow();
+    expect(await store.findSchoolBySubdomain("orphan-store")).toBeNull();
+  });
+});

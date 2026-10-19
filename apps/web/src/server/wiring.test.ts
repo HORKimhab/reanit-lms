@@ -23,4 +23,10 @@ describe("server wiring", () => {
 
     expect(getAuthService()).toBe(getAuthService());
   });
+
+  it("builds the school service once", async () => {
+    const { getSchoolService } = await import("./schools/service");
+
+    expect(getSchoolService()).toBe(getSchoolService());
+  });
 });

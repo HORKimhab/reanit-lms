@@ -48,3 +48,29 @@ describe("getServerEnv", () => {
     expect(getServerEnv({})).toEqual(VALID);
   });
 });
+
+describe("getRootDomain", () => {
+  it("returns the lower-cased root domain", async () => {
+    const { getRootDomain } = await import("./env");
+
+    expect(getRootDomain({ ROOT_DOMAIN: "Reanit.com" })).toBe("reanit.com");
+  });
+
+  it("keeps a port", async () => {
+    const { getRootDomain } = await import("./env");
+
+    expect(getRootDomain({ ROOT_DOMAIN: "localhost:3000" })).toBe("localhost:3000");
+  });
+
+  it.each([[undefined], [""]])("returns undefined when unset (%j)", async (value) => {
+    const { getRootDomain } = await import("./env");
+
+    expect(getRootDomain({ ROOT_DOMAIN: value })).toBeUndefined();
+  });
+
+  it("throws a ZodError when it is a URL instead of a host", async () => {
+    const { getRootDomain } = await import("./env");
+
+    expect(() => getRootDomain({ ROOT_DOMAIN: "https://reanit.com" })).toThrow(ZodError);
+  });
+});

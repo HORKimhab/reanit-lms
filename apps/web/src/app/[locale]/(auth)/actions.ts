@@ -10,12 +10,12 @@ import {
 } from "@reanit/core/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import type { z } from "zod";
 
 import { safeRedirectPath } from "@/server/auth/redirect";
 import { getAuthService } from "@/server/auth/service";
 import { endSession, setSessionCookie } from "@/server/auth/session";
 import { getServerEnv } from "@/server/env";
+import { invalidFieldsOf } from "@/server/form-errors";
 
 /** Result of the last submit, shown by the auth forms (WEB-10). */
 export type AuthFormState = {
@@ -27,16 +27,6 @@ export type AuthFormState = {
 /** Route that verifies a magic link token (app/api/auth/magic-link). */
 const MAGIC_LINK_PATH = "/api/auth/magic-link";
 const MINUTE_MS = 60 * 1000;
-
-/**
- * Turns a failed parse into a form state listing each bad field once.
- *
- * @param error The parse error.
- * @returns An `invalid` state.
- */
-function invalid(error: z.ZodError): AuthFormState {
-  return { status: "invalid", invalidFields: [...new Set(error.issues.map((issue) => String(issue.path[0])))] };
-}
 
 /**
  * Creates a password account, signs it in and goes to `next`.
@@ -52,7 +42,7 @@ export async function signUp(_previous: AuthFormState, formData: FormData): Prom
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return invalid(parsed.error);
+  if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
   try {
     await setSessionCookie(await getAuthService().signUp(parsed.data));
   } catch (error) {
@@ -72,7 +62,7 @@ export async function signUp(_previous: AuthFormState, formData: FormData): Prom
  */
 export async function logIn(_previous: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = logInSchema.safeParse({ email: formData.get("email"), password: formData.get("password") });
-  if (!parsed.success) return invalid(parsed.error);
+  if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
   try {
     await setSessionCookie(await getAuthService().logIn(parsed.data));
   } catch (error) {

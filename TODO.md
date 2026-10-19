@@ -27,7 +27,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] DB-01 Prisma core schema, tenant client, RLS. Done when the RLS isolation test passes.
 - [x] API-01 Auth: sign-up, login, magic link, sessions
 - [x] WEB-10 Login/sign-up screens. Needs API-01.
-- [ ] API-02 Schools: create school, subdomain middleware
+- [x] API-02 Schools: create school, subdomain middleware
 - [ ] WEB-11 Create-school onboarding wizard. Needs API-02.
 - [ ] API-03 Catalog: courses/sections/lessons CRUD
 - [ ] WEB-12 Connect builder + sales page. Needs API-03.
