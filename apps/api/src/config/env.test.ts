@@ -24,6 +24,9 @@ describe("parseEnv", () => {
       S3_REGION: "auto",
       S3_FORCE_PATH_STYLE: false,
       PAYWAY_BASE_URL: "https://checkout-sandbox.payway.com.kh",
+      BAKONG_MERCHANT_NAME: "Reanit",
+      BAKONG_MERCHANT_CITY: "Phnom Penh",
+      BAKONG_BASE_URL: "https://sit-api-bakong.nbc.gov.kh",
     });
   });
 
@@ -35,7 +38,7 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...REQUIRED, STRIPE_SECRET_KEY: "sk_test_1", STRIPE_WEBHOOK_SECRET: "whsec_1" }).STRIPE_SECRET_KEY).toBe("sk_test_1");
   });
 
-  it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }, { PAYWAY_MERCHANT_ID: "m" }, { PAYWAY_API_KEY: "k" }])("throws a ZodError for half a gateway's credentials: %j", (half) => {
+  it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }, { PAYWAY_MERCHANT_ID: "m" }, { PAYWAY_API_KEY: "k" }, { BAKONG_ACCOUNT_ID: "a@b" }, { BAKONG_TOKEN: "t" }])("throws a ZodError for half a gateway's credentials: %j", (half) => {
     expect(() => parseEnv({ ...REQUIRED, ...half })).toThrow(ZodError);
   });
 

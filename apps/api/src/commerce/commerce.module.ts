@@ -7,7 +7,8 @@ import Stripe from "stripe";
 import type { Env } from "../config/env";
 import { SchoolsModule } from "../schools/schools.module";
 import { CheckoutController } from "./checkout.controller";
-import { COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYMENT_GATEWAYS, PAYWAY, STRIPE, type CommerceForSchool } from "./commerce.tokens";
+import { createBakongGateway } from "./bakong-gateway";
+import { BAKONG, COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYMENT_GATEWAYS, PAYWAY, STRIPE, type CommerceForSchool } from "./commerce.tokens";
 import { createPayWayGateway } from "./payway-gateway";
 import { PayWayWebhookController } from "./payway-webhook.controller";
 import { PriceController } from "./price.controller";
@@ -41,14 +42,32 @@ function providePayWay(env: Env): PaymentGateway | null {
 }
 
 /**
+ * Connects to Bakong when it is configured. Bakong has no webhook: orders are checked when their status is read.
+ *
+ * @param env Validated environment.
+ * @returns The gateway, or null without credentials.
+ */
+function provideBakong(env: Env): PaymentGateway | null {
+  if (!env.BAKONG_ACCOUNT_ID || !env.BAKONG_TOKEN) return null;
+  return createBakongGateway({
+    accountId: env.BAKONG_ACCOUNT_ID,
+    merchantName: env.BAKONG_MERCHANT_NAME,
+    merchantCity: env.BAKONG_MERCHANT_CITY,
+    token: env.BAKONG_TOKEN,
+    baseUrl: env.BAKONG_BASE_URL,
+  });
+}
+
+/**
  * Lists the gateways that are configured, in the order checkout offers them: local methods first.
  *
  * @param payway The PayWay gateway, or null.
+ * @param bakong The Bakong KHQR gateway, or null.
  * @param stripe Stripe client, or null.
  * @returns The gateways.
  */
-function provideGateways(payway: PaymentGateway | null, stripe: Stripe | null): PaymentGateway[] {
-  return [payway, stripe && createStripeGateway(stripe)].filter((gateway): gateway is PaymentGateway => gateway !== null);
+function provideGateways(payway: PaymentGateway | null, bakong: PaymentGateway | null, stripe: Stripe | null): PaymentGateway[] {
+  return [payway, bakong, stripe && createStripeGateway(stripe)].filter((gateway): gateway is PaymentGateway => gateway !== null);
 }
 
 /**
@@ -80,7 +99,8 @@ function provideConfirmation(db: DbClient) {
   providers: [
     { provide: STRIPE, inject: [ENV], useFactory: provideStripe },
     { provide: PAYWAY, inject: [ENV], useFactory: providePayWay },
-    { provide: PAYMENT_GATEWAYS, inject: [PAYWAY, STRIPE], useFactory: provideGateways },
+    { provide: BAKONG, inject: [ENV], useFactory: provideBakong },
+    { provide: PAYMENT_GATEWAYS, inject: [PAYWAY, BAKONG, STRIPE], useFactory: provideGateways },
     { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: provideCommerceForSchool },
     { provide: PAYMENT_CONFIRMATION, inject: [DB_CLIENT], useFactory: provideConfirmation },
   ],

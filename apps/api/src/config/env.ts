@@ -32,6 +32,15 @@ const envSchema = baseEnvSchema
   PAYWAY_API_KEY: z.string().min(1).optional(),
   /** PayWay host: the sandbox until the profile goes live (https://checkout.payway.com.kh). */
   PAYWAY_BASE_URL: z.url().default("https://checkout-sandbox.payway.com.kh"),
+  /** Bakong account paid by KHQR (e.g. `reanit@aclb`); Bakong KHQR is offered at checkout only when it and the token are set. */
+  BAKONG_ACCOUNT_ID: z.string().min(1).optional(),
+  /** Bakong Open API token (api-bakong.nbc.gov.kh); renew it before it expires every 90 days. */
+  BAKONG_TOKEN: z.string().min(1).optional(),
+  /** Payee name and city banking apps show; KHQR allows 25 and 15 characters. */
+  BAKONG_MERCHANT_NAME: z.string().min(1).max(25).default("Reanit"),
+  BAKONG_MERCHANT_CITY: z.string().min(1).max(15).default("Phnom Penh"),
+  /** Bakong Open API host: the sandbox until the account goes live (https://api-bakong.nbc.gov.kh). */
+  BAKONG_BASE_URL: z.url().default("https://sit-api-bakong.nbc.gov.kh"),
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   /** Interface to listen on; all of them by default, as a container needs. */
   HOST: z.string().min(1).default("0.0.0.0"),
@@ -43,6 +52,10 @@ const envSchema = baseEnvSchema
   .refine((env) => Boolean(env.PAYWAY_MERCHANT_ID) === Boolean(env.PAYWAY_API_KEY), {
     message: "Set PAYWAY_MERCHANT_ID and PAYWAY_API_KEY together",
     path: ["PAYWAY_API_KEY"],
+  })
+  .refine((env) => Boolean(env.BAKONG_ACCOUNT_ID) === Boolean(env.BAKONG_TOKEN), {
+    message: "Set BAKONG_ACCOUNT_ID and BAKONG_TOKEN together",
+    path: ["BAKONG_TOKEN"],
   });
 
 /** The API's validated environment. */
