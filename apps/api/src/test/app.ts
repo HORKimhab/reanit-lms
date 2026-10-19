@@ -4,15 +4,17 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModuleBuilder } from "@nestjs/testing";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
+import type { CommerceService } from "@reanit/core/commerce";
 import type { MediaService } from "@reanit/core/media";
 import type { SchoolService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
-import { vi, type Mock } from "vitest";
+import { afterEach, beforeEach, vi, type Mock } from "vitest";
 
 import { AppModule } from "../app.module";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
+import { COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION } from "../commerce/commerce.tokens";
 import { setupApp } from "../app.setup";
 import { ENV } from "@reanit/nest";
 
@@ -37,6 +39,8 @@ export const TEST_ENV: Env = {
   S3_ACCESS_KEY_ID: "test-key",
   S3_SECRET_ACCESS_KEY: "test-secret",
   S3_FORCE_PATH_STYLE: true,
+  STRIPE_SECRET_KEY: "sk_test_reanit",
+  STRIPE_WEBHOOK_SECRET: "whsec_reanit_test",
   PORT: 4000,
   HOST: "127.0.0.1",
   LOG_LEVEL: "silent",
@@ -56,6 +60,11 @@ export type FakeClients = {
   /** Stands in for every school's media service; `mediaFor` records which school was asked for. */
   media: Record<keyof MediaService, Mock>;
   mediaFor: Mock<(schoolId: string) => MediaService>;
+  /** Stands in for every school's commerce service; `commerceFor` records which school was asked for. */
+  commerce: Record<keyof CommerceService, Mock>;
+  commerceFor: Mock<(schoolId: string) => CommerceService>;
+  /** Stands in for the payment confirmation that enrolls. */
+  confirmation: { confirm: Mock };
 };
 
 /** Extras a test can boot the app with. */
@@ -82,6 +91,7 @@ const CATALOG_METHODS = [
   "saveOutline",
 ] as const satisfies readonly (keyof CatalogService)[];
 const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as const satisfies readonly (keyof MediaService)[];
+const COMMERCE_METHODS = ["setPrice", "getOffer", "checkout", "getOrder"] as const satisfies readonly (keyof CommerceService)[];
 
 /**
  * Creates a fake of a core service with one spy per use case.
@@ -96,13 +106,14 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, catalog and media services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, catalog, media and commerce services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
   auth.getSessionUser.mockResolvedValue(null);
   const catalog = fakeService(CATALOG_METHODS);
   const media = fakeService(MEDIA_METHODS);
+  const commerce = fakeService(COMMERCE_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
@@ -112,6 +123,9 @@ export function createFakeClients(): FakeClients {
     catalogFor: vi.fn(() => catalog as unknown as CatalogService),
     media,
     mediaFor: vi.fn(() => media as unknown as MediaService),
+    commerce,
+    commerceFor: vi.fn(() => commerce as unknown as CommerceService),
+    confirmation: { confirm: vi.fn() },
   };
 }
 
@@ -140,7 +154,11 @@ export async function createTestApp(
     .overrideProvider(CATALOG_FOR_SCHOOL)
     .useValue(clients.catalogFor)
     .overrideProvider(MEDIA_FOR_SCHOOL)
-    .useValue(clients.mediaFor);
+    .useValue(clients.mediaFor)
+    .overrideProvider(COMMERCE_FOR_SCHOOL)
+    .useValue(clients.commerceFor)
+    .overrideProvider(PAYMENT_CONFIRMATION)
+    .useValue(clients.confirmation);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });
@@ -156,9 +174,31 @@ export async function createTestApp(
  */
 export async function bootTestApp(builder: TestingModuleBuilder): Promise<NestFastifyApplication> {
   const moduleRef = await builder.compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter(), { bufferLogs: true });
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter(), { bufferLogs: true, rawBody: true });
   await setupApp(app);
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   return app;
+}
+
+/** A test app and its fakes; the fields are replaced before each test. */
+export type TestApp = { clients: FakeClients; app: NestFastifyApplication };
+
+/**
+ * Boots a fresh app before each test and closes it after.
+ *
+ * @param prepare Programs the fakes before the app boots, e.g. to resolve a school.
+ * @returns An object whose fields are replaced before each test: read them inside tests, never destructure at file level.
+ */
+export function useTestApp(prepare?: (clients: FakeClients) => void): TestApp {
+  const testApp = {} as TestApp;
+  beforeEach(async () => {
+    const clients = createFakeClients();
+    prepare?.(clients);
+    Object.assign(testApp, { clients, app: await createTestApp(clients) });
+  });
+  afterEach(async () => {
+    await testApp.app.close();
+  });
+  return testApp;
 }

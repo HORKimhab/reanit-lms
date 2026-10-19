@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import type { Mailer, MailMessage } from "@reanit/core/auth";
+import type { PaymentGateway } from "@reanit/core/commerce";
 import type { ObjectStorage } from "@reanit/core/media";
 // Types `inject("databaseUrl")` for the e2e files.
 import type {} from "@reanit/db/testing/postgres";
@@ -14,6 +15,7 @@ import { afterAll, beforeAll, inject } from "vitest";
 import { AppModule } from "../app.module";
 import { ENV } from "@reanit/nest";
 import { MAILER } from "../mail/mail.module";
+import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
 import { OBJECT_STORAGE } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
@@ -26,6 +28,29 @@ type MemoryStorage = ObjectStorage & { uploaded: Set<string> };
 
 /** The app under test, the email it has sent and its object storage. */
 export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[]; storage: MemoryStorage };
+
+/** Stripe without the network: the session id is `cs_e2e_<order id>`, so tests can sign its webhook. */
+const e2eStripeGateway: PaymentGateway = {
+  method: "stripe",
+  /**
+   * Takes USD only, as tests expect.
+   *
+   * @param currency The course's currency.
+   * @returns True for USD.
+   */
+  supports(currency) {
+    return currency === "USD";
+  },
+  /**
+   * Fakes a Checkout Session.
+   *
+   * @param request The order.
+   * @returns A redirect naming the session.
+   */
+  async startPayment(request) {
+    return { kind: "redirect", url: `https://checkout.stripe.test/cs_e2e_${request.orderId}`, providerRef: `cs_e2e_${request.orderId}` };
+  },
+};
 
 /**
  * Creates storage that signs nothing: URLs name the key, and uploads are simulated.
@@ -90,6 +115,8 @@ async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
   const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(OBJECT_STORAGE)
     .useValue(storage)
+    .overrideProvider(PAYMENT_GATEWAYS)
+    .useValue([e2eStripeGateway])
     .overrideProvider(ENV)
     .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl })
     .overrideProvider(REDIS)

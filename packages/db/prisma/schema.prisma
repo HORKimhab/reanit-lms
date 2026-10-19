@@ -35,6 +35,13 @@ enum OrderStatus {
   refunded
 }
 
+/// How the student chose to pay; each has a gateway in apps/api.
+enum PaymentMethod {
+  stripe
+  aba_payway
+  bakong_khqr
+}
+
 enum EnrollmentSource {
   purchase
   manual
@@ -42,7 +49,7 @@ enum EnrollmentSource {
 
 /// A person. Global: one account can belong to many schools.
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
   name         String?
   /// Null for accounts that only sign in by magic link.
@@ -197,14 +204,18 @@ model Price {
 }
 
 model Order {
-  id          String      @id @default(uuid()) @db.Uuid
-  schoolId    String      @map("school_id") @db.Uuid
-  userId      String      @map("user_id") @db.Uuid
-  status      OrderStatus @default(pending)
-  totalAmount Int         @map("total_amount")
-  currency    String      @db.Char(3)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id            String        @id @default(uuid()) @db.Uuid
+  schoolId      String        @map("school_id") @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  status        OrderStatus   @default(pending)
+  totalAmount   Int           @map("total_amount")
+  currency      String        @db.Char(3)
+  paymentMethod PaymentMethod @map("payment_method")
+  /// The gateway's id for this payment (Stripe session, PayWay tran_id, KHQR md5); set once payment starts.
+  providerRef   String?       @unique @map("provider_ref")
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)

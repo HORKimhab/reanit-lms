@@ -22,8 +22,10 @@ function toSwaggerProperties(schema: z.ZodType): Record<string, object> {
   return Object.fromEntries(
     Object.entries(json.properties ?? {}).map(([key, property]) => {
       const isRequired = json.required?.includes(key) ?? false;
+      // Swagger takes a property without `type` (a union: oneOf/anyOf) for a circular class reference.
+      const typed = "type" in property ? property : { type: "object", ...property };
       // An object property keeps its own `required` list; swagger reads `selfRequired` for the property itself.
-      return [key, "required" in property ? { ...property, selfRequired: isRequired } : { ...property, required: isRequired }];
+      return [key, "required" in typed ? { ...typed, selfRequired: isRequired } : { ...typed, required: isRequired }];
     }),
   );
 }

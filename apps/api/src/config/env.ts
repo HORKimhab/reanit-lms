@@ -3,7 +3,8 @@ import { z } from "zod";
 
 const DEFAULT_PORT = 4000;
 
-const envSchema = baseEnvSchema.extend({
+const envSchema = baseEnvSchema
+  .extend({
   /** Public origin of the web app: builds links in emails, decides the Secure cookie flag and which origins may send mutating requests. */
   APP_URL: z.url(),
   /** SMTP server, e.g. smtp://localhost:1025 for Mailpit. */
@@ -22,10 +23,18 @@ const envSchema = baseEnvSchema.extend({
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   /** Local SeaweedFS needs path-style URLs (`endpoint/bucket/key`). */
   S3_FORCE_PATH_STYLE: z.stringbool().default(false),
+  /** Stripe secret key; Stripe is offered at checkout only when it and the webhook secret are set. */
+  STRIPE_SECRET_KEY: z.string().startsWith("sk_").optional(),
+  /** Signing secret of the Stripe webhook endpoint (`whsec_...`). */
+  STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   /** Interface to listen on; all of them by default, as a container needs. */
   HOST: z.string().min(1).default("0.0.0.0"),
-});
+  })
+  .refine((env) => Boolean(env.STRIPE_SECRET_KEY) === Boolean(env.STRIPE_WEBHOOK_SECRET), {
+    message: "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together",
+    path: ["STRIPE_WEBHOOK_SECRET"],
+  });
 
 /** The API's validated environment. */
 export type Env = z.infer<typeof envSchema>;

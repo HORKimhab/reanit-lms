@@ -213,7 +213,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 |---|---|---|---|
 | 1 | ✅ Backend framework | **Decided:** NestJS (`apps/api`) | Chosen to give mobile and third-party clients one API, and a structure (modules, DI, guards) that scales with the team. `apps/web` becomes an API client. Migration: TODO.md NEST-01 to NEST-10 |
 | 2 | ✅ Video provider | **Decided for now:** S3-compatible object storage (R2 in production, SeaweedFS locally) | Presigned uploads and signed MP4/PDF playback behind the `ObjectStorage` port in `@reanit/core/media`; no transcoding yet. Mux or Cloudflare Stream can replace it later behind the same port |
-| 3 | 🟡 Payment providers | Stripe Connect · ABA PayWay / KHQR · PayPal | Stripe payouts may not be available in Cambodia, so a local gateway may be needed |
+| 3 | ✅ Payment providers | **Decided:** ABA PayWay (KHQR + cards), Bakong KHQR and Stripe, chosen by the student at checkout | One `PaymentGateway` port in `@reanit/core/commerce`; a method is offered when its credentials are set and it takes the course's currency. Enrollment comes only from the gateway's confirmation, once. Stripe: API-05; PayWay: API-20; Bakong: API-21 |
 | 4 | 🟡 Hosting | Vercel + Fly/Railway · AWS (ECS + RDS) | Start on managed hosting and move to AWS as cost and scale require |
 | 5 | 🟡 ORM | Prisma · Drizzle | Prisma is the default; Drizzle gives finer control over RLS and SQL |
 | 6 | ✅ Package manager / runtime | **Decided:** pnpm + Node.js 24 LTS | Chosen over Bun for strict dependencies and maturity. See [pnpm usage](#pnpm-usage) |

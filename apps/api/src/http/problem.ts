@@ -4,6 +4,12 @@ import { HttpException, HttpStatus } from "@nestjs/common";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import {
+  AlreadyEnrolledError,
+  CourseNotForSaleError,
+  OrderNotFoundError,
+  PaymentMethodUnavailableError,
+} from "@reanit/core/commerce";
+import {
   InvalidMediaKeyError,
   LessonMediaMissingError,
   LessonNotFoundError,
@@ -49,6 +55,10 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: SubdomainTakenError, status: HttpStatus.CONFLICT, code: "subdomain-taken", detail: "Another school already uses this subdomain." },
   { error: NotSchoolStaffError, status: HttpStatus.FORBIDDEN, code: "not-school-staff", detail: "You do not run a school." },
   { error: SchoolNotFoundError, status: HttpStatus.NOT_FOUND, code: "school-not-found", detail: "No school uses this subdomain." },
+  { error: CourseNotForSaleError, status: HttpStatus.CONFLICT, code: "course-not-for-sale", detail: "This course has no price yet." },
+  { error: AlreadyEnrolledError, status: HttpStatus.CONFLICT, code: "already-enrolled", detail: "You already have this course." },
+  { error: PaymentMethodUnavailableError, status: HttpStatus.BAD_REQUEST, code: "payment-method-unavailable", detail: "This payment method cannot take this payment." },
+  { error: OrderNotFoundError, status: HttpStatus.NOT_FOUND, code: "order-not-found", detail: "The order does not exist." },
   { error: LessonNotFoundError, status: HttpStatus.NOT_FOUND, code: "lesson-not-found", detail: "The lesson does not exist." },
   { error: LessonMediaMissingError, status: HttpStatus.NOT_FOUND, code: "lesson-media-missing", detail: "The lesson has no file yet." },
   { error: UnsupportedMediaError, status: HttpStatus.UNSUPPORTED_MEDIA_TYPE, code: "unsupported-media", detail: "This lesson does not take this kind of file." },

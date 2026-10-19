@@ -30,6 +30,14 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...REQUIRED, S3_FORCE_PATH_STYLE: "true" }).S3_FORCE_PATH_STYLE).toBe(true);
   });
 
+  it("accepts Stripe credentials set together", () => {
+    expect(parseEnv({ ...REQUIRED, STRIPE_SECRET_KEY: "sk_test_1", STRIPE_WEBHOOK_SECRET: "whsec_1" }).STRIPE_SECRET_KEY).toBe("sk_test_1");
+  });
+
+  it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }])("throws a ZodError for half the Stripe credentials: %j", (half) => {
+    expect(() => parseEnv({ ...REQUIRED, ...half })).toThrow(ZodError);
+  });
+
   it("throws a ZodError for an unknown log level", () => {
     expect(() => parseEnv({ ...REQUIRED, LOG_LEVEL: "verbose" })).toThrow(ZodError);
   });

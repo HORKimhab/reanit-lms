@@ -16,7 +16,7 @@ import { createAdapter } from "./context/request-id";
  * @throws {z.ZodError} When the environment is invalid.
  */
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, createAdapter(), { bufferLogs: true });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, createAdapter(), { bufferLogs: true, rawBody: true });
   await setupApp(app);
   const { PORT, HOST } = app.get<Env>(ENV);
   await app.listen(PORT, HOST);

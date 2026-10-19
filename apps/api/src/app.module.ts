@@ -3,6 +3,7 @@ import { DbModule, EnvModule, LoggingModule } from "@reanit/nest";
 
 import { AuthModule } from "./auth/auth.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { CommerceModule } from "./commerce/commerce.module";
 import { parseEnv } from "./config/env";
 import { RequestContextModule } from "./context/request-context";
 import { HealthModule } from "./health/health.module";
@@ -27,6 +28,7 @@ import { SchoolsModule } from "./schools/schools.module";
     SchoolsModule,
     CatalogModule,
     MediaModule,
+    CommerceModule,
   ],
 })
 export class AppModule {}

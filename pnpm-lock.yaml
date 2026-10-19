@@ -335,6 +335,9 @@ catalogs:
     rxjs:
       specifier: 7.8.2
       version: 7.8.2
+    stripe:
+      specifier: 23.0.0
+      version: 23.0.0
     supertest:
       specifier: 7.3.1
       version: 7.3.1
@@ -436,6 +439,9 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
+      stripe:
+        specifier: 'catalog:'
+        version: 23.0.0(@types/node@24.19.2)
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -6007,6 +6013,15 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
+  stripe@23.0.0:
+    resolution: {integrity: sha512-MDE2A5ZVVluYURORaZEVghSmnLJc3w6aHAlZSxDQMsOjOb3V0O6ro/CiaeFlJS4N7uIVmsg98ocRsPmUK6YfyA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@types/node': '>=20'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+
   strtok3@10.6.1:
     resolution: {integrity: sha512-p8ynRS8lXnvA3tsdcUYFjbzwh2MsdBZgxrFT2G+Yb7vNvUfPF+GgHCt/0jkayfsRXA1TwtZstf+JA0V+iQXdHA==}
     engines: {node: '>=18'}
@@ -11445,6 +11460,10 @@ snapshots:
       min-indent: 1.0.1
 
   strip-json-comments@5.0.3: {}
+
+  stripe@23.0.0(@types/node@24.19.2):
+    optionalDependencies:
+      '@types/node': 24.19.2
 
   strtok3@10.6.1:
     dependencies:

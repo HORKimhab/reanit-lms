@@ -26,6 +26,11 @@ class UserBody extends createZodDto(
   z.object({ user: z.object({ id: z.uuid(), email: z.string(), name: z.string().optional() }) }),
 ) {}
 
+/** A body with a union property. */
+class UnionBody extends createZodDto(
+  z.object({ result: z.discriminatedUnion("kind", [z.object({ kind: z.literal("a"), a: z.string() }), z.object({ kind: z.literal("b") })]) }),
+) {}
+
 /** Paging query. */
 class PageQuery extends createZodDto(z.object({ page: z.coerce.number().int().min(1).default(1), search: z.string().optional() })) {}
 
@@ -63,6 +68,17 @@ class DocsProbeController {
    */
   @Post("user")
   user(@Body() body: UserBody) {
+    return body;
+  }
+
+  /**
+   * Accepts a body with a union.
+   *
+   * @param body The body.
+   * @returns The body.
+   */
+  @Post("union")
+  union(@Body() body: UnionBody) {
     return body;
   }
 
@@ -115,6 +131,15 @@ describe("buildOpenApiDocument", () => {
     expect(document.components?.schemas?.UserBody).toMatchObject({
       required: ["user"],
       properties: { user: { type: "object", required: ["id", "email"] } },
+    });
+  });
+
+  it("documents a union property as oneOf", async () => {
+    const document = await probeDocument();
+
+    expect(document.components?.schemas?.UnionBody).toMatchObject({
+      required: ["result"],
+      properties: { result: { oneOf: [expect.objectContaining({ required: ["kind", "a"] }), expect.objectContaining({ required: ["kind"] })] } },
     });
   });
 
