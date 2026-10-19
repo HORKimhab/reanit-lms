@@ -3,13 +3,15 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { PLAYER_BASE, PLAYER_LESSONS } from "@/test/player";
+import { PLAYER_BASE, PLAYER_LESSONS, STUDENT_QUIZ } from "@/test/player";
 import { renderWithIntl } from "@/test/render";
 
 import { LessonView } from "./lesson-view";
 
 const [welcome, workbook, sketching] = PLAYER_LESSONS as [PlayerLesson, PlayerLesson, PlayerLesson];
 const TEXT_LESSON: PlayerLesson = { ...workbook, type: "text", hasMedia: false };
+const QUIZ_LESSON: PlayerLesson = { ...workbook, type: "quiz", hasMedia: false, isCompleted: false };
+const NEXT_HREF = `${PLAYER_BASE}/next`;
 
 /**
  * Renders a lesson of the test course.
@@ -17,13 +19,26 @@ const TEXT_LESSON: PlayerLesson = { ...workbook, type: "text", hasMedia: false }
  * @param lesson - The lesson to show.
  * @param options - Render options.
  * @param options.fileUrl - Its signed file URL.
+ * @param options.isQuiz - Whether it is a quiz lesson, given the test quiz.
  * @param options.locale - UI locale.
  * @returns The complete action spy.
  */
-function renderLesson(lesson: PlayerLesson, { fileUrl = null, locale = "en" }: { fileUrl?: string | null; locale?: "en" | "km" } = {}) {
+function renderLesson(
+  lesson: PlayerLesson,
+  { fileUrl = null, isQuiz = false, locale = "en" }: { fileUrl?: string | null; isQuiz?: boolean; locale?: "en" | "km" } = {},
+) {
   const complete = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   renderWithIntl(
-    <LessonView lessons={PLAYER_LESSONS} lesson={lesson} base={PLAYER_BASE} fileUrl={fileUrl} savePosition={vi.fn()} complete={complete} />,
+    <LessonView
+      lessons={PLAYER_LESSONS}
+      lesson={lesson}
+      base={PLAYER_BASE}
+      fileUrl={fileUrl}
+      quiz={isQuiz ? { view: STUDENT_QUIZ, submit: vi.fn() } : null}
+      nextHref={NEXT_HREF}
+      savePosition={vi.fn()}
+      complete={complete}
+    />,
     { locale },
   );
   return complete;
@@ -89,5 +104,19 @@ describe("LessonView", () => {
     renderLesson(workbook, { locale: "km" });
 
     expect(await screen.findByText("មេរៀនទី 2 នៃ 3 · Getting started")).toBeInTheDocument();
+  });
+
+  it("shows a quiz lesson's questions and holds back moving on until it is passed", async () => {
+    renderLesson(QUIZ_LESSON, { isQuiz: true });
+
+    expect(await screen.findByRole("group", { name: "Which color is primary?" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete and continue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("lets the student continue from a quiz lesson they passed", async () => {
+    renderLesson({ ...QUIZ_LESSON, isCompleted: true }, { isQuiz: true });
+
+    expect(await screen.findByRole("link", { name: "Continue" })).toHaveAttribute("href", NEXT_HREF);
   });
 });

@@ -1,12 +1,13 @@
 import { playerLessons } from "@reanit/core/learning";
 import { notFound } from "next/navigation";
 
-import { completeLesson, saveVideoPosition } from "@/app/[locale]/s/[school]/learn/actions";
+import { completeLesson, saveVideoPosition, submitQuizAnswers } from "@/app/[locale]/s/[school]/learn/actions";
 import { LessonView } from "@/components/player/lesson-view";
 import { getLessonFileUrl, getPlayerCourse } from "@/server/learning/player";
+import { getStudentQuiz } from "@/server/learning/quizzes";
 
 /**
- * One lesson in the player, with its file signed for the student. 404s when the lesson is not in the course.
+ * One lesson in the player, with its file signed or its quiz loaded for the student. 404s when the lesson is not in the course.
  *
  * @param props - Page props.
  * @param props.params - Route params with the school's subdomain, the course slug and the lesson id.
@@ -21,15 +22,21 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/s/[sch
   if (!lesson) notFound();
   const base = `/s/${school}/learn/${course.slug}`;
   const next = lessons[lesson.index + 1];
-  const fileUrl = lesson.type !== "text" && lesson.hasMedia ? await getLessonFileUrl(school, lesson.id, `${base}/${lesson.id}`) : null;
+  const nextHref = next ? `${base}/${next.id}` : `/s/${school}/my-courses`;
+  const lessonPath = `${base}/${lesson.id}`;
+  const fileUrl = lesson.type !== "text" && lesson.hasMedia ? await getLessonFileUrl(school, lesson.id, lessonPath) : null;
+  const quiz =
+    lesson.type === "quiz" ? { view: await getStudentQuiz(school, lesson.id, lessonPath), submit: submitQuizAnswers.bind(null, school, lesson.id) } : null;
   return (
     <LessonView
       lessons={lessons}
       lesson={lesson}
       base={base}
       fileUrl={fileUrl}
+      quiz={quiz}
+      nextHref={nextHref}
       savePosition={saveVideoPosition.bind(null, school, lesson.id)}
-      complete={completeLesson.bind(null, school, lesson.id, next ? `${base}/${next.id}` : `/s/${school}/my-courses`)}
+      complete={completeLesson.bind(null, school, lesson.id, nextHref)}
     />
   );
 }

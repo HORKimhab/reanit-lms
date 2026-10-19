@@ -1,6 +1,7 @@
 "use server";
 
 import { createCourseSchema, outlineSchema, updateCourseSchema } from "@reanit/core/catalog";
+import { quizSchema, type Quiz } from "@reanit/core/learning";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -137,4 +138,20 @@ export async function attachLessonMedia(lessonId: string, key: string): Promise<
   if (response.status === 409) return { status: "notUploaded" };
   checkStaffResponse(response);
   return { status: "attached" };
+}
+
+/**
+ * Saves a quiz lesson's pass mark and questions. Bind the lesson: `saveQuiz.bind(null, lessonId)`.
+ *
+ * @param lessonId The quiz lesson.
+ * @param quiz Untrusted quiz from the editor.
+ * @returns `saved`, or `invalid` when a question lacks text, answers or its right answer.
+ * @throws {Error} Next's not-found signal when the lesson is not one of the school's quizzes, or any unexpected failure.
+ */
+export async function saveQuiz(lessonId: string, quiz: Quiz): Promise<CourseFormState> {
+  const parsed = quizSchema.safeParse(quiz);
+  if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
+  const { response } = await (await getApi()).PUT("/lessons/{lessonId}/quiz", { params: { path: { lessonId: idPath(lessonId).path.id } }, body: parsed.data });
+  checkStaffResponse(response);
+  return { status: "saved", invalidFields: [] };
 }

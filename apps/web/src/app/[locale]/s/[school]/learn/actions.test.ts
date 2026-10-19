@@ -6,7 +6,7 @@ import { onApi, problem, requestTo } from "@/test/api";
 import { RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
-import { completeLesson, saveVideoPosition } from "./actions";
+import { completeLesson, saveVideoPosition, submitQuizAnswers } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
@@ -58,5 +58,29 @@ describe("completeLesson", () => {
     onApi(ROUTE, problem(500));
 
     await expect(completeLesson("angkor", LESSON_ID, "/s/angkor/my-courses")).rejects.toThrow("API answered 500");
+  });
+});
+
+describe("submitQuizAnswers", () => {
+  const ATTEMPTS = `POST /schools/by-subdomain/angkor/lessons/${LESSON_ID}/quiz/attempts`;
+  const ANSWERS = [{ questionId: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a61", optionIds: ["6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a62"] }];
+
+  it("sends the answers and returns the grade", async () => {
+    const result = { scorePercent: 100, isPassed: true, questions: [{ questionId: ANSWERS[0]?.questionId, isCorrect: true }] };
+    onApi(ATTEMPTS, Response.json({ result }, { status: 201 }));
+
+    expect(await submitQuizAnswers("angkor", LESSON_ID, ANSWERS)).toEqual(result);
+    expect(await requestTo(ATTEMPTS)?.json()).toEqual({ answers: ANSWERS });
+  });
+
+  it("refuses malformed answers without calling the API", async () => {
+    await expect(submitQuizAnswers("angkor", LESSON_ID, [{ questionId: "q", optionIds: [] }])).rejects.toBeInstanceOf(ZodError);
+    expect(requestTo(ATTEMPTS)).toBeUndefined();
+  });
+
+  it("fails loudly when the student lost access", async () => {
+    onApi(ATTEMPTS, problem(403, "urn:reanit:problem:not-enrolled"));
+
+    await expect(submitQuizAnswers("angkor", LESSON_ID, ANSWERS)).rejects.toThrow();
   });
 });

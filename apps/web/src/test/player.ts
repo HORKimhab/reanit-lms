@@ -1,5 +1,7 @@
-// A course as the player API returns it for its enrolled student, for player component and page tests.
+// A course and a quiz as the player API returns them for their enrolled student, for player component and page tests.
 import { playerLessons, type PlayerCourse } from "@reanit/core/learning";
+
+import type { StudentQuizView } from "@/server/learning/quizzes";
 
 import { PUBLISHED_COURSE_WITH_OUTLINE, SITE_SCHOOL } from "./site";
 
@@ -17,3 +19,20 @@ export const PLAYER_LESSONS = playerLessons(PLAYER_COURSE, PLAYER_COURSE.progres
 
 /** The course's player path. */
 export const PLAYER_BASE = `/s/${SITE_SCHOOL.slug}/learn/${PLAYER_COURSE.slug}`;
+
+/** A one-question quiz as its student takes it, never tried. */
+export const STUDENT_QUIZ: StudentQuizView = {
+  passPercent: 100,
+  questions: [
+    {
+      id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a61",
+      prompt: "Which color is primary?",
+      kind: "single",
+      options: [
+        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a62", text: "Red" },
+        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a63", text: "Green" },
+      ],
+    },
+  ],
+  lastAttempt: null,
+};

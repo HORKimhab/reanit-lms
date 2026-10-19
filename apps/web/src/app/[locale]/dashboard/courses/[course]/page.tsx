@@ -57,6 +57,7 @@ export default async function CourseBuilderPage({ params }: PageProps<"/[locale]
           initial={{ sections }}
           save={saveOutline.bind(null, course.id)}
           media={{ lessonsWithMedia: lessonsWithMedia(course), start: startLessonUpload, attach: attachLessonMedia }}
+          quizBase={`/dashboard/courses/${course.slug}/quizzes`}
         />
       </section>
       <DeleteCourseButton action={deleteCourse.bind(null, course.id)} />

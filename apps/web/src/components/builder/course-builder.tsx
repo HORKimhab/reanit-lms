@@ -4,14 +4,16 @@ import { LESSON_TYPES, TITLE_MAX_LENGTH, type LessonType, type Outline } from "@
 import { holdsMedia } from "@reanit/core/media";
 import { Button } from "@reanit/ui/components/button";
 import { cn } from "@reanit/ui/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { ListChecks, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useReducer, useRef, type Dispatch } from "react";
+import { useReducer, useRef, useTransition, type Dispatch } from "react";
 
 import { LessonIcon } from "@/components/course/lesson-icon";
+import { useRouter } from "@/i18n/navigation";
 
 import { LessonMediaUpload, type LessonMediaActions } from "./lesson-media-upload";
 import { outlineReducer, type OutlineAction, type OutlineSection } from "./outline-reducer";
+import { RemoveButton } from "./remove-button";
 import { SortableItem, SortableList } from "./sortable-list";
 import { useAutosave, type SaveStatus } from "./use-autosave";
 
@@ -22,16 +24,19 @@ import { useAutosave, type SaveStatus } from "./use-autosave";
  * @param props.initial - The outline as last saved.
  * @param props.save - Persists the outline; rejecting shows a save error.
  * @param props.media - Lesson file uploads: lessons that already have a file, and the start and attach actions.
+ * @param props.quizBase - Path under which each quiz lesson has its editor (`<quizBase>/<lesson id>`).
  * @returns The save status, the section list and an add-section button.
  */
 export function CourseBuilder({
   initial,
   save,
   media,
+  quizBase,
 }: {
   initial: Outline;
   save: (outline: Outline) => Promise<void>;
   media: { lessonsWithMedia: string[] } & Omit<LessonMediaActions, "saveNow">;
+  quizBase: string;
 }) {
   const t = useTranslations("Builder");
   const [outline, dispatch] = useReducer(outlineReducer, initial);
@@ -62,6 +67,7 @@ export function CourseBuilder({
             dispatch={dispatch}
             lessonsWithMedia={media.lessonsWithMedia}
             mediaActions={mediaActions}
+            quizBase={quizBase}
           />
         ))}
       </SortableList>
@@ -74,6 +80,38 @@ export function CourseBuilder({
         {t("addSection")}
       </Button>
     </div>
+  );
+}
+
+/**
+ * Opens a quiz lesson's editor once the outline is saved, so the lesson exists when the editor loads.
+ *
+ * @param props - Component props.
+ * @param props.href - The quiz editor's path.
+ * @param props.lessonTitle - The lesson's name, for the button's label.
+ * @param props.saveNow - Saves the outline as it is now.
+ * @returns The button.
+ */
+function EditQuizButton({ href, lessonTitle, saveNow }: { href: string; lessonTitle: string; saveNow: () => Promise<void> }) {
+  const t = useTranslations("Quiz");
+  const router = useRouter();
+  const [isOpening, startOpening] = useTransition();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={isOpening}
+      onClick={() =>
+        startOpening(async () => {
+          await saveNow();
+          router.push(href);
+        })
+      }
+    >
+      <ListChecks aria-hidden />
+      {t("edit", { title: lessonTitle })}
+    </Button>
   );
 }
 
@@ -101,6 +139,7 @@ function SaveStatusText({ status }: { status: SaveStatus }) {
  * @param props.dispatch - Sends edits to the builder's outline.
  * @param props.lessonsWithMedia - Lessons that already have a file attached.
  * @param props.mediaActions - Lesson file uploads.
+ * @param props.quizBase - Path under which each quiz lesson has its editor (`<quizBase>/<lesson id>`).
  * @returns The section card.
  */
 function SectionEditor({
@@ -108,11 +147,13 @@ function SectionEditor({
   dispatch,
   lessonsWithMedia,
   mediaActions,
+  quizBase,
 }: {
   section: OutlineSection;
   dispatch: Dispatch<OutlineAction>;
   lessonsWithMedia: string[];
   mediaActions: LessonMediaActions;
+  quizBase: string;
 }) {
   const t = useTranslations("Builder");
   const sectionId = section.id;
@@ -160,6 +201,9 @@ function SectionEditor({
                       hasMedia={lessonsWithMedia.includes(lessonId)}
                       actions={mediaActions}
                     />
+                  ) : null}
+                  {lesson.type === "quiz" ? (
+                    <EditQuizButton href={`${quizBase}/${lessonId}`} lessonTitle={lessonName} saveNow={mediaActions.saveNow} />
                   ) : null}
                   <RemoveButton
                     label={t("removeLesson", { title: lessonName })}
@@ -217,22 +261,6 @@ function TitleInput({
         className,
       )}
     />
-  );
-}
-
-/**
- * An icon-only button that removes a section or lesson.
- *
- * @param props - Component props.
- * @param props.label - Accessible name, naming what is removed.
- * @param props.onClick - Removes the item.
- * @returns The button.
- */
-function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <Button variant="ghost" size="icon" aria-label={label} onClick={onClick} className="size-8 text-muted-foreground">
-      <Trash2 aria-hidden />
-    </Button>
   );
 }
 

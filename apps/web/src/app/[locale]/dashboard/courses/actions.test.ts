@@ -15,6 +15,7 @@ import {
   saveOutline,
   startLessonUpload,
   updateCourse,
+  saveQuiz,
   type CourseFormState,
 } from "./actions";
 
@@ -186,5 +187,43 @@ describe("attachLessonMedia", () => {
     onApi(ROUTE, problem(409));
 
     expect(await attachLessonMedia(LESSON_ID, "k")).toEqual({ status: "notUploaded" });
+  });
+});
+
+describe("saveQuiz", () => {
+  const LESSON_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a60";
+  const ROUTE = `PUT /lessons/${LESSON_ID}/quiz`;
+  const QUIZ = {
+    passPercent: 80,
+    questions: [
+      {
+        id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a61",
+        prompt: " Pick red ",
+        kind: "single" as const,
+        options: [
+          { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a62", text: "Red", isCorrect: true },
+          { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a63", text: "Blue", isCorrect: false },
+        ],
+      },
+    ],
+  };
+
+  it("saves the parsed quiz", async () => {
+    onApi(ROUTE, new Response(null, { status: 204 }));
+
+    expect(await saveQuiz(LESSON_ID, QUIZ)).toEqual({ status: "saved", invalidFields: [] });
+    expect(await requestTo(ROUTE)?.json()).toMatchObject({ questions: [{ prompt: "Pick red" }] });
+  });
+
+  it("refuses a question without a right answer, without calling the API", async () => {
+    const [question] = QUIZ.questions;
+    const noRight = { ...QUIZ, questions: [{ ...question!, options: question!.options.map((option) => ({ ...option, isCorrect: false })) }] };
+
+    expect((await saveQuiz(LESSON_ID, noRight)).status).toBe("invalid");
+    expect(requestTo(ROUTE)).toBeUndefined();
+  });
+
+  it("404s on a lesson id that is not a UUID", async () => {
+    await expect(saveQuiz("nope", QUIZ)).rejects.toBeInstanceOf(NotFoundError);
   });
 });

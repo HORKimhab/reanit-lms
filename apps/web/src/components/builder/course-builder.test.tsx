@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Outline } from "@reanit/core/catalog";
+import { router } from "@/test/navigation";
 import { renderWithIntl } from "@/test/render";
 
 import { CourseBuilder } from "./course-builder";
@@ -23,6 +24,9 @@ const OUTLINE: Outline = {
     { id: "b", title: "Basics", lessons: [] },
   ],
 };
+
+/** Where the builder opens quiz editors. */
+const QUIZ_BASE = "/dashboard/courses/intro/quizzes";
 
 /** Upload actions that are never reached in these tests. */
 const NO_MEDIA = { lessonsWithMedia: [], start: vi.fn(), attach: vi.fn() };
@@ -46,8 +50,19 @@ function okSave(): SaveSpy {
  * @returns The user-event instance.
  */
 function setup(save: SaveSpy = okSave()) {
-  renderWithIntl(<CourseBuilder initial={OUTLINE} save={save} media={NO_MEDIA} />);
+  renderWithIntl(<CourseBuilder initial={OUTLINE} save={save} media={NO_MEDIA} quizBase={QUIZ_BASE} />);
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+}
+
+/**
+ * Changes the type of the "Setup" lesson, the second one.
+ *
+ * @param user - The user-event instance from `setup`.
+ * @param type - The type's label, such as "PDF".
+ */
+async function setSetupType(user: ReturnType<typeof setup>, type: string) {
+  const [, setupType] = await screen.findAllByRole("combobox", { name: "Lesson type" });
+  await user.selectOptions(setupType as HTMLElement, type);
 }
 
 /**
@@ -170,22 +185,32 @@ describe("CourseBuilder", () => {
   it("changes a lesson's type, autosaves it and offers the matching upload", async () => {
     const save = okSave();
     const user = setup(save);
-
-    const [, setupType] = await screen.findAllByRole("combobox", { name: "Lesson type" });
-    await user.selectOptions(setupType as HTMLElement, "PDF");
+    await setSetupType(user, "PDF");
     await waitForAutosave();
 
     expect(screen.getByLabelText("Upload PDF for Setup")).toBeInTheDocument();
     expect(save.mock.lastCall?.[0].sections[0]?.lessons[1]?.type).toBe("pdf");
   });
 
+  it("saves the outline, then opens the quiz editor of a lesson turned into a quiz", async () => {
+    const save = okSave();
+    const user = setup(save);
+
+    await setSetupType(user, "Quiz");
+    expect(screen.queryByLabelText(/Upload .* for Setup/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit quiz for Setup" }));
+
+    expect(save.mock.lastCall?.[0].sections[0]?.lessons[1]?.type).toBe("quiz");
+    expect(router.push).toHaveBeenCalledWith(`${QUIZ_BASE}/a2`);
+  });
+
   it("offers to replace the file of a lesson that has one", async () => {
-    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={{ ...NO_MEDIA, lessonsWithMedia: ["a1"] }} />);
+    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={{ ...NO_MEDIA, lessonsWithMedia: ["a1"] }} quizBase={QUIZ_BASE} />);
     expect(await screen.findByLabelText("Replace video of Welcome")).toBeInTheDocument();
   });
 
   it("uses Khmer labels when the locale is km", async () => {
-    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={NO_MEDIA} />, { locale: "km" });
+    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={NO_MEDIA} quizBase={QUIZ_BASE} />, { locale: "km" });
     expect(await screen.findByRole("button", { name: "បន្ថែមផ្នែក" })).toBeInTheDocument();
   });
 });

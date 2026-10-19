@@ -1,20 +1,28 @@
-import type { PlayerLesson } from "@reanit/core/learning";
+import type { PlayerLesson, QuizAnswers, QuizResult } from "@reanit/core/learning";
 import { Button } from "@reanit/ui/components/button";
 import { ArrowLeft, ArrowRight, Download, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
+import type { StudentQuizView } from "@/server/learning/quizzes";
 
 import { LessonVideo } from "./lesson-video";
+import { QuizPlayer } from "./quiz-player";
+
+/** A quiz lesson's quiz and how its answers are graded. */
+type LessonQuiz = { view: StudentQuizView | null; submit: (answers: QuizAnswers) => Promise<QuizResult> };
 
 /**
  * One lesson in the player: content, position in the course, and previous / complete-and-continue navigation.
+ * A quiz lesson is completed by passing it, so it offers "continue" only once passed.
  *
  * @param props - Component props.
  * @param props.lessons - Every lesson in the course, in order.
  * @param props.lesson - The lesson to show; one of `lessons`.
  * @param props.base - The course's player path.
  * @param props.fileUrl - Signed URL of the lesson's video or PDF; null for text lessons and files not uploaded yet.
+ * @param props.quiz - The quiz of a quiz lesson; null for other lessons.
+ * @param props.nextHref - Where the student goes after this lesson.
  * @param props.savePosition - The video heartbeat, bound to the lesson.
  * @param props.complete - Marks the lesson completed and moves on, bound to the lesson and the next page.
  * @returns The lesson's content, title and position, and links to the previous and next lessons.
@@ -24,6 +32,8 @@ export function LessonView({
   lesson,
   base,
   fileUrl,
+  quiz,
+  nextHref,
   savePosition,
   complete,
 }: {
@@ -31,6 +41,8 @@ export function LessonView({
   lesson: PlayerLesson;
   base: string;
   fileUrl: string | null;
+  quiz: LessonQuiz | null;
+  nextHref: string;
   savePosition: (positionSeconds: number) => Promise<void>;
   complete: () => Promise<void>;
 }) {
@@ -40,7 +52,7 @@ export function LessonView({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 sm:p-6">
-      <LessonBody lesson={lesson} fileUrl={fileUrl} savePosition={savePosition} />
+      {quiz ? <QuizPlayer quiz={quiz.view} submit={quiz.submit} /> : <LessonBody lesson={lesson} fileUrl={fileUrl} savePosition={savePosition} />}
 
       <div className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">
@@ -60,12 +72,23 @@ export function LessonView({
         ) : (
           <span />
         )}
-        <form action={complete}>
-          <Button type="submit">
-            {isLast ? t("finish") : t("completeAndContinue")}
-            <ArrowRight aria-hidden />
-          </Button>
-        </form>
+        {quiz ? (
+          lesson.isCompleted ? (
+            <Button asChild>
+              <Link href={nextHref}>
+                {isLast ? t("finish") : t("continue")}
+                <ArrowRight aria-hidden />
+              </Link>
+            </Button>
+          ) : null
+        ) : (
+          <form action={complete}>
+            <Button type="submit">
+              {isLast ? t("finish") : t("completeAndContinue")}
+              <ArrowRight aria-hidden />
+            </Button>
+          </form>
+        )}
       </nav>
     </div>
   );
