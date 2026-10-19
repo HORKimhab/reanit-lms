@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkoutSchema, couponSchema, priceSchema } from "./rules";
+import { bundleCheckoutSchema, checkoutSchema, couponSchema, createBundleSchema, priceSchema, updateBundleSchema } from "./rules";
 
 describe("priceSchema", () => {
   it.each([
@@ -63,5 +63,39 @@ describe("couponSchema", () => {
 describe("checkoutSchema coupon", () => {
   it("normalizes the coupon code the student typed", () => {
     expect(checkoutSchema.parse({ courseSlug: "intro", method: "stripe", couponCode: "save20" }).couponCode).toBe("SAVE20");
+  });
+});
+
+describe("createBundleSchema", () => {
+  const COURSES = ["0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e21", "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e22"];
+
+  it("accepts a title and two or more courses", () => {
+    expect(createBundleSchema.parse({ title: "  Design kit ", courseIds: COURSES })).toEqual({ title: "Design kit", courseIds: COURSES });
+  });
+
+  it.each([
+    ["a single course", { title: "Kit", courseIds: [COURSES[0]] }],
+    ["the same course twice", { title: "Kit", courseIds: [COURSES[0], COURSES[0]] }],
+    ["a blank title", { title: "  ", courseIds: COURSES }],
+    ["a course id that is not a UUID", { title: "Kit", courseIds: [COURSES[0], "intro"] }],
+  ])("rejects %s", (_case, bundle) => {
+    expect(createBundleSchema.safeParse(bundle).success).toBe(false);
+  });
+});
+
+describe("updateBundleSchema", () => {
+  it("accepts just a status, leaving the rest as it is", () => {
+    expect(updateBundleSchema.parse({ status: "published" })).toEqual({ status: "published" });
+  });
+});
+
+describe("bundleCheckoutSchema", () => {
+  it("takes a bundle instead of a course, with the same method, coupon and language", () => {
+    expect(bundleCheckoutSchema.parse({ bundleSlug: "kit", method: "stripe", couponCode: "save20" })).toEqual({
+      bundleSlug: "kit",
+      method: "stripe",
+      couponCode: "SAVE20",
+      locale: "en",
+    });
   });
 });

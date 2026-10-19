@@ -144,3 +144,41 @@ describe("coupons", () => {
     );
   });
 });
+
+describe("bundles", () => {
+  it("sells a published bundle at one price and enrolls the buyer in every course once Stripe confirms", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const second = (await alpha.agent.post("/courses").send({ title: "Bundle Extra" }).expect(201)).body.course;
+    await alpha.agent.patch(`/courses/${second.id}`).send({ status: "published" }).expect(200);
+    await alpha.agent.put(`/courses/${second.id}/price`).send({ amount: 3900, currency: "USD" }).expect(200);
+    const { bundle } = (await alpha.agent.post("/bundles").send({ title: "Starter Kit", courseIds: [course.id, second.id] }).expect(201)).body;
+    const anonymous = request(e2e().app.getHttpServer());
+    await anonymous.get(`${base}/bundles/${bundle.slug}`).expect(404);
+
+    await alpha.agent.patch(`/bundles/${bundle.id}`).send({ status: "published" }).expect(200);
+    await alpha.agent.put(`/bundles/${bundle.id}/price`).send({ amount: 7001, currency: "USD" }).expect(200);
+    expect((await anonymous.get(`${base}/bundles/${bundle.slug}`).expect(200)).body.bundle).toMatchObject({
+      title: "Starter Kit",
+      courses: [{ id: course.id }, { id: second.id }],
+      price: { amount: 7001, currency: "USD" },
+    });
+
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-bundle"));
+    const { orderId } = (await buyer.post(`${base}/bundle-checkout`).send({ bundleSlug: bundle.slug, method: "stripe" }).expect(201)).body;
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.amount).toBe(7001);
+    await paidWebhook(orderId).expect(200);
+
+    const again = await buyer.post(`${base}/bundle-checkout`).send({ bundleSlug: bundle.slug, method: "stripe" }).expect(409);
+    expect(again.body.type).toBe("urn:reanit:problem:already-enrolled");
+    await buyer.post(`${base}/checkout`).send({ courseSlug: second.slug, method: "stripe" }).expect(409);
+  });
+
+  it("refuses another school's course in a bundle", async () => {
+    const beta = await openSchool(e2e().app, uniqueName("bundle-beta"));
+    const theirs = (await beta.agent.post("/courses").send({ title: "Theirs" }).expect(201)).body.course;
+
+    const response = await alpha.agent.post("/bundles").send({ title: "Mixed", courseIds: [course.id, theirs.id] }).expect(400);
+
+    expect(response.body.type).toBe("urn:reanit:problem:unknown-bundle-course");
+  });
+});

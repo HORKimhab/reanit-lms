@@ -1,10 +1,24 @@
-import { checkoutSchema, couponSchema, CURRENCIES, offerQuerySchema, PAYMENT_METHODS, priceSchema } from "@reanit/core/commerce";
+import {
+  bundleCheckoutSchema,
+  checkoutSchema,
+  couponSchema,
+  createBundleSchema,
+  CURRENCIES,
+  offerQuerySchema,
+  PAYMENT_METHODS,
+  priceSchema,
+  updateBundleSchema,
+} from "@reanit/core/commerce";
 import { subdomainSchema } from "@reanit/core/schools";
 import { z } from "zod";
 
+import { courseSchema } from "../catalog/catalog.dto";
 import { createZodDto } from "../http/zod-dto";
 
-/** `PUT /courses/:id/price` body. */
+/** A course's or bundle's slug in a path. */
+const slugSchema = z.string().min(1).max(80);
+
+/** `PUT /courses/:id/price` and `PUT /bundles/:id/price` body. */
 export class PriceBody extends createZodDto(priceSchema) {}
 
 /** Checkout body: the course and how to pay. */
@@ -13,8 +27,8 @@ export class CheckoutBody extends createZodDto(checkoutSchema) {}
 /** Path of a school's selling routes. */
 export class SchoolParams extends createZodDto(z.object({ subdomain: subdomainSchema })) {}
 
-/** Path of a course's offer. */
-export class OfferParams extends createZodDto(z.object({ subdomain: subdomainSchema, slug: z.string().min(1).max(80) })) {}
+/** Path of a course's or bundle's public page and offer. */
+export class OfferParams extends createZodDto(z.object({ subdomain: subdomainSchema, slug: slugSchema })) {}
 
 /** Query of a course's offer: the coupon to price it with. */
 export class OfferQuery extends createZodDto(offerQuerySchema) {}
@@ -22,8 +36,20 @@ export class OfferQuery extends createZodDto(offerQuerySchema) {}
 /** `POST /coupons` body: the coupon, wrapped so its two kinds are documented as one field. */
 export class CreateCouponBody extends createZodDto(z.object({ coupon: couponSchema })) {}
 
-/** Path of a coupon. */
-export class CouponIdParams extends createZodDto(z.object({ id: z.uuid() })) {}
+/** Path of a coupon or bundle. */
+export class IdParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
+/** Path of a bundle in the dashboard. */
+export class BundleSlugParams extends createZodDto(z.object({ slug: slugSchema })) {}
+
+/** `POST /bundles` body. */
+export class CreateBundleBody extends createZodDto(createBundleSchema) {}
+
+/** `PATCH /bundles/:id` body. */
+export class UpdateBundleBody extends createZodDto(updateBundleSchema) {}
+
+/** Bundle checkout body: the bundle and how to pay. */
+export class BundleCheckoutBody extends createZodDto(bundleCheckoutSchema) {}
 
 /** Path of an order. */
 export class OrderParams extends createZodDto(z.object({ subdomain: subdomainSchema, orderId: z.uuid() })) {}
@@ -43,6 +69,18 @@ const discountResponseSchema = z.object({ code: z.string(), amountOff: z.number(
 export class OfferResponse extends createZodDto(
   z.object({ price: priceResponseSchema.nullable(), methods: z.array(z.enum(PAYMENT_METHODS)), discount: discountResponseSchema.nullable() }),
 ) {}
+
+/** A bundle with its courses in order and its price (null until set). */
+const bundleResponseSchema = courseSchema.extend({
+  courses: z.array(courseSchema.pick({ id: true, title: true, slug: true })),
+  price: priceResponseSchema.nullable(),
+});
+
+/** One bundle. */
+export class BundleResponse extends createZodDto(z.object({ bundle: bundleResponseSchema })) {}
+
+/** A school's bundles, newest first. */
+export class BundlesResponse extends createZodDto(z.object({ bundles: z.array(bundleResponseSchema) })) {}
 
 /** Fields both coupon kinds have. */
 const couponLimitsResponse = {

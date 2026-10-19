@@ -121,6 +121,8 @@ model School {
   outboxEvents     OutboxEvent[]
   auditEvents      AuditEvent[]
   coupons          Coupon[]
+  bundles          Bundle[]
+  bundleCourses    BundleCourse[]
 
   @@map("schools")
 }
@@ -157,6 +159,7 @@ model Course {
   enrollments      Enrollment[]
   dailySales       DailySales[]
   dailyCompletions DailyCompletions[]
+  bundleCourses    BundleCourse[]
 
   @@unique([schoolId, slug])
   @@map("courses")
@@ -200,21 +203,63 @@ model Lesson {
 }
 
 /// What a course costs. Money is integer minor units + ISO 4217 code.
+/// What a course or a bundle costs; exactly one of `course_id` and `bundle_id` is set. Newest wins.
 model Price {
   id        String   @id @default(uuid()) @db.Uuid
   schoolId  String   @map("school_id") @db.Uuid
-  courseId  String   @map("course_id") @db.Uuid
+  courseId  String?  @map("course_id") @db.Uuid
+  bundleId  String?  @map("bundle_id") @db.Uuid
   amount    Int
   currency  String   @db.Char(3)
   createdAt DateTime @default(now()) @map("created_at")
 
   school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course     Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  bundle     Bundle?     @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
 
   @@index([schoolId])
   @@index([courseId])
+  @@index([bundleId])
   @@map("prices")
+}
+
+/// Several of a school's courses sold together at one price (`prices.bundle_id`).
+model Bundle {
+  id          String       @id @default(uuid()) @db.Uuid
+  schoolId    String       @map("school_id") @db.Uuid
+  title       String
+  slug        String
+  description String?
+  status      CourseStatus @default(draft)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  school     School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  courses    BundleCourse[]
+  prices     Price[]
+  orderItems OrderItem[]
+
+  @@unique([schoolId, slug])
+  @@index([schoolId])
+  @@map("bundles")
+}
+
+/// A course in a bundle, in display order.
+model BundleCourse {
+  schoolId String @map("school_id") @db.Uuid
+  bundleId String @map("bundle_id") @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  position Int
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([bundleId, courseId])
+  @@index([schoolId])
+  @@index([courseId])
+  @@map("bundle_courses")
 }
 
 model Order {
@@ -275,17 +320,22 @@ model OrderItem {
   schoolId String @map("school_id") @db.Uuid
   orderId  String @map("order_id") @db.Uuid
   courseId String @map("course_id") @db.Uuid
-  priceId  String @map("price_id") @db.Uuid
+  priceId  String  @map("price_id") @db.Uuid
+  /// The bundle this course was bought in; null for a course bought alone.
+  bundleId String? @map("bundle_id") @db.Uuid
+  /// This course's share of what the order charged.
   amount   Int
-  currency String @db.Char(3)
+  currency String  @db.Char(3)
 
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  price  Price  @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  price  Price   @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  bundle Bundle? @relation(fields: [bundleId], references: [id], onDelete: Restrict)
 
   @@index([schoolId])
   @@index([orderId])
+  @@index([bundleId])
   @@map("order_items")
 }
 

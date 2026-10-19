@@ -14,3 +14,23 @@ export function slugify(text: string, maxLength: number): string {
     .slice(0, maxLength)
     .replace(/^-+|-+$/g, "");
 }
+
+/** Longest slug of a course or bundle in a URL. */
+export const SLUG_MAX_LENGTH = 80;
+
+/**
+ * Picks a URL slug from a title that none of the taken slugs use, numbering it (`intro-2`,
+ * `intro-3`, …) when the plain slug is taken.
+ *
+ * @param title The title to slugify.
+ * @param takenSlugs Slugs already in use.
+ * @param fallback Slug for a title with no Latin letters or digits.
+ * @returns A free slug.
+ */
+export function uniqueSlug(title: string, takenSlugs: Iterable<string>, fallback: string): string {
+  const base = slugify(title, SLUG_MAX_LENGTH) || fallback;
+  const taken = new Set(takenSlugs);
+  let slug = base;
+  for (let suffix = 2; taken.has(slug); suffix++) slug = `${base}-${suffix}`;
+  return slug;
+}

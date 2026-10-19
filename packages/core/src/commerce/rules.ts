@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { COURSE_STATUSES, DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH } from "../catalog/rules";
 import { EMAIL_LOCALES } from "../notifications/rules";
+import { SLUG_MAX_LENGTH } from "../shared/slug";
 
 /** Currencies courses are sold in. Amounts are integer ISO 4217 minor units (two decimals for both). */
 export const CURRENCIES = ["USD", "KHR"] as const;
@@ -84,13 +86,47 @@ export const couponSchema = z
     path: ["amountOff"],
   });
 
+/** A course's or bundle's slug, as a URL carries it. */
+const slugSchema = z.string().min(1).max(SLUG_MAX_LENGTH);
+
 /** What the student picks at checkout, the coupon they typed, and the language they bought in, for their receipt. */
 export const checkoutSchema = z.object({
-  courseSlug: z.string().min(1).max(80),
+  courseSlug: slugSchema,
   method: z.enum(PAYMENT_METHODS),
   couponCode: couponCodeSchema.optional(),
   locale: z.enum(EMAIL_LOCALES).default("en"),
 });
+
+/** Fewest courses a bundle holds: one course is just a course. */
+const MIN_BUNDLE_COURSES = 2;
+/** Most courses a bundle holds. */
+export const MAX_BUNDLE_COURSES = 50;
+
+/** A bundle's courses in display order, each once. */
+const bundleCourseIdsSchema = z
+  .array(z.uuid())
+  .min(MIN_BUNDLE_COURSES)
+  .max(MAX_BUNDLE_COURSES)
+  .refine((ids) => new Set(ids).size === ids.length, { message: "Each course can be in a bundle once" });
+
+/** New-bundle input: its title and courses. It starts as a draft without a price. */
+export const createBundleSchema = z.object({
+  title: z.string().trim().min(1).max(TITLE_MAX_LENGTH),
+  courseIds: bundleCourseIdsSchema,
+});
+
+/** Bundle details input; omitted fields stay as they are. */
+export const updateBundleSchema = z
+  .object({
+    title: z.string().trim().min(1).max(TITLE_MAX_LENGTH),
+    description: z.string().trim().max(DESCRIPTION_MAX_LENGTH),
+    status: z.enum(COURSE_STATUSES),
+    courseIds: bundleCourseIdsSchema,
+  })
+  .partial();
+
+/** What the student picks when buying a bundle: the same as for a course. */
+export const bundleCheckoutSchema = checkoutSchema.omit({ courseSlug: true }).extend({ bundleSlug: slugSchema });
 
 /** A course offer query: the coupon to price it with, if any. */
 export const offerQuerySchema = z.object({ coupon: couponCodeSchema.optional() });
@@ -103,6 +139,12 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type PriceInput = z.infer<typeof priceSchema>;
 /** Parsed coupon input. */
 export type CouponInput = z.infer<typeof couponSchema>;
+/** Parsed new-bundle input. */
+export type CreateBundleInput = z.infer<typeof createBundleSchema>;
+/** Parsed bundle-details input. */
+export type UpdateBundleInput = z.infer<typeof updateBundleSchema>;
+/** Parsed bundle checkout input. */
+export type BundleCheckoutInput = z.infer<typeof bundleCheckoutSchema>;
 /** Parsed offer query. */
 export type OfferQuery = z.infer<typeof offerQuerySchema>;
 /** Parsed checkout input. */

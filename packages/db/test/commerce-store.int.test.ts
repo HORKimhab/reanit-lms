@@ -27,9 +27,9 @@ async function pendingOrder(userId: string, coupon?: { id: string; amount: numbe
   if (!price) throw new Error("The course has no price.");
   const { id } = await store.createOrder({
     userId,
-    courseId,
     price,
-    amount: coupon?.amount ?? price.amount,
+    lines: [{ courseId, amount: coupon?.amount ?? price.amount }],
+    bundleId: null,
     couponId: coupon?.id ?? null,
     method: "stripe",
     locale: "en",
@@ -90,7 +90,7 @@ describe("payment confirmation store", () => {
     expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
     expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: false });
 
-    expect(await createCommerceStore(db, alphaId).isEnrolled(buyer, courseId)).toBe(true);
+    expect(await createCommerceStore(db, alphaId).enrolledCourseIds(buyer, [courseId, randomUUID()])).toEqual([courseId]);
     expect(await db.enrollment.count({ where: { userId: buyer, courseId } })).toBe(1);
     expect((await createCommerceStore(db, alphaId).findOrder(id, buyer))?.status).toBe("paid");
     expect(await db.outboxEvent.findMany({ where: { type: "OrderPaid", payload: { path: ["orderId"], equals: id } }, select: { schoolId: true, payload: true } })).toEqual([
@@ -170,5 +170,111 @@ describe("coupons", () => {
 
     expect(await store.findCoupon("GONE")).toBeNull();
     expect(await db.order.findUnique({ where: { id: order.id }, select: { couponId: true, totalAmount: true } })).toEqual({ couponId: null, totalAmount: 3920 });
+  });
+});
+
+describe("bundles", () => {
+  /**
+   * Creates a published course in the alpha school.
+   *
+   * @param slug Its slug, also its title.
+   * @returns Its id.
+   */
+  async function course(slug: string) {
+    const catalog = createCatalogStore(db, alphaId);
+    const { id } = await catalog.createCourse({ title: slug, slug });
+    await catalog.updateCourse(id, { status: "published" });
+    return id;
+  }
+
+  it("creates a draft bundle with its courses in order, and changes them", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const [first, second] = [await course("kit-one"), await course("kit-two")];
+
+    const bundle = await store.createBundle({ title: "Kit", slug: "kit", courseIds: [second, first] });
+
+    expect(bundle).toEqual({
+      id: expect.any(String),
+      title: "Kit",
+      slug: "kit",
+      description: null,
+      status: "draft",
+      courses: [
+        { id: second, title: "kit-two", slug: "kit-two" },
+        { id: first, title: "kit-one", slug: "kit-one" },
+      ],
+      price: null,
+    });
+    const updated = await store.updateBundle(bundle.id, { status: "published", description: "Both", courseIds: [first, second, courseId] });
+    expect(updated).toMatchObject({ status: "published", description: "Both", courses: [{ id: first }, { id: second }, { id: courseId }] });
+    expect(await store.findBundle("kit")).toEqual(updated);
+    expect(await store.listBundleSlugs()).toContain("kit");
+  });
+
+  it("lists a bundle's courses by their position, not by when they were added", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const [first, second] = [await course("order-one"), await course("order-two")];
+    const bundle = await store.createBundle({ title: "Ordered", slug: "ordered", courseIds: [first, second] });
+
+    await db.bundleCourse.update({ where: { bundleId_courseId: { bundleId: bundle.id, courseId: first } }, data: { position: 5 } });
+
+    expect((await store.findBundle("ordered"))?.courses.map(({ id }) => id)).toEqual([second, first]);
+  });
+
+  it("prices a bundle, keeping the newest price", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const bundle = await store.createBundle({ title: "Priced", slug: "priced", courseIds: [courseId, await course("priced-two")] });
+
+    await store.setBundlePrice(bundle.id, { amount: 9000, currency: "USD" });
+    await store.setBundlePrice(bundle.id, { amount: 8000, currency: "USD" });
+
+    expect((await store.findBundle("priced"))?.price).toEqual({ id: expect.any(String), amount: 8000, currency: "USD" });
+  });
+
+  it("hides a school's bundles and courses from another school", async () => {
+    const beta = createCommerceStore(db, betaId);
+    const bundle = await createCommerceStore(db, alphaId).createBundle({ title: "Mine", slug: "mine", courseIds: [courseId, await course("mine-two")] });
+
+    expect(await beta.findBundle("mine")).toBeNull();
+    expect(await beta.listBundles()).toEqual([]);
+    expect(await beta.updateBundle(bundle.id, { title: "Taken" })).toBeNull();
+    expect(await beta.setBundlePrice(bundle.id, { amount: 1, currency: "USD" })).toBeNull();
+    expect(await beta.findCourseIds([courseId])).toEqual([]);
+    expect(await createCommerceStore(db, alphaId).findCourseIds([courseId, randomUUID()])).toEqual([courseId]);
+  });
+
+  it("sells a bundle as one order with an item per course, and enrolls the buyer in every course on payment", async () => {
+    const store = createCommerceStore(db, alphaId);
+    const other = await course("sold-with");
+    const bundle = await store.createBundle({ title: "Sold kit", slug: "sold-kit", courseIds: [courseId, other] });
+    const price = await store.setBundlePrice(bundle.id, { amount: 9001, currency: "USD" });
+    if (!price) throw new Error("The bundle has no price.");
+    const buyer = (await db.user.create({ data: { email: "commerce-bundle@example.com" } })).id;
+
+    const { id } = await store.createOrder({
+      userId: buyer,
+      price,
+      lines: [
+        { courseId, amount: 4501 },
+        { courseId: other, amount: 4500 },
+      ],
+      bundleId: bundle.id,
+      couponId: null,
+      method: "stripe",
+      locale: "en",
+    });
+    await store.setProviderRef(id, `cs_bundle_${id}`);
+    await confirmations.confirm("stripe", `cs_bundle_${id}`);
+
+    expect(await db.order.findUnique({ where: { id }, select: { totalAmount: true } })).toEqual({ totalAmount: 9001 });
+    expect(await db.orderItem.findMany({ where: { orderId: id }, select: { courseId: true, bundleId: true, amount: true }, orderBy: { amount: "desc" } })).toEqual([
+      { courseId, bundleId: bundle.id, amount: 4501 },
+      { courseId: other, bundleId: bundle.id, amount: 4500 },
+    ]);
+    expect((await store.enrolledCourseIds(buyer, [courseId, other])).sort()).toEqual([courseId, other].sort());
+  });
+
+  it("refuses a price that belongs to neither a course nor a bundle", async () => {
+    await expect(db.price.create({ data: { schoolId: alphaId, amount: 100, currency: "USD" } })).rejects.toThrow();
   });
 });

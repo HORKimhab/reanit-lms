@@ -9,7 +9,19 @@ import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 import { RateLimit } from "../rate-limit/rate-limit";
-import { CheckoutBody, CheckoutResponse, OfferParams, OfferQuery, OfferResponse, OrderParams, OrderResponse, SchoolParams } from "./commerce.dto";
+import { toBundleResponse } from "./bundles.controller";
+import {
+  BundleCheckoutBody,
+  BundleResponse,
+  CheckoutBody,
+  CheckoutResponse,
+  OfferParams,
+  OfferQuery,
+  OfferResponse,
+  OrderParams,
+  OrderResponse,
+  SchoolParams,
+} from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
 /**
@@ -29,7 +41,7 @@ function toPaymentStep(payment: PaymentStart): CheckoutResponse["payment"] {
   }
 }
 
-/** Buying a course on a school site: its offer, checkout and the order's status. */
+/** Buying a course or bundle on a school site: its offer, checkout and the order's status. */
 @Controller("schools/by-subdomain/:subdomain")
 export class CheckoutController {
   /**
@@ -54,6 +66,18 @@ export class CheckoutController {
    */
   private async commerce(subdomain: string): Promise<CommerceService> {
     return this.commerceFor((await this.schools.getSchoolBySubdomain(subdomain)).id);
+  }
+
+  /**
+   * Builds where a gateway sends the student back: the order's status page, or the page they bought from.
+   *
+   * @param subdomain The school's subdomain.
+   * @param cancelPath The page the student bought from, under the school.
+   * @returns The return URLs for a new order.
+   */
+  private returnUrls(subdomain: string, cancelPath: string) {
+    const schoolUrl = new URL(`/s/${subdomain}`, this.env.APP_URL).href;
+    return (orderId: string) => ({ successUrl: `${schoolUrl}/orders/${orderId}`, cancelUrl: `${schoolUrl}${cancelPath}` });
   }
 
   /**
@@ -91,11 +115,63 @@ export class CheckoutController {
   @RateLimit("checkout")
   @ApiCreatedResponse({ type: CheckoutResponse })
   async checkout(@Param() params: SchoolParams, @Body() body: CheckoutBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
-    const schoolUrl = new URL(`/s/${params.subdomain}`, this.env.APP_URL).href;
-    const { orderId, payment } = await (await this.commerce(params.subdomain)).checkout({ userId: user.id, email: user.email }, body, (id) => ({
-      successUrl: `${schoolUrl}/orders/${id}`,
-      cancelUrl: `${schoolUrl}/courses/${body.courseSlug}`,
-    }));
+    const urls = this.returnUrls(params.subdomain, `/courses/${body.courseSlug}`);
+    const { orderId, payment } = await (await this.commerce(params.subdomain)).checkout({ userId: user.id, email: user.email }, body, urls);
+    return { orderId, payment: toPaymentStep(payment) };
+  }
+
+  /**
+   * Loads a published bundle with its courses, for its sales page.
+   *
+   * @param params The school's subdomain and the bundle's slug.
+   * @returns The bundle.
+   * @throws {SchoolNotFoundError} When no school has the subdomain (404).
+   * @throws {BundleNotFoundError} When the school has no published bundle with the slug (404).
+   */
+  @Public()
+  @Get("bundles/:slug")
+  @ApiOkResponse({ type: BundleResponse })
+  async bundle(@Param() params: OfferParams): Promise<BundleResponse> {
+    return { bundle: toBundleResponse(await (await this.commerce(params.subdomain)).getPublishedBundle(params.slug)) };
+  }
+
+  /**
+   * Says how a published bundle can be bought, like a course's offer.
+   *
+   * @param params The school's subdomain and the bundle's slug.
+   * @param query The coupon code, if any.
+   * @returns The price (null when not for sale), the methods and the discount (null without a coupon).
+   * @throws {SchoolNotFoundError} When no school has the subdomain (404).
+   * @throws {BundleNotFoundError} When the school sells no such bundle (404).
+   * @throws {InvalidCouponError} When the coupon cannot be used on the bundle (400).
+   */
+  @Public()
+  @Get("bundles/:slug/offer")
+  @ApiOkResponse({ type: OfferResponse })
+  async bundleOffer(@Param() params: OfferParams, @Query() query: OfferQuery): Promise<OfferResponse> {
+    const { price, methods, discount } = await (await this.commerce(params.subdomain)).getBundleOffer(params.slug, query);
+    return { price: price && { amount: price.amount, currency: price.currency }, methods, discount };
+  }
+
+  /**
+   * Starts buying a bundle: one order for all its courses. Enrollment in each follows only the gateway's confirmation.
+   *
+   * @param params The school's subdomain.
+   * @param body The bundle, payment method and coupon code.
+   * @param user The signed-in buyer.
+   * @returns The order and what the browser does next.
+   * @throws {BundleNotFoundError} When the school sells no such bundle (404).
+   * @throws {CourseNotForSaleError} When the bundle has no price (409).
+   * @throws {AlreadyEnrolledError} When the buyer has every course of the bundle (409).
+   * @throws {PaymentMethodUnavailableError} When the method cannot take the payment (400).
+   * @throws {InvalidCouponError} When the coupon cannot be used on this bundle (400).
+   */
+  @Post("bundle-checkout")
+  @RateLimit("checkout")
+  @ApiCreatedResponse({ type: CheckoutResponse })
+  async checkoutBundle(@Param() params: SchoolParams, @Body() body: BundleCheckoutBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
+    const urls = this.returnUrls(params.subdomain, `/bundles/${body.bundleSlug}`);
+    const { orderId, payment } = await (await this.commerce(params.subdomain)).checkoutBundle({ userId: user.id, email: user.email }, body, urls);
     return { orderId, payment: toPaymentStep(payment) };
   }
 

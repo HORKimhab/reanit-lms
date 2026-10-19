@@ -10,6 +10,9 @@ type AuditAction =
   | "course.price.set"
   | "coupon.create"
   | "coupon.delete"
+  | "bundle.create"
+  | "bundle.update"
+  | "bundle.price.set"
   | "lesson.media.attach"
   | "school.settings.update";
 

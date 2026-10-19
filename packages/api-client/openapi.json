@@ -1058,6 +1058,172 @@
         ]
       }
     },
+    "/bundles": {
+      "get": {
+        "operationId": "BundlesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundlesResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bundles"
+        ]
+      },
+      "post": {
+        "operationId": "BundlesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBundleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bundles"
+        ]
+      }
+    },
+    "/bundles/by-slug/{slug}": {
+      "get": {
+        "operationId": "BundlesController_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bundles"
+        ]
+      }
+    },
+    "/bundles/{id}": {
+      "patch": {
+        "operationId": "BundlesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBundleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bundles"
+        ]
+      }
+    },
+    "/bundles/{id}/price": {
+      "put": {
+        "operationId": "BundlesController_setPrice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bundles"
+        ]
+      }
+    },
     "/schools/by-subdomain/{subdomain}/courses/{slug}/offer": {
       "get": {
         "operationId": "CheckoutController_offer",
@@ -1132,6 +1298,144 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CheckoutBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}/bundles/{slug}": {
+      "get": {
+        "operationId": "CheckoutController_bundle",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}/bundles/{slug}/offer": {
+      "get": {
+        "operationId": "CheckoutController_bundleOffer",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "coupon",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[A-Z0-9][A-Z0-9_-]{2,31}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}/bundle-checkout": {
+      "post": {
+        "operationId": "CheckoutController_checkoutBundle",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleCheckoutBody"
               }
             }
           }
@@ -2527,6 +2831,244 @@
           "coupon"
         ]
       },
+      "BundlesResponse": {
+        "type": "object",
+        "properties": {
+          "bundles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "description": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "published"
+                  ]
+                },
+                "courses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "slug"
+                    ]
+                  }
+                },
+                "price": {
+                  "nullable": true,
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "USD",
+                        "KHR"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "slug",
+                "description",
+                "status",
+                "courses",
+                "price"
+              ]
+            }
+          }
+        },
+        "required": [
+          "bundles"
+        ]
+      },
+      "CreateBundleBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "courseIds": {
+            "minItems": 2,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "courseIds"
+        ]
+      },
+      "BundleResponse": {
+        "type": "object",
+        "properties": {
+          "bundle": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "title": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "description": {
+                "nullable": true,
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "published"
+                ]
+              },
+              "courses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "slug"
+                  ]
+                }
+              },
+              "price": {
+                "nullable": true,
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "USD",
+                      "KHR"
+                    ]
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "slug",
+              "description",
+              "status",
+              "courses",
+              "price"
+            ]
+          }
+        },
+        "required": [
+          "bundle"
+        ]
+      },
+      "UpdateBundleBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ]
+          },
+          "courseIds": {
+            "minItems": 2,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        }
+      },
       "OfferResponse": {
         "type": "object",
         "properties": {
@@ -2713,6 +3255,40 @@
         "required": [
           "orderId",
           "payment"
+        ]
+      },
+      "BundleCheckoutBody": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "stripe",
+              "aba_payway",
+              "bakong_khqr"
+            ]
+          },
+          "couponCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{2,31}$"
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en",
+              "km"
+            ]
+          },
+          "bundleSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "method",
+          "bundleSlug"
         ]
       },
       "OrderResponse": {
@@ -3038,6 +3614,9 @@
                     "course.price.set",
                     "coupon.create",
                     "coupon.delete",
+                    "bundle.create",
+                    "bundle.update",
+                    "bundle.price.set",
                     "lesson.media.attach",
                     "school.settings.update"
                   ]

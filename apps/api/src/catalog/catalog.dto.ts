@@ -28,7 +28,8 @@ export class SchoolCatalogParams extends createZodDto(z.object({ subdomain: subd
 /** Path of one published course of one school. */
 export class SchoolCourseParams extends createZodDto(z.object({ subdomain: subdomainSchema, slug: slugSchema })) {}
 
-const courseSchema = z.object({
+/** A course without its outline; bundles share its shape. */
+export const courseSchema = z.object({
   id: z.uuid(),
   title: z.string(),
   slug: z.string(),

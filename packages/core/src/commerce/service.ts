@@ -1,18 +1,56 @@
 import type { Clock } from "../auth";
 import { CourseNotFoundError } from "../catalog";
+import { uniqueSlug } from "../shared/slug";
+import { splitAcrossCourses } from "./bundles";
 import { applyCoupon } from "./coupons";
 import {
   AlreadyEnrolledError,
+  BundleNotFoundError,
   CouponCodeTakenError,
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
+  UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
-import type { Coupon, CommerceStore, Discount, OrderSummary, PaymentConfirmationStore, PaymentGateway, PaymentStart, Price } from "./ports";
-import type { CheckoutInput, CouponInput, OfferQuery, PaymentMethod, PriceInput } from "./rules";
+import type {
+  Bundle,
+  Coupon,
+  CommerceStore,
+  Discount,
+  OrderSummary,
+  PaymentConfirmationStore,
+  PaymentGateway,
+  PaymentStart,
+  Price,
+} from "./ports";
+import type {
+  BundleCheckoutInput,
+  CheckoutInput,
+  CouponInput,
+  CreateBundleInput,
+  OfferQuery,
+  PaymentMethod,
+  PriceInput,
+  UpdateBundleInput,
+} from "./rules";
+
+/** Slug for a bundle title with no Latin letters or digits. */
+const FALLBACK_BUNDLE_SLUG = "bundle";
+
+/** Who is paying. */
+type Buyer = { userId: string; email: string };
+
+/** Where the gateway sends the student back, given the new order's id. */
+type ReturnUrls = (orderId: string) => { successUrl: string; cancelUrl: string };
+
+/** How a course or bundle can be bought. */
+type Offer = { price: Price | null; methods: PaymentMethod[]; discount: Discount | null };
+
+/** What an order sells: one course, or a bundle's courses at the bundle's price. */
+type Product = { title: string; price: Price; courseIds: string[]; bundleId: string | null };
 
 /** What `createCommerceService` needs. */
 export interface CommerceDependencies {
@@ -27,7 +65,8 @@ export interface CommerceDependencies {
 }
 
 /**
- * Builds one school's selling use cases: prices, the payment methods a course offers, and checkout.
+ * Builds one school's selling use cases: prices, coupons, bundles, the payment methods a course or
+ * bundle offers, and checkout.
  * Enrollment never happens here: only a confirmed payment enrolls (`createPaymentConfirmation`).
  *
  * @param dependencies Store, gateways and confirmation.
@@ -35,7 +74,7 @@ export interface CommerceDependencies {
  * @param dependencies.gateways Every configured gateway.
  * @param dependencies.confirmation Enrolls from a confirmed payment.
  * @param dependencies.clock The current time, for coupon expiry.
- * @returns Pricing, coupon, offer and checkout operations.
+ * @returns Pricing, coupon, bundle, offer and checkout operations.
  * @example
  * const commerce = createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation, clock });
  */
@@ -62,6 +101,90 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
     const coupon = await store.findCoupon(code);
     if (!coupon) throw new InvalidCouponError("unknown");
     return { coupon, discount: applyCoupon(price, coupon, clock.now()) };
+  }
+
+  /**
+   * Describes how something with a price can be bought.
+   *
+   * @param price Its price, or null when it is not for sale.
+   * @param query The coupon code, if any.
+   * @returns The price, the methods that take its currency, and the coupon's discount.
+   * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the price.
+   */
+  async function offerFor(price: Price | null, query: OfferQuery): Promise<Offer> {
+    if (!price) return { price: null, methods: [], discount: null };
+    const discount = query.coupon ? (await discountFor(price, query.coupon)).discount : null;
+    return { price, methods: methodsFor(price), discount };
+  }
+
+  /**
+   * Creates a pending order for a course or bundle at its price less any coupon, split across its
+   * courses, and asks the chosen gateway to take the payment.
+   *
+   * @param buyer Who is paying.
+   * @param product What is bought.
+   * @param input The payment method, coupon code and the buyer's language.
+   * @param urls Where the gateway sends the student back.
+   * @returns The order id and what the browser does next.
+   * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
+   * @throws {AlreadyEnrolledError} When the student already has every course sold.
+   * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the price.
+   */
+  async function startOrder(
+    buyer: Buyer,
+    product: Product,
+    input: Pick<CheckoutInput, "method" | "couponCode" | "locale">,
+    urls: ReturnUrls,
+  ): Promise<{ orderId: string; payment: PaymentStart }> {
+    const gateway = gateways.find(({ method }) => method === input.method);
+    if (!gateway?.supports(product.price.currency)) throw new PaymentMethodUnavailableError();
+    const owned = await store.enrolledCourseIds(buyer.userId, product.courseIds);
+    if (owned.length === product.courseIds.length) throw new AlreadyEnrolledError();
+    const coupon = input.couponCode ? await discountFor(product.price, input.couponCode) : null;
+    const amount = coupon?.discount.total ?? product.price.amount;
+
+    const { id: orderId } = await store.createOrder({
+      userId: buyer.userId,
+      price: product.price,
+      lines: splitAcrossCourses(amount, product.courseIds, product.price.currency),
+      bundleId: product.bundleId,
+      couponId: coupon?.coupon.id ?? null,
+      method: gateway.method,
+      locale: input.locale,
+    });
+    const payment = await gateway.startPayment({
+      orderId,
+      amount,
+      currency: product.price.currency,
+      description: product.title,
+      customerEmail: buyer.email,
+      ...urls(orderId),
+    });
+    await store.setProviderRef(orderId, payment.providerRef);
+    return { orderId, payment };
+  }
+
+  /**
+   * Checks that every course of a bundle is the school's.
+   *
+   * @param courseIds The bundle's courses.
+   * @throws {UnknownBundleCourseError} When one is not.
+   */
+  async function assertSchoolCourses(courseIds: string[]): Promise<void> {
+    if ((await store.findCourseIds(courseIds)).length !== courseIds.length) throw new UnknownBundleCourseError();
+  }
+
+  /**
+   * Loads a bundle students can see.
+   *
+   * @param slug The bundle's slug.
+   * @returns The published bundle.
+   * @throws {BundleNotFoundError} When the school has no published bundle with that slug.
+   */
+  async function publishedBundle(slug: string): Promise<Bundle> {
+    const bundle = await store.findBundle(slug);
+    if (bundle?.status !== "published") throw new BundleNotFoundError();
+    return bundle;
   }
 
   return {
@@ -121,12 +244,10 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
      * @throws {CourseNotFoundError} When the school has no published course with that slug.
      * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the course's price.
      */
-    async getOffer(slug: string, query: OfferQuery = {}): Promise<{ price: Price | null; methods: PaymentMethod[]; discount: Discount | null }> {
+    async getOffer(slug: string, query: OfferQuery = {}): Promise<Offer> {
       const course = await store.findCourse(slug);
       if (!course?.isPublished) throw new CourseNotFoundError();
-      if (!course.price) return { price: null, methods: [], discount: null };
-      const discount = query.coupon ? (await discountFor(course.price, query.coupon)).discount : null;
-      return { price: course.price, methods: methodsFor(course.price), discount };
+      return offerFor(course.price, query);
     },
 
     /**
@@ -145,39 +266,123 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
      * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
      * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the course's price.
      */
-    async checkout(
-      buyer: { userId: string; email: string },
-      input: CheckoutInput,
-      urls: (orderId: string) => { successUrl: string; cancelUrl: string },
-    ): Promise<{ orderId: string; payment: PaymentStart }> {
+    async checkout(buyer: Buyer, input: CheckoutInput, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
       const course = await store.findCourse(input.courseSlug);
       if (!course?.isPublished) throw new CourseNotFoundError();
       if (!course.price) throw new CourseNotForSaleError();
-      const gateway = gateways.find(({ method }) => method === input.method);
-      if (!gateway?.supports(course.price.currency)) throw new PaymentMethodUnavailableError();
-      if (await store.isEnrolled(buyer.userId, course.id)) throw new AlreadyEnrolledError();
-      const coupon = input.couponCode ? await discountFor(course.price, input.couponCode) : null;
-      const amount = coupon?.discount.total ?? course.price.amount;
+      return startOrder(buyer, { title: course.title, price: course.price, courseIds: [course.id], bundleId: null }, input, urls);
+    },
 
-      const { id: orderId } = await store.createOrder({
-        userId: buyer.userId,
-        courseId: course.id,
-        price: course.price,
-        amount,
-        couponId: coupon?.coupon.id ?? null,
-        method: gateway.method,
-        locale: input.locale,
-      });
-      const payment = await gateway.startPayment({
-        orderId,
-        amount,
-        currency: course.price.currency,
-        description: course.title,
-        customerEmail: buyer.email,
-        ...urls(orderId),
-      });
-      await store.setProviderRef(orderId, payment.providerRef);
-      return { orderId, payment };
+    /**
+     * Lists the school's bundles, drafts included, for the dashboard.
+     *
+     * @returns The bundles, newest first.
+     */
+    listBundles(): Promise<Bundle[]> {
+      return store.listBundles();
+    },
+
+    /**
+     * Loads a bundle for the dashboard, draft or published.
+     *
+     * @param slug The bundle's slug.
+     * @returns The bundle.
+     * @throws {BundleNotFoundError} When the school has no bundle with that slug.
+     */
+    async getBundle(slug: string): Promise<Bundle> {
+      const bundle = await store.findBundle(slug);
+      if (!bundle) throw new BundleNotFoundError();
+      return bundle;
+    },
+
+    /**
+     * Loads a published bundle for its sales page.
+     *
+     * @param slug The bundle's slug.
+     * @returns The bundle.
+     * @throws {BundleNotFoundError} When the school has no published bundle with that slug.
+     */
+    getPublishedBundle(slug: string): Promise<Bundle> {
+      return publishedBundle(slug);
+    },
+
+    /**
+     * Creates a draft bundle of the school's courses, with a slug made from its title.
+     *
+     * @param input Its title and courses.
+     * @returns The bundle, without a price.
+     * @throws {UnknownBundleCourseError} When a course is not the school's.
+     */
+    async createBundle(input: CreateBundleInput): Promise<Bundle> {
+      await assertSchoolCourses(input.courseIds);
+      const slug = uniqueSlug(input.title, await store.listBundleSlugs(), FALLBACK_BUNDLE_SLUG);
+      return store.createBundle({ title: input.title, slug, courseIds: input.courseIds });
+    },
+
+    /**
+     * Changes a bundle's title, description, status or courses. The slug stays, so links keep working.
+     *
+     * @param bundleId The bundle.
+     * @param changes The fields to change.
+     * @returns The updated bundle.
+     * @throws {UnknownBundleCourseError} When a new course is not the school's.
+     * @throws {BundleNotFoundError} When the school has no such bundle.
+     */
+    async updateBundle(bundleId: string, changes: UpdateBundleInput): Promise<Bundle> {
+      if (changes.courseIds) await assertSchoolCourses(changes.courseIds);
+      const bundle = await store.updateBundle(bundleId, changes);
+      if (!bundle) throw new BundleNotFoundError();
+      return bundle;
+    },
+
+    /**
+     * Sets a bundle's price; earlier prices stay on past orders.
+     *
+     * @param bundleId The bundle.
+     * @param price Amount in minor units and currency.
+     * @returns The new price.
+     * @throws {BundleNotFoundError} When the school has no such bundle.
+     */
+    async setBundlePrice(bundleId: string, price: PriceInput): Promise<Price> {
+      const saved = await store.setBundlePrice(bundleId, price);
+      if (!saved) throw new BundleNotFoundError();
+      return saved;
+    },
+
+    /**
+     * Describes how a published bundle can be bought, like `getOffer` for a course.
+     *
+     * @param slug The bundle's slug.
+     * @param query The coupon code, if any.
+     * @returns The price (null when not for sale), the payment methods and the discount.
+     * @throws {BundleNotFoundError} When the school has no published bundle with that slug.
+     * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the bundle's price.
+     */
+    async getBundleOffer(slug: string, query: OfferQuery = {}): Promise<Offer> {
+      return offerFor((await publishedBundle(slug)).price, query);
+    },
+
+    /**
+     * Starts buying a bundle: one pending order for all its courses, its price less any coupon split
+     * across them. The confirmed payment enrolls the buyer in every course.
+     *
+     * @param buyer Who is paying.
+     * @param buyer.userId Their user id.
+     * @param buyer.email Their email, for the gateway's receipt.
+     * @param input The bundle, payment method, coupon code and the buyer's language.
+     * @param urls Where the gateway sends the student back, given the new order's id.
+     * @returns The order id and what the browser does next.
+     * @throws {BundleNotFoundError} When the school has no published bundle with that slug.
+     * @throws {CourseNotForSaleError} When the bundle has no price.
+     * @throws {AlreadyEnrolledError} When the student already has every course of the bundle.
+     * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
+     * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the bundle's price.
+     */
+    async checkoutBundle(buyer: Buyer, input: BundleCheckoutInput, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
+      const bundle = await publishedBundle(input.bundleSlug);
+      if (!bundle.price) throw new CourseNotForSaleError();
+      const courseIds = bundle.courses.map((course) => course.id);
+      return startOrder(buyer, { title: bundle.title, price: bundle.price, courseIds, bundleId: bundle.id }, input, urls);
     },
 
     /**

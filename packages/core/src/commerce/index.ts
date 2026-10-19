@@ -1,18 +1,22 @@
 export {
   AlreadyEnrolledError,
+  BundleNotFoundError,
   CouponCodeTakenError,
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
+  UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
 export { moneyFormat, toMinorUnits } from "./money";
 export type {
+  Bundle,
   CommerceStore,
   Coupon,
   Discount,
+  OrderLine,
   OrderStatus,
   OrderSummary,
   PaymentCheck,
@@ -24,20 +28,27 @@ export type {
   SellableCourse,
 } from "./ports";
 export {
+  bundleCheckoutSchema,
   checkoutSchema,
   COUPON_CODE_MAX_LENGTH,
   couponSchema,
+  createBundleSchema,
   CURRENCIES,
+  MAX_BUNDLE_COURSES,
   MAX_PERCENT_OFF,
   offerQuerySchema,
   PAYMENT_METHODS,
   priceSchema,
+  updateBundleSchema,
+  type BundleCheckoutInput,
   type CheckoutInput,
   type CouponInput,
+  type CreateBundleInput,
   type OfferQuery,
   type Currency,
   type PaymentMethod,
   type PriceInput,
+  type UpdateBundleInput,
 } from "./rules";
 export {
   createCommerceService,

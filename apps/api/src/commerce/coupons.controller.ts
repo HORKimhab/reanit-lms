@@ -5,7 +5,7 @@ import type { Coupon } from "@reanit/core/commerce";
 import { Audited, pathParam } from "../audit/audit.decorator";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "../schools/schools.decorators";
-import { CouponIdParams, CouponResponse, CouponsResponse, CreateCouponBody } from "./commerce.dto";
+import { IdParams, CouponResponse, CouponsResponse, CreateCouponBody } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
 /** The staff school `@Roles` resolved for the request. */
@@ -69,7 +69,7 @@ export class CouponsController {
   @Delete(":id")
   @Audited("coupon.delete", pathParam("id"))
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentSchool() school: StaffSchool, @Param() params: CouponIdParams) {
+  async remove(@CurrentSchool() school: StaffSchool, @Param() params: IdParams) {
     await this.commerceFor(school.id).deleteCoupon(params.id);
   }
 }

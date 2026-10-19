@@ -158,3 +158,52 @@ describe("GET .../orders/:orderId", () => {
     expect((await testApp.app.inject({ method: "GET", url: `${BASE_URL}/orders/${ORDER_ID}`, headers })).statusCode).toBe(404);
   });
 });
+
+describe("public bundle routes", () => {
+  const BUNDLE = {
+    id: ORDER_ID,
+    title: "Design Kit",
+    slug: "design-kit",
+    description: null,
+    status: "published",
+    courses: [],
+    price: { id: "p", amount: 9900, currency: "USD" },
+  };
+
+  it("shows anyone a published bundle without its price id", async () => {
+    testApp.clients.commerce.getPublishedBundle.mockResolvedValue(BUNDLE);
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/bundles/design-kit` });
+
+    expect(response.json()).toEqual({ bundle: { ...BUNDLE, price: { amount: 9900, currency: "USD" } } });
+    expect(testApp.clients.commerce.getPublishedBundle).toHaveBeenCalledWith("design-kit");
+  });
+
+  it("prices a bundle with the coupon in the query", async () => {
+    const discount = { code: "KIT10", amountOff: 990, total: 8910 };
+    testApp.clients.commerce.getBundleOffer.mockResolvedValue({ price: BUNDLE.price, methods: ["stripe"], discount });
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/bundles/design-kit/offer?coupon=kit10` });
+
+    expect(response.json()).toEqual({ price: { amount: 9900, currency: "USD" }, methods: ["stripe"], discount });
+    expect(testApp.clients.commerce.getBundleOffer).toHaveBeenCalledWith("design-kit", { coupon: "KIT10" });
+  });
+
+  it("starts buying a bundle and sends a student who gives up back to its page", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.checkoutBundle.mockResolvedValue({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://pay.test", providerRef: "cs_1" } });
+
+    const response = await testApp.app.inject({
+      method: "POST",
+      url: `${BASE_URL}/bundle-checkout`,
+      headers,
+      payload: { bundleSlug: "design-kit", method: "stripe" },
+    });
+
+    expect(response.json()).toEqual({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://pay.test" } });
+    const [buyer, input, urls] = testApp.clients.commerce.checkoutBundle.mock.calls[0] ?? [];
+    expect(buyer).toEqual({ userId: TEST_USER.id, email: TEST_USER.email });
+    expect(input).toEqual({ bundleSlug: "design-kit", method: "stripe", locale: "en" });
+    expect(urls(ORDER_ID).cancelUrl).toBe(`http://localhost:3000/s/${TEST_SCHOOL.subdomain}/bundles/design-kit`);
+  });
+});

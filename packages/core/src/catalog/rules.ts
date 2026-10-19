@@ -1,12 +1,11 @@
 import { z } from "zod";
 
-import { slugify } from "../shared/slug";
+import { uniqueSlug } from "../shared/slug";
 
 /** Longest course, section or lesson title. */
 export const TITLE_MAX_LENGTH = 200;
 /** Longest course description. */
 export const DESCRIPTION_MAX_LENGTH = 5000;
-const SLUG_MAX_LENGTH = 80;
 /** Slug for a title with no Latin letters or digits. */
 const FALLBACK_SLUG = "course";
 
@@ -76,11 +75,7 @@ export type Outline = z.infer<typeof outlineSchema>;
  * uniqueCourseSlug("Intro to Design", ["intro-to-design"]); // "intro-to-design-2"
  */
 export function uniqueCourseSlug(title: string, takenSlugs: Iterable<string>): string {
-  const base = slugify(title, SLUG_MAX_LENGTH) || FALLBACK_SLUG;
-  const taken = new Set(takenSlugs);
-  let slug = base;
-  for (let suffix = 2; taken.has(slug); suffix++) slug = `${base}-${suffix}`;
-  return slug;
+  return uniqueSlug(title, takenSlugs, FALLBACK_SLUG);
 }
 
 /**

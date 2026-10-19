@@ -1,9 +1,9 @@
-/** The course has no price yet, so it cannot be bought. */
+/** The course or bundle has no price yet, so it cannot be bought. */
 export class CourseNotForSaleError extends Error {
   override readonly name = "CourseNotForSaleError";
 }
 
-/** The student already has the course. */
+/** The student already has the course, or every course of the bundle. */
 export class AlreadyEnrolledError extends Error {
   override readonly name = "AlreadyEnrolledError";
 }
@@ -48,4 +48,14 @@ export class CouponCodeTakenError extends Error {
 /** The school has no coupon with that id. */
 export class CouponNotFoundError extends Error {
   override readonly name = "CouponNotFoundError";
+}
+
+/** The school has no bundle with that slug or id, or it is not published. */
+export class BundleNotFoundError extends Error {
+  override readonly name = "BundleNotFoundError";
+}
+
+/** A bundle names a course the school does not have. */
+export class UnknownBundleCourseError extends Error {
+  override readonly name = "UnknownBundleCourseError";
 }

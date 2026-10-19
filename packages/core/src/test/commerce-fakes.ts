@@ -1,9 +1,11 @@
 // In-memory fakes of the commerce ports, for unit tests of checkout and confirmation.
 import type {
+  Bundle,
   CommerceStore,
   Coupon,
   CouponInput,
   Currency,
+  OrderLine,
   OrderSummary,
   PaymentCheck,
   PaymentConfirmationStore,
@@ -13,11 +15,12 @@ import type {
   Price,
   PriceInput,
   SellableCourse,
+  UpdateBundleInput,
 } from "../commerce";
 import type { EmailLocale } from "../notifications";
 
-/** A stored order with its buyer, coupon and gateway reference. */
-type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale; couponId: string | null };
+/** A stored order with its buyer, lines, bundle, coupon and gateway reference; `courseId` and `amount` sum up its lines. */
+type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale; couponId: string | null; bundleId: string | null; lines: OrderLine[] };
 
 /** In-memory `CommerceStore` for one school, whose rows tests can inspect. */
 export class FakeCommerceStore implements CommerceStore {
@@ -25,6 +28,8 @@ export class FakeCommerceStore implements CommerceStore {
   readonly orders: FakeOrder[] = [];
   /** `userId:courseId` pairs. */
   readonly enrollments = new Set<string>();
+  /** Bundles, newest first. */
+  readonly bundles: Bundle[] = [];
   /** Coupons without their usage, newest first; `redemptions` is counted from paid orders. */
   readonly coupons: (CouponInput & { id: string })[] = [];
 
@@ -63,14 +68,24 @@ export class FakeCommerceStore implements CommerceStore {
   }
 
   /**
-   * Tells whether a user has a course.
+   * Lists the courses a user has among some.
    *
    * @param userId The user.
-   * @param courseId The course.
-   * @returns True when enrolled.
+   * @param courseIds The courses to check.
+   * @returns The ones the user is enrolled in.
    */
-  async isEnrolled(userId: string, courseId: string) {
-    return this.enrollments.has(`${userId}:${courseId}`);
+  async enrolledCourseIds(userId: string, courseIds: string[]) {
+    return courseIds.filter((courseId) => this.enrollments.has(`${userId}:${courseId}`));
+  }
+
+  /**
+   * Lists which of some course ids the school has.
+   *
+   * @param courseIds The ids.
+   * @returns The known ones.
+   */
+  async findCourseIds(courseIds: string[]) {
+    return courseIds.filter((courseId) => this.courses.has(courseId));
   }
 
   /**
@@ -78,9 +93,9 @@ export class FakeCommerceStore implements CommerceStore {
    *
    * @param order The order.
    * @param order.userId The buyer.
-   * @param order.courseId The course.
    * @param order.price Its price.
-   * @param order.amount What it charges.
+   * @param order.lines Its courses and what each is charged.
+   * @param order.bundleId The bundle bought, or null.
    * @param order.couponId The coupon used, or null.
    * @param order.method The payment method.
    * @param order.locale The buyer's language.
@@ -88,23 +103,37 @@ export class FakeCommerceStore implements CommerceStore {
    */
   async createOrder({
     userId,
-    courseId,
     price,
-    amount,
+    lines,
+    bundleId,
     couponId,
     method,
     locale,
   }: {
     userId: string;
-    courseId: string;
     price: Price;
-    amount: number;
+    lines: OrderLine[];
+    bundleId: string | null;
     couponId: string | null;
     method: PaymentMethod;
     locale: EmailLocale;
   }) {
     const id = `order-${this.orders.length + 1}`;
-    this.orders.push({ id, userId, courseId, status: "pending", amount, currency: price.currency, method, locale, couponId, providerRef: null });
+    const amount = lines.reduce((total, line) => total + line.amount, 0);
+    this.orders.push({
+      id,
+      userId,
+      courseId: lines[0]?.courseId ?? "",
+      status: "pending",
+      amount,
+      currency: price.currency,
+      method,
+      locale,
+      couponId,
+      bundleId,
+      lines,
+      providerRef: null,
+    });
     return { id };
   }
 
@@ -129,8 +158,8 @@ export class FakeCommerceStore implements CommerceStore {
   async findOrder(orderId: string, userId: string) {
     const order = this.orders.find((candidate) => candidate.id === orderId && candidate.userId === userId);
     if (!order) return null;
-    const { userId: buyer, ...summary } = order;
-    return buyer === userId ? { ...summary } : null;
+    const { id, status, courseId, amount, currency, method, providerRef } = order;
+    return order.userId === userId ? { id, status, courseId, amount, currency, method, providerRef } : null;
   }
 
   /**
@@ -178,6 +207,91 @@ export class FakeCommerceStore implements CommerceStore {
     this.coupons.splice(index, 1);
     return true;
   }
+
+  /**
+   * Lists the bundles.
+   *
+   * @returns The bundles, newest first.
+   */
+  async listBundles() {
+    return [...this.bundles];
+  }
+
+  /**
+   * Finds a bundle by slug.
+   *
+   * @param slug The slug.
+   * @returns The bundle, or null.
+   */
+  async findBundle(slug: string) {
+    return this.bundles.find((bundle) => bundle.slug === slug) ?? null;
+  }
+
+  /**
+   * Lists the bundles' slugs.
+   *
+   * @returns The slugs.
+   */
+  async listBundleSlugs() {
+    return this.bundles.map((bundle) => bundle.slug);
+  }
+
+  /**
+   * Stores a draft bundle of known courses.
+   *
+   * @param bundle The bundle.
+   * @param bundle.title Its title.
+   * @param bundle.slug Its slug.
+   * @param bundle.courseIds Its courses, in order.
+   * @returns The bundle.
+   */
+  async createBundle({ title, slug, courseIds }: { title: string; slug: string; courseIds: string[] }) {
+    const bundle: Bundle = { id: `bundle-${this.bundles.length + 1}`, title, slug, description: null, status: "draft", courses: this.coursesOf(courseIds), price: null };
+    this.bundles.unshift(bundle);
+    return bundle;
+  }
+
+  /**
+   * Changes a bundle.
+   *
+   * @param bundleId The bundle.
+   * @param changes The fields to change.
+   * @param changes.courseIds New courses, in order.
+   * @returns The bundle, or null when unknown.
+   */
+  async updateBundle(bundleId: string, { courseIds, ...fields }: UpdateBundleInput) {
+    const bundle = this.bundles.find(({ id }) => id === bundleId);
+    if (!bundle) return null;
+    Object.assign(bundle, fields, courseIds && { courses: this.coursesOf(courseIds) });
+    return bundle;
+  }
+
+  /**
+   * Sets a bundle's price.
+   *
+   * @param bundleId The bundle.
+   * @param price The price.
+   * @returns The new price, or null for an unknown bundle.
+   */
+  async setBundlePrice(bundleId: string, price: PriceInput) {
+    const bundle = this.bundles.find(({ id }) => id === bundleId);
+    if (!bundle) return null;
+    bundle.price = { id: `price-${bundleId}-${price.amount}`, ...price };
+    return bundle.price;
+  }
+
+  /**
+   * Looks up courses by id, as a bundle lists them.
+   *
+   * @param courseIds The courses, in order.
+   * @returns Their id, title and slug.
+   */
+  private coursesOf(courseIds: string[]) {
+    return courseIds.flatMap((courseId) => {
+      const course = this.courses.get(courseId);
+      return course ? [{ id: course.id, title: course.title, slug: course.slug }] : [];
+    });
+  }
 }
 
 /** `PaymentConfirmationStore` over a `FakeCommerceStore`'s rows. */
@@ -201,7 +315,7 @@ export class FakeConfirmationStore implements PaymentConfirmationStore {
     if (!order) return null;
     const isNewlyPaid = order.status === "pending";
     order.status = "paid";
-    this.commerce.enrollments.add(`${order.userId}:${order.courseId}`);
+    for (const line of order.lines) this.commerce.enrollments.add(`${order.userId}:${line.courseId}`);
     return { orderId: order.id, isNewlyPaid };
   }
 }

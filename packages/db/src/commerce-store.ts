@@ -2,7 +2,7 @@ import type { DbClient } from "./client";
 import { recordSale } from "./daily-stats";
 import { Prisma, type PaymentMethod } from "./generated/prisma/client";
 import { appendEvent } from "./outbox";
-import { forSchool, inSchoolTransaction } from "./tenant";
+import { forSchool, inSchoolTransaction, type SchoolTransaction } from "./tenant";
 
 /** Prices are integer minor units with an ISO code; the store only knows these two currencies. */
 type Currency = "USD" | "KHR";
@@ -33,6 +33,50 @@ const COUPON_FIELDS = {
 
 /** A coupon row as `COUPON_FIELDS` selects it. */
 type CouponRow = Prisma.CouponGetPayload<{ select: typeof COUPON_FIELDS }>;
+
+/** Bundle columns with its courses in order and its newest price. */
+const BUNDLE_FIELDS = {
+  id: true,
+  title: true,
+  slug: true,
+  description: true,
+  status: true,
+  courses: { orderBy: { position: "asc" }, select: { course: { select: { id: true, title: true, slug: true } } } },
+  prices: { orderBy: NEWEST_FIRST, take: 1, select: PRICE_FIELDS },
+} as const;
+
+/** A bundle row as `BUNDLE_FIELDS` selects it. */
+type BundleRow = Prisma.BundleGetPayload<{ select: typeof BUNDLE_FIELDS }>;
+
+/** Bundle details that can change; matches `UpdateBundleInput` in `@reanit/core/commerce`. */
+type BundleChanges = { title?: string; description?: string; status?: "draft" | "published"; courseIds?: string[] };
+
+/**
+ * Turns a bundle row into the bundle checkout and the dashboard use.
+ *
+ * @param row The stored bundle.
+ * @param row.courses Its courses, in order.
+ * @param row.prices Its newest price, if any.
+ * @returns The bundle with its courses in order and its current price.
+ */
+function toBundle({ courses, prices, ...bundle }: BundleRow) {
+  const [price] = prices;
+  return { ...bundle, courses: courses.map(({ course }) => course), price: price ? toPrice(price) : null };
+}
+
+/**
+ * Puts courses in a bundle, in order, in place of the ones it had.
+ *
+ * @param tx The school's transaction.
+ * @param bundle The bundle.
+ * @param bundle.schoolId Its school.
+ * @param bundle.bundleId Its id.
+ * @param courseIds The courses, in display order.
+ */
+async function setBundleCourses(tx: SchoolTransaction, { schoolId, bundleId }: { schoolId: string; bundleId: string }, courseIds: string[]) {
+  await tx.bundleCourse.deleteMany({ where: { bundleId } });
+  await tx.bundleCourse.createMany({ data: courseIds.map((courseId, position) => ({ schoolId, bundleId, courseId, position })) });
+}
 
 /**
  * Turns a coupon row into the coupon checkout uses; the table's check constraint guarantees each
@@ -107,27 +151,38 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     },
 
     /**
-     * Tells whether a user already has a course.
+     * Lists the courses a user already has among some.
      *
      * @param userId The user.
-     * @param courseId The course.
-     * @returns True when enrolled.
+     * @param courseIds The courses to check.
+     * @returns The ones the user is enrolled in.
      */
-    async isEnrolled(userId: string, courseId: string) {
-      return (await tenant.enrollment.count({ where: { userId, courseId } })) > 0;
+    async enrolledCourseIds(userId: string, courseIds: string[]) {
+      const enrollments = await tenant.enrollment.findMany({ where: { userId, courseId: { in: courseIds } }, select: { courseId: true } });
+      return enrollments.map((enrollment) => enrollment.courseId);
     },
 
     /**
-     * Creates a pending order for one course at the given price, charging `amount` (the price less any coupon).
+     * Lists which of some course ids are this school's courses.
+     *
+     * @param courseIds The ids.
+     * @returns The school's ones.
+     */
+    async findCourseIds(courseIds: string[]) {
+      return (await tenant.course.findMany({ where: { id: { in: courseIds } }, select: { id: true } })).map((course) => course.id);
+    },
+
+    /**
+     * Creates a pending order with one item per course; the lines' amounts add up to what it charges.
      *
      * @param order The order.
      * @param order.userId The buyer.
-     * @param order.courseId The course.
-     * @param order.price The price charged.
+     * @param order.price The course's or bundle's price.
      * @param order.price.id Its id.
      * @param order.price.amount Amount in minor units.
      * @param order.price.currency ISO code.
-     * @param order.amount What the order charges, in minor units.
+     * @param order.lines Each course and its share of the charge, in minor units.
+     * @param order.bundleId The bundle bought, or null for a single course.
      * @param order.couponId The coupon used, or null.
      * @param order.method The payment method chosen.
      * @param order.locale The language the buyer checked out in.
@@ -135,17 +190,17 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      */
     createOrder({
       userId,
-      courseId,
       price,
-      amount,
+      lines,
+      bundleId,
       couponId,
       method,
       locale,
     }: {
       userId: string;
-      courseId: string;
       price: { id: string; amount: number; currency: Currency };
-      amount: number;
+      lines: { courseId: string; amount: number }[];
+      bundleId: string | null;
       couponId: string | null;
       method: PaymentMethod;
       locale: string;
@@ -155,13 +210,15 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
           data: {
             schoolId,
             userId,
-            totalAmount: amount,
+            totalAmount: lines.reduce((total, line) => total + line.amount, 0),
             currency: price.currency,
             paymentMethod: method,
             locale,
             couponId,
-            // The item carries what was charged, so sales stats count the discounted amount.
-            items: { create: { schoolId, courseId, priceId: price.id, amount, currency: price.currency } },
+            // Items carry what was charged for each course, so sales stats count discounts and bundle shares.
+            items: {
+              create: lines.map(({ courseId, amount }) => ({ schoolId, courseId, bundleId, priceId: price.id, amount, currency: price.currency })),
+            },
           },
           select: { id: true },
         }),
@@ -261,6 +318,83 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      */
     async deleteCoupon(couponId: string) {
       return (await tenant.coupon.deleteMany({ where: { id: couponId } })).count > 0;
+    },
+
+    /**
+     * Lists the school's bundles, drafts included.
+     *
+     * @returns The bundles, newest first.
+     */
+    async listBundles() {
+      return (await tenant.bundle.findMany({ orderBy: NEWEST_FIRST, select: BUNDLE_FIELDS })).map(toBundle);
+    },
+
+    /**
+     * Loads a bundle by slug.
+     *
+     * @param slug The bundle's slug.
+     * @returns The bundle, or null when the school has none with that slug.
+     */
+    async findBundle(slug: string) {
+      const bundle = await tenant.bundle.findUnique({ where: { schoolId_slug: { schoolId, slug } }, select: BUNDLE_FIELDS });
+      return bundle && toBundle(bundle);
+    },
+
+    /**
+     * Lists the slugs the school's bundles use, to pick a free one.
+     *
+     * @returns The slugs.
+     */
+    async listBundleSlugs() {
+      return (await tenant.bundle.findMany({ select: { slug: true } })).map((bundle) => bundle.slug);
+    },
+
+    /**
+     * Creates a draft bundle of the school's courses.
+     *
+     * @param bundle The bundle.
+     * @param bundle.title Its title.
+     * @param bundle.slug Its free slug.
+     * @param bundle.courseIds Its courses, in order; the caller checked they are the school's.
+     * @returns The bundle, without a price.
+     */
+    createBundle({ title, slug, courseIds }: { title: string; slug: string; courseIds: string[] }) {
+      return inSchoolTransaction(db, schoolId, async (tx) => {
+        const { id: bundleId } = await tx.bundle.create({ data: { schoolId, title, slug }, select: { id: true } });
+        await setBundleCourses(tx, { schoolId, bundleId }, courseIds);
+        return toBundle(await tx.bundle.findUniqueOrThrow({ where: { id: bundleId }, select: BUNDLE_FIELDS }));
+      });
+    },
+
+    /**
+     * Changes a bundle's details; new courses replace the old ones, in their new order.
+     *
+     * @param bundleId The bundle.
+     * @param changes The fields to change.
+     * @param changes.courseIds New courses in order; the caller checked they are the school's.
+     * @returns The bundle, or null when the school has no such bundle.
+     */
+    updateBundle(bundleId: string, { courseIds, ...fields }: BundleChanges) {
+      return inSchoolTransaction(db, schoolId, async (tx) => {
+        const { count } = await tx.bundle.updateMany({ where: { id: bundleId }, data: fields });
+        if (count === 0) return null;
+        if (courseIds) await setBundleCourses(tx, { schoolId, bundleId }, courseIds);
+        return toBundle(await tx.bundle.findUniqueOrThrow({ where: { id: bundleId }, select: BUNDLE_FIELDS }));
+      });
+    },
+
+    /**
+     * Gives a bundle a new price; older prices stay for the orders that used them.
+     *
+     * @param bundleId The bundle.
+     * @param price Amount in minor units and currency.
+     * @param price.amount Amount in minor units.
+     * @param price.currency ISO code.
+     * @returns The new price, or null when the school has no such bundle.
+     */
+    async setBundlePrice(bundleId: string, { amount, currency }: { amount: number; currency: Currency }) {
+      if (!(await tenant.bundle.findFirst({ where: { id: bundleId }, select: { id: true } }))) return null;
+      return toPrice(await tenant.price.create({ data: { schoolId, bundleId, amount, currency }, select: PRICE_FIELDS }));
     },
   };
 }

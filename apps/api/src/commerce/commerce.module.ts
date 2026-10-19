@@ -7,6 +7,7 @@ import Stripe from "stripe";
 import type { Env } from "../config/env";
 import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
+import { BundlesController } from "./bundles.controller";
 import { CheckoutController } from "./checkout.controller";
 import { CouponsController } from "./coupons.controller";
 import { createBakongGateway } from "./bakong-gateway";
@@ -107,10 +108,10 @@ function provideConfirmation(db: DbClient) {
   return createPaymentConfirmation(createPaymentConfirmationStore(db));
 }
 
-/** Prices, coupons, checkout with the configured gateways, and the webhooks that enroll on payment. */
+/** Prices, coupons, bundles, checkout with the configured gateways, and the webhooks that enroll on payment. */
 @Module({
   imports: [SchoolsModule],
-  controllers: [PriceController, CouponsController, CheckoutController, StripeWebhookController, PayWayWebhookController],
+  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, StripeWebhookController, PayWayWebhookController],
   providers: [
     { provide: STRIPE, inject: [ENV], useFactory: provideStripe },
     { provide: PAYWAY, inject: [ENV], useFactory: providePayWay },

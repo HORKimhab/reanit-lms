@@ -1,5 +1,6 @@
+import type { CourseStatus } from "../catalog";
 import type { EmailLocale } from "../notifications/rules";
-import type { CouponInput, Currency, PaymentMethod, PriceInput } from "./rules";
+import type { CouponInput, Currency, PaymentMethod, PriceInput, UpdateBundleInput } from "./rules";
 
 /** A course's current price. */
 export interface Price {
@@ -15,6 +16,26 @@ export interface SellableCourse {
   isPublished: boolean;
   /** Null until the creator sets one. */
   price: Price | null;
+}
+
+/** Several of a school's courses sold together at one price. */
+export interface Bundle {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  /** Students see and buy only published bundles. */
+  status: CourseStatus;
+  /** In display order. */
+  courses: { id: string; title: string; slug: string }[];
+  /** Null until the creator sets one. */
+  price: Price | null;
+}
+
+/** One course of an order and what it is charged; a bundle's price is split across its courses. */
+export interface OrderLine {
+  courseId: string;
+  amount: number;
 }
 
 /** A school's coupon with how often it has been used. */
@@ -49,18 +70,22 @@ export interface OrderSummary {
   providerRef: string | null;
 }
 
-/** One school's prices and orders. `@reanit/db` implements it with `createCommerceStore`. */
+/** One school's prices, bundles, coupons and orders. `@reanit/db` implements it with `createCommerceStore`. */
 export interface CommerceStore {
   findCourse(slug: string): Promise<SellableCourse | null>;
   /** Returns the new price, or null when the school has no such course. */
   setPrice(courseId: string, price: PriceInput): Promise<Price | null>;
-  isEnrolled(userId: string, courseId: string): Promise<boolean>;
-  /** `amount` is what the order charges: the price less any coupon. */
+  /** The ones among `courseIds` the user is enrolled in. */
+  enrolledCourseIds(userId: string, courseIds: string[]): Promise<string[]>;
+  /** The ones among `courseIds` the school has. */
+  findCourseIds(courseIds: string[]): Promise<string[]>;
+  /** The lines' amounts add up to what the order charges: the price less any coupon. */
   createOrder(order: {
     userId: string;
-    courseId: string;
     price: Price;
-    amount: number;
+    lines: OrderLine[];
+    /** The bundle bought, or null for a single course. */
+    bundleId: string | null;
     couponId: string | null;
     method: PaymentMethod;
     locale: EmailLocale;
@@ -75,6 +100,16 @@ export interface CommerceStore {
   findCoupon(code: string): Promise<Coupon | null>;
   /** Returns false when the school has no such coupon. Orders that used it keep their discount. */
   deleteCoupon(couponId: string): Promise<boolean>;
+  /** The school's bundles, drafts included, newest first. */
+  listBundles(): Promise<Bundle[]>;
+  findBundle(slug: string): Promise<Bundle | null>;
+  listBundleSlugs(): Promise<string[]>;
+  /** Courses must be the school's (see `findCourseIds`). */
+  createBundle(bundle: { title: string; slug: string; courseIds: string[] }): Promise<Bundle>;
+  /** Returns null when the school has no such bundle. New `courseIds` replace the old ones. */
+  updateBundle(bundleId: string, changes: UpdateBundleInput): Promise<Bundle | null>;
+  /** Returns the new price, or null when the school has no such bundle. */
+  setBundlePrice(bundleId: string, price: PriceInput): Promise<Price | null>;
 }
 
 /**

@@ -5,12 +5,14 @@ import { FakeClock } from "../test/auth-fakes";
 import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway } from "../test/commerce-fakes";
 import {
   AlreadyEnrolledError,
+  BundleNotFoundError,
   CouponCodeTakenError,
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
+  UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
 import { createCommerceService, createPaymentConfirmation, type CommerceService } from "./service";
@@ -186,6 +188,90 @@ describe("coupons", () => {
 
   it("throws CouponNotFoundError when deleting an unknown coupon", async () => {
     await expect(commerce.deleteCoupon("missing")).rejects.toThrow(CouponNotFoundError);
+  });
+});
+
+describe("bundles", () => {
+  /**
+   * Creates a published bundle of the intro and advanced courses at a USD price.
+   *
+   * @param price The bundle's price, in USD cents.
+   * @returns The bundle's id and slug.
+   */
+  async function publishedBundle(price = 10_000) {
+    store.courses.set("c5", { id: "c5", slug: "advanced", title: "Advanced", isPublished: true, price: { id: "p5", amount: 7900, currency: "USD" } });
+    const bundle = await commerce.createBundle({ title: "Design Kit", courseIds: ["c1", "c5"] });
+    await commerce.updateBundle(bundle.id, { status: "published" });
+    await commerce.setBundlePrice(bundle.id, { amount: price, currency: "USD" });
+    return bundle;
+  }
+
+  it("creates a draft bundle of the school's courses with a slug from its title, numbered when taken", async () => {
+    const first = await commerce.createBundle({ title: "Design Kit", courseIds: ["c1", "c3"] });
+    const second = await commerce.createBundle({ title: "Design Kit", courseIds: ["c3", "c1"] });
+
+    expect(first).toMatchObject({ slug: "design-kit", status: "draft", price: null, courses: [{ id: "c1" }, { id: "c3" }] });
+    expect(second.slug).toBe("design-kit-2");
+    expect(await commerce.listBundles()).toEqual([second, first]);
+  });
+
+  it("throws UnknownBundleCourseError for a course the school does not have", async () => {
+    await expect(commerce.createBundle({ title: "Kit", courseIds: ["c1", "other-school"] })).rejects.toThrow(UnknownBundleCourseError);
+    const { id } = await commerce.createBundle({ title: "Kit", courseIds: ["c1", "c3"] });
+    await expect(commerce.updateBundle(id, { courseIds: ["c1", "other-school"] })).rejects.toThrow(UnknownBundleCourseError);
+  });
+
+  it("throws BundleNotFoundError when changing or pricing a bundle the school does not have", async () => {
+    await expect(commerce.updateBundle("missing", { title: "Kit" })).rejects.toThrow(BundleNotFoundError);
+    await expect(commerce.setBundlePrice("missing", { amount: 100, currency: "USD" })).rejects.toThrow(BundleNotFoundError);
+    await expect(commerce.getBundle("missing")).rejects.toThrow(BundleNotFoundError);
+  });
+
+  it("shows a draft bundle to the school's staff but not to students", async () => {
+    await commerce.createBundle({ title: "Draft Kit", courseIds: ["c1", "c3"] });
+
+    expect((await commerce.getBundle("draft-kit")).status).toBe("draft");
+    await expect(commerce.getPublishedBundle("draft-kit")).rejects.toThrow(BundleNotFoundError);
+    await expect(commerce.getBundleOffer("draft-kit")).rejects.toThrow(BundleNotFoundError);
+  });
+
+  it("offers a published bundle at its price, with a coupon's discount", async () => {
+    const { slug } = await publishedBundle();
+    await commerce.createCoupon(SAVE20);
+
+    expect(await commerce.getBundleOffer(slug, { coupon: "SAVE20" })).toEqual({
+      price: { id: expect.any(String), amount: 10_000, currency: "USD" },
+      methods: ["stripe", "bakong_khqr"],
+      discount: { code: "SAVE20", amountOff: 2000, total: 8000 },
+    });
+  });
+
+  it("sells every course in one order at the bundle's price split across them, and enrolls in all on payment", async () => {
+    const { id, slug } = await publishedBundle(10_001);
+
+    const { orderId } = await commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls);
+
+    expect(stripe.requests[0]).toMatchObject({ amount: 10_001, description: "Design Kit" });
+    expect(store.orders[0]).toMatchObject({ bundleId: id, amount: 10_001, lines: [{ courseId: "c1", amount: 5001 }, { courseId: "c5", amount: 5000 }] });
+    await createPaymentConfirmation(new FakeConfirmationStore(store)).confirm("stripe", `ref-${orderId}`);
+    expect(store.enrollments).toEqual(new Set(["user-1:c1", "user-1:c5"]));
+  });
+
+  it("sells a bundle to a student who has some of its courses, not all", async () => {
+    const { slug } = await publishedBundle();
+    store.enrollments.add("user-1:c1");
+
+    await commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls);
+    store.enrollments.add("user-1:c5");
+
+    await expect(commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
+  });
+
+  it("throws CourseNotForSaleError for a published bundle without a price", async () => {
+    const { id, slug } = await commerce.createBundle({ title: "Free Kit", courseIds: ["c1", "c3"] });
+    await commerce.updateBundle(id, { status: "published" });
+
+    await expect(commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls)).rejects.toThrow(CourseNotForSaleError);
   });
 });
 
