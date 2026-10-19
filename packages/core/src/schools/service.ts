@@ -1,4 +1,4 @@
-import { NotSchoolStaffError, SubdomainTakenError } from "./errors";
+import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "./errors";
 import type { MembershipRole, School, SchoolStore } from "./ports";
 import type { CreateSchoolInput } from "./rules";
 
@@ -27,6 +27,19 @@ export function createSchoolService({ store }: { store: SchoolStore }) {
     async createSchool(input: CreateSchoolInput, ownerId: string): Promise<School> {
       if (await store.findSchoolBySubdomain(input.subdomain)) throw new SubdomainTakenError();
       return store.createSchoolWithOwner({ ...input, ownerId });
+    },
+
+    /**
+     * Resolves the school a subdomain (or a `/s/<subdomain>` path) belongs to.
+     *
+     * @param subdomain Normalized subdomain.
+     * @returns The school.
+     * @throws {SchoolNotFoundError} When no school has the subdomain.
+     */
+    async getSchoolBySubdomain(subdomain: string): Promise<School> {
+      const school = await store.findSchoolBySubdomain(subdomain);
+      if (!school) throw new SchoolNotFoundError();
+      return school;
     },
 
     /**

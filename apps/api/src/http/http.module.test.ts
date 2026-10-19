@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError, signUpSchema } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
-import { NotSchoolStaffError, SubdomainTakenError } from "@reanit/core/schools";
+import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -25,6 +25,7 @@ const DOMAIN_ERRORS: Record<string, new () => Error> = {
   InvalidMagicLinkError,
   SubdomainTakenError,
   NotSchoolStaffError,
+  SchoolNotFoundError,
   CourseNotFoundError,
 };
 
@@ -136,6 +137,7 @@ describe("errors", () => {
     ["InvalidMagicLinkError", 400, "invalid-magic-link"],
     ["SubdomainTakenError", 409, "subdomain-taken"],
     ["NotSchoolStaffError", 403, "not-school-staff"],
+    ["SchoolNotFoundError", 404, "school-not-found"],
     ["CourseNotFoundError", 404, "course-not-found"],
   ])("answers %s with %i and its problem type", async (name, status, code) => {
     const response = await app.inject({ method: "GET", url: `/edge-probe/throw/${name}` });

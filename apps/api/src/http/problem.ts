@@ -3,7 +3,7 @@ import { STATUS_CODES } from "node:http";
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
-import { NotSchoolStaffError, SubdomainTakenError } from "@reanit/core/schools";
+import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
 
@@ -40,6 +40,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: InvalidMagicLinkError, status: HttpStatus.BAD_REQUEST, code: "invalid-magic-link", detail: "The sign-in link is invalid, used or expired." },
   { error: SubdomainTakenError, status: HttpStatus.CONFLICT, code: "subdomain-taken", detail: "Another school already uses this subdomain." },
   { error: NotSchoolStaffError, status: HttpStatus.FORBIDDEN, code: "not-school-staff", detail: "You do not run a school." },
+  { error: SchoolNotFoundError, status: HttpStatus.NOT_FOUND, code: "school-not-found", detail: "No school uses this subdomain." },
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
 ];
 

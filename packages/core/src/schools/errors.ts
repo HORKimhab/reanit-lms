@@ -7,3 +7,8 @@ export class SubdomainTakenError extends Error {
 export class NotSchoolStaffError extends Error {
   override readonly name = "NotSchoolStaffError";
 }
+
+/** No school has the given subdomain. */
+export class SchoolNotFoundError extends Error {
+  override readonly name = "SchoolNotFoundError";
+}

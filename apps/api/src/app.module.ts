@@ -9,9 +9,10 @@ import { HttpModule } from "./http/http.module";
 import { LoggingModule } from "./logging/logging.module";
 import { MailModule } from "./mail/mail.module";
 import { RedisModule } from "./redis/redis.module";
+import { SchoolsModule } from "./schools/schools.module";
 
 /** Root module: shared infrastructure plus every feature module. */
 @Module({
-  imports: [EnvModule, LoggingModule, RequestContextModule, HttpModule, DbModule, RedisModule, MailModule, HealthModule, AuthModule],
+  imports: [EnvModule, LoggingModule, RequestContextModule, HttpModule, DbModule, RedisModule, MailModule, HealthModule, AuthModule, SchoolsModule],
 })
 export class AppModule {}

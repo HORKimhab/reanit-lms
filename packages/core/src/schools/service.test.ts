@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { FakeSchoolStore } from "../test/school-fakes";
-import { NotSchoolStaffError, SubdomainTakenError } from "./errors";
+import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "./errors";
 import { createSchoolService } from "./service";
 
 describe("createSchool", () => {
@@ -23,6 +23,22 @@ describe("createSchool", () => {
       SubdomainTakenError,
     );
     expect(store.schools).toHaveLength(1);
+  });
+});
+
+describe("getSchoolBySubdomain", () => {
+  it("returns the school with the subdomain", async () => {
+    const schools = createSchoolService({ store: new FakeSchoolStore() });
+    const angkor = await schools.createSchool({ name: "Angkor", subdomain: "angkor" }, "user-1");
+    await schools.createSchool({ name: "Bayon", subdomain: "bayon" }, "user-2");
+
+    expect(await schools.getSchoolBySubdomain("angkor")).toEqual(angkor);
+  });
+
+  it("throws SchoolNotFoundError when no school has the subdomain", async () => {
+    const schools = createSchoolService({ store: new FakeSchoolStore() });
+
+    await expect(schools.getSchoolBySubdomain("missing")).rejects.toThrow(SchoolNotFoundError);
   });
 });
 

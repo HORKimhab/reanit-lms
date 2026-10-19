@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import type { AuthUser } from "@reanit/core/auth";
-import type { MembershipRole } from "@reanit/core/schools";
+import type { MembershipRole, School } from "@reanit/core/schools";
 import { ClsModule, type ClsStore } from "nestjs-cls";
 
 import { requestIdOf } from "./request-id";
@@ -13,7 +13,7 @@ export interface RequestContext extends ClsStore {
   /** Signed-in user; set by the session guard. */
   user?: AuthUser;
   /** School the request acts on, with the user's role in it; set by the roles guard. */
-  school?: { id: string; role: MembershipRole };
+  school?: School & { role: MembershipRole };
 }
 
 /** Opens a request context around every request, keyed by the same id the logs use. */

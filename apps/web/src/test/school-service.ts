@@ -6,6 +6,7 @@ import { vi, type Mock } from "vitest";
 /** Stubbed school use cases; `setup.ts` resets them after each test. */
 export const schoolService = {
   createSchool: vi.fn(),
+  getSchoolBySubdomain: vi.fn(),
   getStaffSchool: vi.fn(),
 } satisfies Record<keyof SchoolService, Mock>;
 

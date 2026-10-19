@@ -388,6 +388,91 @@
           "Auth"
         ]
       }
+    },
+    "/schools": {
+      "post": {
+        "operationId": "SchoolsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSchoolBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Schools"
+        ]
+      }
+    },
+    "/schools/current": {
+      "get": {
+        "operationId": "SchoolsController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSchoolResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Schools"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}": {
+      "get": {
+        "operationId": "SchoolsController_bySubdomain",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Schools"
+        ]
+      }
     }
   },
   "info": {
@@ -485,6 +570,84 @@
         },
         "required": [
           "email"
+        ]
+      },
+      "CreateSchoolBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "subdomain": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 63,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+          }
+        },
+        "required": [
+          "name",
+          "subdomain"
+        ]
+      },
+      "SchoolResponse": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "subdomain": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "school"
+        ]
+      },
+      "StaffSchoolResponse": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "subdomain": {
+                "type": "string"
+              }
+            }
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "instructor",
+              "student"
+            ]
+          }
+        },
+        "required": [
+          "school",
+          "role"
         ]
       }
     }

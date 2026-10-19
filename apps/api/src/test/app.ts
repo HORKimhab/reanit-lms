@@ -3,6 +3,7 @@ import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import type { AuthService } from "@reanit/core/auth";
+import type { SchoolService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { vi, type Mock } from "vitest";
@@ -15,6 +16,7 @@ import { createAdapter } from "../context/request-id";
 import { DB_CLIENT } from "../db/db.module";
 import { loggerOptions } from "../logging/logger-options";
 import { REDIS } from "../redis/redis.module";
+import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 
 /** Environment the test app boots with; nothing connects to these URLs. */
 const TEST_ENV: Env = {
@@ -34,12 +36,16 @@ export type FakeClients = {
   redis: { status: string; ping: Mock; quit: Mock; disconnect: Mock };
   /** Stands in for `@reanit/core/auth`; every session is unknown until a test says otherwise. */
   auth: Record<keyof AuthService, Mock>;
+  /** Stands in for `@reanit/core/schools`. */
+  schools: Record<keyof SchoolService, Mock>;
 };
 
 /** Extras a test can boot the app with. */
 type TestAppOptions = {
   /** Test-only controllers mounted next to the app's own, e.g. to read the request context. */
   controllers?: Type[];
+  /** Test-only modules, for probe controllers that need a feature module's providers. */
+  imports?: Type[];
   /** Receives the app's logs at `info` level; logging is silent otherwise. nestjs-pino keeps the first app's logger for the whole test file. */
   logStream?: DestinationStream;
 };
@@ -47,7 +53,7 @@ type TestAppOptions = {
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection and auth service.
+ * @returns A fake Prisma client, Redis connection, and auth and school services.
  */
 export function createFakeClients(): FakeClients {
   return {
@@ -61,6 +67,7 @@ export function createFakeClients(): FakeClients {
       getSessionUser: vi.fn().mockResolvedValue(null),
       logOut: vi.fn(),
     },
+    schools: { createSchool: vi.fn(), getSchoolBySubdomain: vi.fn(), getStaffSchool: vi.fn() },
   };
 }
 
@@ -68,14 +75,14 @@ export function createFakeClients(): FakeClients {
  * Boots the app on Fastify, set up as `main.ts` does, without listening; send requests with `app.inject`.
  *
  * @param clients Fakes from `createFakeClients`.
- * @param options Extra controllers and a log destination.
+ * @param options Extra controllers, modules and a log destination.
  * @returns The initialized app. Close it after the test.
  */
 export async function createTestApp(
   clients: FakeClients = createFakeClients(),
   options: TestAppOptions = {},
 ): Promise<NestFastifyApplication> {
-  let builder = Test.createTestingModule({ imports: [AppModule], controllers: options.controllers ?? [] })
+  let builder = Test.createTestingModule({ imports: [AppModule, ...(options.imports ?? [])], controllers: options.controllers ?? [] })
     .overrideProvider(ENV)
     .useValue(TEST_ENV)
     .overrideProvider(DB_CLIENT)
@@ -83,7 +90,9 @@ export async function createTestApp(
     .overrideProvider(REDIS)
     .useValue(clients.redis)
     .overrideProvider(AUTH_SERVICE)
-    .useValue(clients.auth);
+    .useValue(clients.auth)
+    .overrideProvider(SCHOOL_SERVICE)
+    .useValue(clients.schools);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });
