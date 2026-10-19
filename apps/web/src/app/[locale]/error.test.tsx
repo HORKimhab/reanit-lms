@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -23,6 +24,15 @@ describe("ErrorPage", () => {
 
     expect(await screen.findByText("Reference: 123456")).toBeInTheDocument();
     expect(screen.queryByText(/SQL details/)).not.toBeInTheDocument();
+  });
+
+  it("reports the error to Sentry", async () => {
+    const error = new Error("boom");
+
+    renderWithIntl(<ErrorPage error={error} reset={vi.fn()} />);
+
+    await screen.findByRole("button", { name: "Try again" });
+    expect(Sentry.captureException).toHaveBeenCalledExactlyOnceWith(error);
   });
 
   it("is written in Khmer for km", async () => {

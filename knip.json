@@ -19,14 +19,26 @@
     },
     "apps/api": {
       "entry": [
+        "src/instrument.ts",
         "src/main.ts",
         "src/openapi.ts",
         "src/storage-setup.ts"
+      ],
+      "ignoreDependencies": [
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/instrumentation",
+        "@opentelemetry/sdk-node"
       ]
     },
     "apps/worker": {
       "entry": [
+        "src/instrument.ts",
         "src/main.ts"
+      ],
+      "ignoreDependencies": [
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/instrumentation",
+        "@opentelemetry/sdk-node"
       ]
     }
   }

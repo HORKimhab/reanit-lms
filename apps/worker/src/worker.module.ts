@@ -1,6 +1,6 @@
 import { BullModule, type BullRootModuleOptions } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
-import { baseEnvSchema, DbModule, ENV, EnvModule, LoggingModule, MailModule, mailEnvSchema } from "@reanit/nest";
+import { baseEnvSchema, DbModule, ENV, EnvModule, LoggingModule, MailModule, mailEnvSchema, TelemetryModule } from "@reanit/nest";
 import { z } from "zod";
 
 import { EventsModule } from "./events/events.module";
@@ -36,11 +36,12 @@ export function bullOptions(env: WorkerEnv): BullRootModuleOptions {
   return { connection: { url: env.REDIS_URL, maxRetriesPerRequest: null } };
 }
 
-/** Root of the background worker: shared env, logs, database and mail, BullMQ, and the job modules. */
+/** Root of the background worker: shared env, logs, telemetry flush, database and mail, BullMQ, and the job modules. */
 @Module({
   imports: [
     EnvModule.forRoot(parseWorkerEnv),
     LoggingModule,
+    TelemetryModule,
     DbModule,
     MailModule,
     BullModule.forRootAsync({ inject: [ENV], useFactory: bullOptions }),

@@ -146,6 +146,12 @@ User ─┬─< Membership >─ School ──< Domain
 - Payment and enrollment operations use idempotency keys.
 - Events are published through the outbox pattern, with retries and a dead-letter queue for failed jobs.
 
+**Observability**
+- Sentry gets the errors nobody expected: API 500s, dead-lettered worker jobs, and server and browser errors in the web app. Each is tagged with its OpenTelemetry trace id.
+- OpenTelemetry traces go to any OTLP collector. The API and worker preload `dist/instrument.js` (`node --import`) to trace HTTP, Redis and pino, and pino log lines carry the `trace_id`. The web app exports the spans Next.js emits.
+- PostHog records pageviews in the browser, with visitors kept anonymous.
+- Each is off until its variable is set (`SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `NEXT_PUBLIC_POSTHOG_KEY`; see the `.env.example` files).
+
 **Security**
 - Row-Level Security on all tenant tables, signed video URLs, and rate limiting on auth and checkout.
 - An audit log of admin and instructor actions.

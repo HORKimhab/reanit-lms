@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch --onSuccess \"node --env-file-if-exists=.env --enable-source-maps dist/main.js\"",
-    "start": "node --env-file-if-exists=.env --enable-source-maps dist/main.js",
+    "dev": "tsup --watch --onSuccess \"node --env-file-if-exists=.env --enable-source-maps --import ./dist/instrument.js dist/main.js\"",
+    "start": "node --env-file-if-exists=.env --enable-source-maps --import ./dist/instrument.js dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -15,6 +15,11 @@
     "@nestjs/bullmq": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/auto-instrumentations-node": "catalog:",
+    "@opentelemetry/instrumentation": "catalog:",
+    "@opentelemetry/sdk-node": "catalog:",
+    "@sentry/node": "catalog:",
     "bullmq": "catalog:",
     "nestjs-pino": "catalog:",
     "pino-http": "catalog:",

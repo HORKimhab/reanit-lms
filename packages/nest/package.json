@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./telemetry": "./src/telemetry.ts",
     "./testing/redis": "./src/testing/redis.ts"
   },
   "scripts": {
@@ -14,8 +15,13 @@
   },
   "dependencies": {
     "@nestjs/common": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/auto-instrumentations-node": "catalog:",
+    "@opentelemetry/instrumentation": "catalog:",
+    "@opentelemetry/sdk-node": "catalog:",
     "@reanit/core": "workspace:*",
     "@reanit/db": "workspace:*",
+    "@sentry/node": "catalog:",
     "nestjs-pino": "catalog:",
     "nodemailer": "catalog:",
     "pino-http": "catalog:",

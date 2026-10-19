@@ -1,9 +1,12 @@
+import { captureException } from "@sentry/node";
 import type { Job, Queue } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 
 import { ORDER_PAID } from "../test/events";
 import { toEventJob, type EventJob } from "./event-job";
 import { EventsProcessor, type DeadLetter } from "./events.processor";
+
+vi.mock("@sentry/node", async (importOriginal) => ({ ...(await importOriginal<object>()), captureException: vi.fn() }));
 
 const DATA = toEventJob(ORDER_PAID);
 
@@ -44,6 +47,23 @@ describe("EventsProcessor", () => {
     await processor.deadLetter(jobAfter(5, 5), new Error("mail down"));
 
     expect(add).toHaveBeenCalledWith("OrderPaid", { event: DATA, error: "mail down", attemptsMade: 5 }, { jobId: ORDER_PAID.id });
+  });
+
+  it("reports a job that failed its last attempt to Sentry, tagged with its event", async () => {
+    const { processor } = processorWith();
+    const error = new Error("mail down");
+
+    await processor.deadLetter(jobAfter(5, 5), error);
+
+    expect(captureException).toHaveBeenCalledWith(error, { tags: { event: "OrderPaid" } });
+  });
+
+  it("keeps a failure with attempts left out of Sentry", async () => {
+    const { processor } = processorWith();
+
+    await processor.deadLetter(jobAfter(4, 5), new Error("mail down"));
+
+    expect(captureException).not.toHaveBeenCalled();
   });
 
   it("leaves a job with attempts left to BullMQ's retry", async () => {

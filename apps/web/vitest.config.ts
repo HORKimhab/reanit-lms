@@ -9,7 +9,7 @@ export default mergeConfig(
     test: {
       // e2e/ holds the Playwright specs (`pnpm e2e`).
       exclude: [...configDefaults.exclude, "e2e/**"],
-      setupFiles: ["./src/test/navigation.ts", "./src/test/setup.ts"],
+      setupFiles: ["./src/test/navigation.ts", "./src/test/telemetry.ts", "./src/test/setup.ts"],
       // next-intl imports "next/navigation" without an extension, which only resolves when bundled.
       server: { deps: { inline: ["next-intl"] } },
     },

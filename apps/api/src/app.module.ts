@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { DbModule, EnvModule, LoggingModule, MailModule } from "@reanit/nest";
+import { DbModule, EnvModule, LoggingModule, MailModule, TelemetryModule } from "@reanit/nest";
 
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { AuditModule } from "./audit/audit.module";
@@ -21,6 +21,7 @@ import { SchoolsModule } from "./schools/schools.module";
   imports: [
     EnvModule.forRoot(parseEnv),
     LoggingModule,
+    TelemetryModule,
     RequestContextModule,
     HttpModule,
     DbModule,

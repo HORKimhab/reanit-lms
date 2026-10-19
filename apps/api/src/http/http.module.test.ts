@@ -12,7 +12,8 @@ import {
 } from "@reanit/core/media";
 import { NotEnrolledError } from "@reanit/core/learning";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { captureException } from "@sentry/node";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createTestApp } from "../test/app";
@@ -20,6 +21,8 @@ import { captureLogs } from "../test/logs";
 import { PROBLEM_CONTENT_TYPE } from "./problem";
 import { Public } from "../auth/auth.decorators";
 import { createZodDto } from "./zod-dto";
+
+vi.mock("@sentry/node", async (importOriginal) => ({ ...(await importOriginal<object>()), captureException: vi.fn() }));
 
 /** Sign-up body validated by the core schema. */
 class SignUpBody extends createZodDto(signUpSchema) {}
@@ -179,6 +182,18 @@ describe("errors", () => {
     expect(response.json()).toEqual({ type: "about:blank", title: "Internal Server Error", status: 500 });
     expect(response.body).not.toContain(INTERNAL_MESSAGE);
     expect(logs.lines.some((line) => line.level === 50 && JSON.stringify(line).includes(INTERNAL_MESSAGE))).toBe(true);
+  });
+
+  it("reports an unknown error to Sentry", async () => {
+    await app.inject({ method: "GET", url: "/edge-probe/throw/internal" });
+
+    expect(captureException).toHaveBeenCalledWith(expect.objectContaining({ message: INTERNAL_MESSAGE }), { tags: {} });
+  });
+
+  it("keeps an expected error out of Sentry", async () => {
+    await app.inject({ method: "GET", url: "/edge-probe/throw/CourseNotFoundError" });
+
+    expect(captureException).not.toHaveBeenCalled();
   });
 
   it("answers an unknown route with 404 problem+json", async () => {
