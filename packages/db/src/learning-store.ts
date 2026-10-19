@@ -1,5 +1,6 @@
 import type { DbClient } from "./client";
 import { recordCompletion } from "./daily-stats";
+import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction } from "./tenant";
 
 const ENROLLMENT_FIELDS = { id: true, courseId: true, expiresAt: true } as const;
@@ -96,7 +97,8 @@ export function createLearningStore(db: DbClient, schoolId: string) {
     },
 
     /**
-     * Marks the enrollment's course completed and counts it in the day's completions, once.
+     * Marks the enrollment's course completed, counts it in the day's completions and records
+     * `CourseCompleted` in the outbox, once.
      *
      * @param enrollment The enrollment.
      * @param enrollment.id Its id.
@@ -106,7 +108,9 @@ export function createLearningStore(db: DbClient, schoolId: string) {
     async completeCourse({ id, courseId }: { id: string; courseId: string }, at: Date) {
       await inSchoolTransaction(db, schoolId, async (tx) => {
         const { count } = await tx.enrollment.updateMany({ where: { id, completedAt: null }, data: { completedAt: at } });
-        if (count > 0) await recordCompletion(tx, { schoolId, courseId, at });
+        if (count === 0) return;
+        await recordCompletion(tx, { schoolId, courseId, at });
+        await appendEvent(tx, { type: "CourseCompleted", schoolId, payload: { enrollmentId: id, courseId } });
       });
     },
   };

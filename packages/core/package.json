@@ -10,7 +10,8 @@
     "./media": "./src/media/index.ts",
     "./commerce": "./src/commerce/index.ts",
     "./learning": "./src/learning/index.ts",
-    "./analytics": "./src/analytics/index.ts"
+    "./analytics": "./src/analytics/index.ts",
+    "./events": "./src/events/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

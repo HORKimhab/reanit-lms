@@ -1,8 +1,8 @@
-import swc from "unplugin-swc";
-import { defineConfig } from "vitest/config";
+import { nestVitestConfig } from "@reanit/config/vitest-nest";
 
-export default defineConfig({
-  // SWC emits the decorator metadata Nest's dependency injection reads; Vite's esbuild does not.
-  plugins: [swc.vite()],
-  test: { environment: "node", restoreMocks: true },
+// The integration project starts Postgres and Redis (Docker), once for all its files.
+export default nestVitestConfig({
+  name: "integration",
+  include: ["test/**/*.int.test.ts"],
+  globalSetup: ["@reanit/db/testing/postgres", "./src/test/redis.ts"],
 });

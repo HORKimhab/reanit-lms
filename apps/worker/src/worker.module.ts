@@ -2,7 +2,7 @@ import { BullModule, type BullRootModuleOptions } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { baseEnvSchema, DbModule, ENV, EnvModule, LoggingModule, type BaseEnv } from "@reanit/nest";
 
-import { KeepAlive } from "./keep-alive";
+import { EventsModule } from "./events/events.module";
 
 /**
  * Validates the worker's environment: the shared variables, nothing more yet.
@@ -26,14 +26,14 @@ export function bullOptions(env: BaseEnv): BullRootModuleOptions {
   return { connection: { url: env.REDIS_URL, maxRetriesPerRequest: null } };
 }
 
-/** Root of the background worker: shared env, logs and database, plus BullMQ. Job modules (WRK-02) import here. */
+/** Root of the background worker: shared env, logs and database, BullMQ, and the job modules. */
 @Module({
   imports: [
     EnvModule.forRoot(parseWorkerEnv),
     LoggingModule,
     DbModule,
     BullModule.forRootAsync({ inject: [ENV], useFactory: bullOptions }),
+    EventsModule,
   ],
-  providers: [KeepAlive],
 })
 export class WorkerModule {}

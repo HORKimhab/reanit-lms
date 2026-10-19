@@ -1,6 +1,7 @@
 import type { DbClient } from "./client";
 import { recordSale } from "./daily-stats";
 import type { PaymentMethod } from "./generated/prisma/client";
+import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction } from "./tenant";
 
 /** Prices are integer minor units with an ISO code; the store only knows these two currencies. */
@@ -175,8 +176,8 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
 export function createPaymentConfirmationStore(db: DbClient) {
   return {
     /**
-     * Marks an order paid, enrolls its buyer and counts the sale in the daily stats, once. Concurrent
-     * confirmations of the same order are safe: only the one that moves it out of `pending` enrolls.
+     * Marks an order paid, enrolls its buyer, counts the sale in the daily stats and records `OrderPaid`
+     * in the outbox, once. Concurrent confirmations of the same order are safe: only the one that moves it out of `pending` enrolls.
      *
      * @param method The gateway that confirmed the payment.
      * @param providerRef The gateway's reference.
@@ -204,6 +205,11 @@ export function createPaymentConfirmationStore(db: DbClient) {
           });
           await recordSale(tx, { schoolId: order.schoolId, courseId, amount, currency, at: paidAt });
         }
+        await appendEvent(tx, {
+          type: "OrderPaid",
+          schoolId: order.schoolId,
+          payload: { orderId: order.id, userId: order.userId, courseIds: items.map((item) => item.courseId) },
+        });
         return { orderId: order.id, isNewlyPaid: true };
       });
     },

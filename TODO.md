@@ -60,7 +60,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-17 Connect students list + settings. Needs API-08.
 
 ## Ship M1
-- [ ] WRK-02 Outbox relay + BullMQ worker app, retries, dead-letter queue. Done when a failed job lands in the DLQ.
+- [x] WRK-02 Outbox relay + BullMQ worker app, retries, dead-letter queue. Done when a failed job lands in the DLQ.
 - [ ] API-09 Transactional email: magic link, purchase receipt, welcome to course (packages/email, en/km)
 - [ ] API-10 Rate limiting on auth and checkout (Redis)
 - [ ] API-11 Audit log for admin/instructor actions

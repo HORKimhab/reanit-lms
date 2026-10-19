@@ -112,6 +112,7 @@ model School {
   lessonProgress   LessonProgress[]
   dailySales       DailySales[]
   dailyCompletions DailyCompletions[]
+  outboxEvents     OutboxEvent[]
 
   @@map("schools")
 }
@@ -328,4 +329,22 @@ model DailyCompletions {
   @@unique([schoolId, courseId, day])
   @@index([courseId])
   @@map("daily_completions")
+}
+
+/// A domain event (`OrderPaid`, `CourseCompleted`) written in the transaction of the change it records;
+/// the worker relays unpublished ones to the job queue.
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @map("school_id") @db.Uuid
+  type        String
+  payload     Json
+  occurredAt  DateTime  @default(now()) @map("occurred_at")
+  /// Set once the relay has queued the event.
+  publishedAt DateTime? @map("published_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt, occurredAt])
+  @@index([schoolId])
+  @@map("outbox_events")
 }

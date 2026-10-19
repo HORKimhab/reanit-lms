@@ -24,13 +24,15 @@
   "devDependencies": {
     "@nestjs/testing": "catalog:",
     "@reanit/config": "workspace:*",
+    "@reanit/core": "workspace:*",
+    "@reanit/db": "workspace:*",
     "@reanit/nest": "workspace:*",
     "@swc/core": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "testcontainers": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:",
-    "unplugin-swc": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
   }

@@ -60,7 +60,7 @@ describe("learning store", () => {
     expect(await createLearningStore(db, betaId).listProgress(enrollmentId)).toEqual([]);
   });
 
-  it("completes the course and counts it in the day's completions once", async () => {
+  it("completes the course, counts it in the day's completions and records the event, once", async () => {
     const store = createLearningStore(db, alphaId);
     const at = new Date("2026-10-19T23:59:00Z");
 
@@ -70,6 +70,9 @@ describe("learning store", () => {
     expect((await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } })).completedAt).toEqual(at);
     expect(await db.dailyCompletions.findMany({ where: { courseId }, select: { day: true, completions: true } })).toEqual([
       { day: new Date("2026-10-19T00:00:00Z"), completions: 1 },
+    ]);
+    expect(await db.outboxEvent.findMany({ where: { type: "CourseCompleted", schoolId: alphaId }, select: { payload: true } })).toEqual([
+      { payload: { enrollmentId, courseId } },
     ]);
   });
 });

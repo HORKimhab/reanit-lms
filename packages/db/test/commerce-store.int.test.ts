@@ -82,6 +82,9 @@ describe("payment confirmation store", () => {
     expect(await createCommerceStore(db, alphaId).isEnrolled(buyer, courseId)).toBe(true);
     expect(await db.enrollment.count({ where: { userId: buyer, courseId } })).toBe(1);
     expect((await createCommerceStore(db, alphaId).findOrder(id, buyer))?.status).toBe("paid");
+    expect(await db.outboxEvent.findMany({ where: { type: "OrderPaid", payload: { path: ["orderId"], equals: id } }, select: { schoolId: true, payload: true } })).toEqual([
+      { schoolId: alphaId, payload: { orderId: id, userId: buyer, courseIds: [courseId] } },
+    ]);
   });
 
   it("lets only one of two concurrent confirmations pay the order", async () => {
