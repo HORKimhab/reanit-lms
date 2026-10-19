@@ -1,0 +1,238 @@
+// Core M1 model (README §4). Every table with a school_id has an RLS policy, added by hand in its migration.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  owner
+  admin
+  instructor
+  student
+}
+
+enum CourseStatus {
+  draft
+  published
+}
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum EnrollmentSource {
+  purchase
+  manual
+}
+
+/// A person. Global: one account can belong to many schools.
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships Membership[]
+  orders      Order[]
+  enrollments Enrollment[]
+
+  @@map("users")
+}
+
+/// A tenant: one creator's branded school.
+model School {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  subdomain  String   @unique
+  brandColor String?  @map("brand_color")
+  logoUrl    String?  @map("logo_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  memberships    Membership[]
+  courses        Course[]
+  sections       Section[]
+  lessons        Lesson[]
+  prices         Price[]
+  orders         Order[]
+  orderItems     OrderItem[]
+  enrollments    Enrollment[]
+  lessonProgress LessonProgress[]
+
+  @@map("schools")
+}
+
+model Membership {
+  id        String         @id @default(uuid()) @db.Uuid
+  schoolId  String         @map("school_id") @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  role      MembershipRole
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Course {
+  id          String       @id @default(uuid()) @db.Uuid
+  schoolId    String       @map("school_id") @db.Uuid
+  title       String
+  slug        String
+  description String?
+  status      CourseStatus @default(draft)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections    Section[]
+  prices      Price[]
+  orderItems  OrderItem[]
+  enrollments Enrollment[]
+
+  @@unique([schoolId, slug])
+  @@map("courses")
+}
+
+model Section {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  title    String
+  position Int
+
+  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([schoolId])
+  @@index([courseId, position])
+  @@map("sections")
+}
+
+model Lesson {
+  id        String @id @default(uuid()) @db.Uuid
+  schoolId  String @map("school_id") @db.Uuid
+  sectionId String @map("section_id") @db.Uuid
+  title     String
+  position  Int
+
+  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  section  Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([schoolId])
+  @@index([sectionId, position])
+  @@map("lessons")
+}
+
+/// What a course costs. Money is integer minor units + ISO 4217 code.
+model Price {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  courseId  String   @map("course_id") @db.Uuid
+  amount    Int
+  currency  String   @db.Char(3)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([schoolId])
+  @@index([courseId])
+  @@map("prices")
+}
+
+model Order {
+  id          String      @id @default(uuid()) @db.Uuid
+  schoolId    String      @map("school_id") @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  status      OrderStatus @default(pending)
+  totalAmount Int         @map("total_amount")
+  currency    String      @db.Char(3)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items       OrderItem[]
+  enrollments Enrollment[]
+
+  @@index([schoolId])
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  orderId  String @map("order_id") @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  priceId  String @map("price_id") @db.Uuid
+  amount   Int
+  currency String @db.Char(3)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  price  Price  @relation(fields: [priceId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId])
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Enrollment {
+  id        String           @id @default(uuid()) @db.Uuid
+  schoolId  String           @map("school_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  courseId  String           @map("course_id") @db.Uuid
+  orderId   String?          @map("order_id") @db.Uuid
+  source    EnrollmentSource
+  expiresAt DateTime?        @map("expires_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order    Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  progress LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([schoolId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id                   String    @id @default(uuid()) @db.Uuid
+  schoolId             String    @map("school_id") @db.Uuid
+  enrollmentId         String    @map("enrollment_id") @db.Uuid
+  lessonId             String    @map("lesson_id") @db.Uuid
+  videoPositionSeconds Int       @default(0) @map("video_position_seconds")
+  completedAt          DateTime? @map("completed_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+  @@index([schoolId])
+  @@index([lessonId])
+  @@map("lesson_progress")
+}

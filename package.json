@@ -12,7 +12,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "knip": "knip",
-    "dup": "jscpd"
+    "dup": "jscpd",
+    "db:migrate": "pnpm --filter @reanit/db migrate"
   },
   "devDependencies": {
     "jscpd": "catalog:",

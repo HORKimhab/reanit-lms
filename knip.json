@@ -4,6 +4,9 @@
     "packages/ui": {
       "entry": ["src/components/*.tsx", "src/lib/*.ts"]
     },
+    "packages/db": {
+      "ignoreDependencies": ["@prisma/client"]
+    },
     "packages/config": {
       "ignoreUnresolved": ["next"]
     }
