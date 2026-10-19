@@ -28,6 +28,7 @@ describe("parseEnv", () => {
       BAKONG_MERCHANT_NAME: "Reanit",
       BAKONG_MERCHANT_CITY: "Phnom Penh",
       BAKONG_BASE_URL: "https://sit-api-bakong.nbc.gov.kh",
+      FAKE_PAYMENTS: false,
     });
   });
 
@@ -41,6 +42,18 @@ describe("parseEnv", () => {
 
   it.each([{ STRIPE_SECRET_KEY: "sk_test_1" }, { STRIPE_WEBHOOK_SECRET: "whsec_1" }, { PAYWAY_MERCHANT_ID: "m" }, { PAYWAY_API_KEY: "k" }, { BAKONG_ACCOUNT_ID: "a@b" }, { BAKONG_TOKEN: "t" }])("throws a ZodError for half a gateway's credentials: %j", (half) => {
     expect(() => parseEnv({ ...REQUIRED, ...half })).toThrow(ZodError);
+  });
+
+  it.each(["http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000", "http://angkor.localhost:3000"])("allows fake payments when the app runs on %s", (appUrl) => {
+    expect(parseEnv({ ...REQUIRED, APP_URL: appUrl, FAKE_PAYMENTS: "true" }).FAKE_PAYMENTS).toBe(true);
+  });
+
+  it.each(["https://reanit.com", "https://localhost.reanit.com", "http://10.0.0.5:3000"])("throws a ZodError for fake payments when the app runs on %s", (appUrl) => {
+    expect(() => parseEnv({ ...REQUIRED, APP_URL: appUrl, FAKE_PAYMENTS: "true" })).toThrow(ZodError);
+  });
+
+  it("throws a ZodError for fake payments next to real Stripe credentials", () => {
+    expect(() => parseEnv({ ...REQUIRED, FAKE_PAYMENTS: "true", STRIPE_SECRET_KEY: "sk_test_1", STRIPE_WEBHOOK_SECRET: "whsec_1" })).toThrow(ZodError);
   });
 
   it("throws a ZodError for an unknown log level", () => {

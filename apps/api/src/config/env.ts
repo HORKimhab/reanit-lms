@@ -3,6 +3,20 @@ import { z } from "zod";
 
 const DEFAULT_PORT = 4000;
 
+/** Hosts that only ever reach the machine itself. */
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * Tells whether a URL points at this machine, as it does only in development and tests.
+ *
+ * @param url An absolute URL.
+ * @returns True for localhost (and its subdomains) and the loopback addresses.
+ */
+function isLocalhost(url: string): boolean {
+  const { hostname } = new URL(url);
+  return LOOPBACK_HOSTS.has(hostname) || hostname.endsWith(".localhost");
+}
+
 const envSchema = baseEnvSchema
   .extend({
   /** Public origin of the web app: builds links in emails, decides the Secure cookie flag and which origins may send mutating requests. */
@@ -38,6 +52,11 @@ const envSchema = baseEnvSchema
   BAKONG_MERCHANT_CITY: z.string().min(1).max(15).default("Phnom Penh"),
   /** Bakong Open API host: the sandbox until the account goes live (https://api-bakong.nbc.gov.kh). */
   BAKONG_BASE_URL: z.url().default("https://sit-api-bakong.nbc.gov.kh"),
+  /**
+   * End-to-end tests only: card payments go to a fake that pays every order as soon as it is checked.
+   * Refused unless APP_URL is a localhost address, so it can never take orders on a real deployment.
+   */
+  FAKE_PAYMENTS: z.stringbool().default(false),
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   /** Interface to listen on; all of them by default, as a container needs. */
   HOST: z.string().min(1).default("0.0.0.0"),
@@ -59,6 +78,14 @@ const envSchema = baseEnvSchema
   .refine((env) => Boolean(env.BAKONG_ACCOUNT_ID) === Boolean(env.BAKONG_TOKEN), {
     message: "Set BAKONG_ACCOUNT_ID and BAKONG_TOKEN together",
     path: ["BAKONG_TOKEN"],
+  })
+  .refine((env) => !env.FAKE_PAYMENTS || isLocalhost(env.APP_URL), {
+    message: "FAKE_PAYMENTS is for end-to-end tests: APP_URL must be a localhost address",
+    path: ["FAKE_PAYMENTS"],
+  })
+  .refine((env) => !env.FAKE_PAYMENTS || !env.STRIPE_SECRET_KEY, {
+    message: "FAKE_PAYMENTS takes Stripe's place: leave the Stripe credentials unset",
+    path: ["FAKE_PAYMENTS"],
   });
 
 /** The API's validated environment. */

@@ -52,6 +52,7 @@ export const TEST_ENV: Env = {
   BAKONG_MERCHANT_NAME: "Reanit",
   BAKONG_MERCHANT_CITY: "Phnom Penh",
   BAKONG_BASE_URL: "https://bakong.test",
+  FAKE_PAYMENTS: false,
   PORT: 4000,
   HOST: "127.0.0.1",
   TRUST_PROXY_HOPS: 0,

@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "catalog:",
+    "@playwright/test": "catalog:",
     "@reanit/config": "workspace:*",
     "@tailwindcss/postcss": "catalog:",
     "@testing-library/jest-dom": "catalog:",

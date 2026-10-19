@@ -17,6 +17,10 @@ coverage/
 .env.*
 !.env.example
 
+# Playwright output
+test-results/
+playwright-report/
+
 # OS
 .DS_Store
 

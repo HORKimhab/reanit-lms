@@ -11,6 +11,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "e2e": "pnpm --filter web e2e",
     "knip": "knip",
     "dup": "jscpd",
     "db:migrate": "pnpm --filter @reanit/db migrate",

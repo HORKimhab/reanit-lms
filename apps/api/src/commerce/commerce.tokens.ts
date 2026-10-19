@@ -6,6 +6,9 @@ export const PAYMENT_GATEWAYS = Symbol("PAYMENT_GATEWAYS");
 /** Injection token for the Stripe client, or null when Stripe is not configured. */
 export const STRIPE = Symbol("STRIPE");
 
+/** Injection token for the card gateway (Stripe, or the end-to-end tests' fake), or null when neither is set. */
+export const CARD = Symbol("CARD");
+
 /** Injection token for the PayWay gateway, or null when PayWay is not configured. */
 export const PAYWAY = Symbol("PAYWAY");
 

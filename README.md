@@ -242,6 +242,7 @@ curl localhost:4000/health
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
 - If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in `packages/db/.env` and `apps/api/.env` to match.
 - Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.
+- End-to-end tests (Playwright, `apps/web/e2e/`): with the compose services up, migrated and `pnpm storage:setup` done, run `pnpm build`, then `pnpm e2e` (first time: `pnpm --filter web exec playwright install chromium`). It starts the built API and web app on ports 4000 and 3000, so stop `pnpm dev` first. The API runs with `FAKE_PAYMENTS=true`: card checkout pays at once, through the same confirmation that enrolls real payments. The API refuses that flag unless `APP_URL` is a localhost address.
 - After changing an API route or DTO, run `pnpm openapi`: it rewrites `packages/api-client/openapi.json` and the client types. `pnpm test` fails while the committed spec is stale.
 
 ### pnpm usage
