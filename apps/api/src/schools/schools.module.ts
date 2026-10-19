@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { createSchoolService } from "@reanit/core/schools";
 import { createSchoolStore, type DbClient } from "@reanit/db";
 
-import { DB_CLIENT } from "../db/db.module";
+import { DB_CLIENT } from "@reanit/nest";
 import { RolesGuard } from "./roles.guard";
 import { SchoolsController } from "./schools.controller";
 import { SCHOOL_SERVICE } from "./schools.tokens";

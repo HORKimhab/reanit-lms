@@ -166,10 +166,11 @@ reanit-lms/
 ├─ apps/
 │  ├─ web/          # Next.js: marketing site, school sites, dashboard, player
 │  ├─ api/          # NestJS (Fastify): REST API over packages/core and packages/db
-│  └─ worker/       # BullMQ consumers: email, webhooks, certificates, stats
+│  └─ worker/       # Nest standalone app + @nestjs/bullmq: email, webhooks, certificates, stats
 ├─ packages/
 │  ├─ db/           # Prisma schema, migrations, tenant-scoped client
 │  ├─ core/         # Framework-free domain logic (commerce, learning, schools)
+│  ├─ nest/         # Nest modules apps/api and apps/worker share: env, database, logging
 │  ├─ api-client/   # Typed client for apps/api, generated from the committed openapi.json
 │  ├─ ui/           # Shared UI components (shadcn)
 │  ├─ email/        # React Email templates

@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { createCatalogService } from "@reanit/core/catalog";
 import { createCatalogStore, type DbClient } from "@reanit/db";
 
-import { DB_CLIENT } from "../db/db.module";
+import { DB_CLIENT } from "@reanit/nest";
 import { SchoolsModule } from "../schools/schools.module";
 import { CATALOG_FOR_SCHOOL, type CatalogForSchool } from "./catalog.tokens";
 import { CoursesController } from "./courses.controller";

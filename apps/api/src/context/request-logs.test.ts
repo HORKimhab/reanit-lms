@@ -1,7 +1,7 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { REQUEST_ID_HEADER } from "../context/request-id";
+import { REQUEST_ID_HEADER } from "./request-id";
 import { createTestApp } from "../test/app";
 import { captureLogs } from "../test/logs";
 

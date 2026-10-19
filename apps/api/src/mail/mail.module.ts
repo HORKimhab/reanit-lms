@@ -2,7 +2,9 @@ import { Global, Module } from "@nestjs/common";
 import type { Mailer } from "@reanit/core/auth";
 import { createTransport } from "nodemailer";
 
-import { ENV, type Env } from "../config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "../config/env";
 
 /** Injection token for the `Mailer` port from `@reanit/core`. */
 export const MAILER = Symbol("MAILER");

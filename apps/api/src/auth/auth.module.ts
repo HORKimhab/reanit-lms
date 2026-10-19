@@ -3,7 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { createAuthService, type Clock, type Mailer } from "@reanit/core/auth";
 import { createAuthStore, type DbClient } from "@reanit/db";
 
-import { DB_CLIENT } from "../db/db.module";
+import { DB_CLIENT } from "@reanit/nest";
 import { MAILER } from "../mail/mail.module";
 import { AuthController } from "./auth.controller";
 import { AUTH_SERVICE } from "./auth.tokens";

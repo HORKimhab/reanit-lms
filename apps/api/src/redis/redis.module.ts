@@ -1,7 +1,9 @@
 import { Global, Inject, Logger, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { Redis } from "ioredis";
 
-import { ENV, type Env } from "../config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "../config/env";
 
 /** Injection token for the shared Redis connection. */
 export const REDIS = Symbol("REDIS");

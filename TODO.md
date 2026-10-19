@@ -34,7 +34,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] NEST-08 Web as API client: same-origin `/api/*` rewrite from Next to `apps/api` (no CORS, one cookie domain); server actions and pages call `packages/api-client`, forwarding the session cookie. Remove `@reanit/db` and the server wiring from `apps/web`, and block re-adding it with an eslint `no-restricted-imports` rule. Done when no `apps/web` file imports `@reanit/db`. Needs NEST-07.
 - [x] NEST-09 API e2e tests: supertest against the Nest app + Testcontainers Postgres per module (auth, schools, catalog), including the 401/403/404 paths and a cross-school request that must see nothing. Needs NEST-08.
 - [x] NEST-10 Run it: `apps/api` Dockerfile (multi-stage, non-root), compose service for local dev, `pnpm dev` starts web + api. Done when sign-up → create school → create course works through the web app. Needs NEST-09.
-- [ ] NEST-11 Worker on Nest ⚠ Nest standalone app with `@nestjs/bullmq` or plain BullMQ for WRK-02.
+- [x] NEST-11 Worker on Nest: `apps/worker` as a Nest standalone app (no HTTP) with `@nestjs/bullmq` (decided over plain BullMQ), sharing the env, database and logging modules with `apps/api` through `packages/nest`; shutdown closes connections. Queues and jobs come with WRK-02 (its first queue is what connects to Redis). Done when the worker boots with BullMQ configured from `REDIS_URL` and stops cleanly.
 
 ## Connect to backend
 - [x] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.

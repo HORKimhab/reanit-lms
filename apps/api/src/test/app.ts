@@ -13,10 +13,12 @@ import { AppModule } from "../app.module";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
 import { setupApp } from "../app.setup";
-import { ENV, type Env } from "../config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
-import { DB_CLIENT } from "../db/db.module";
-import { loggerOptions } from "../logging/logger-options";
+import { DB_CLIENT } from "@reanit/nest";
+import { loggerOptions } from "@reanit/nest";
 import { REDIS } from "../redis/redis.module";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 

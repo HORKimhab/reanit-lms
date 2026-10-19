@@ -5,7 +5,7 @@ import type { FastifyReply } from "fastify";
 import type { Redis } from "ioredis";
 
 import { Public } from "../auth/auth.decorators";
-import { DB_CLIENT } from "../db/db.module";
+import { DB_CLIENT } from "@reanit/nest";
 import { REDIS } from "../redis/redis.module";
 import { PingHealthIndicator } from "./ping.health";
 

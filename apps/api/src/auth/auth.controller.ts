@@ -10,7 +10,9 @@ import {
 } from "@reanit/core/auth";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { ENV, type Env } from "../config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "../config/env";
 import { CurrentUser, Public } from "./auth.decorators";
 import { LogInBody, MagicLinkBody, SessionResponse, SignUpBody, VerifyMagicLinkQuery } from "./auth.dto";
 import { AUTH_SERVICE } from "./auth.tokens";

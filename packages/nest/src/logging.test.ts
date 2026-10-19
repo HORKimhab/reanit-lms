@@ -1,19 +1,26 @@
 import { pino } from "pino";
 import { describe, expect, it } from "vitest";
 
-import { captureLogs } from "../test/logs";
-import { REDACTED_PATHS } from "./logger-options";
+import { loggerOptions, REDACTED_PATHS } from "./logging";
 
 /**
- * Logs one object through pino with the API's redaction and returns what was written.
+ * Logs one object through pino with the shared redaction and returns what was written.
  *
  * @param fields Fields to log.
  * @returns The written line, parsed.
  */
 function logOnce(fields: object) {
-  const { lines, stream } = captureLogs();
-  pino({ redact: REDACTED_PATHS }, stream).info(fields);
-  return lines[0];
+  let written = "{}";
+  /**
+   * Keeps the line pino writes.
+   *
+   * @param line A JSON line.
+   */
+  function write(line: string) {
+    written = line;
+  }
+  pino({ redact: REDACTED_PATHS }, { write }).info(fields);
+  return JSON.parse(written) as Record<string, unknown>;
 }
 
 describe("REDACTED_PATHS", () => {
@@ -31,5 +38,11 @@ describe("REDACTED_PATHS", () => {
     expect(logOnce({ res: { headers: { "set-cookie": "session=abc" } } })).toMatchObject({
       res: { headers: { "set-cookie": "[Redacted]" } },
     });
+  });
+});
+
+describe("loggerOptions", () => {
+  it("logs at the configured level with the shared redaction", () => {
+    expect(loggerOptions({ LOG_LEVEL: "warn" })).toEqual({ level: "warn", redact: REDACTED_PATHS });
   });
 });

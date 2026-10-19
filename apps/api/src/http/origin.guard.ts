@@ -1,7 +1,9 @@
 import { ForbiddenException, Inject, Injectable, type CanActivate, type ExecutionContext } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-import { ENV, type Env } from "../config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "../config/env";
 
 /** Methods that read only; everything else must come from the web app's own origin. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);

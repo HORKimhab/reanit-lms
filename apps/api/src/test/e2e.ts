@@ -11,7 +11,7 @@ import request from "supertest";
 import { afterAll, beforeAll, inject } from "vitest";
 
 import { AppModule } from "../app.module";
-import { ENV } from "../config/env";
+import { ENV } from "@reanit/nest";
 import { MAILER } from "../mail/mail.module";
 import { REDIS } from "../redis/redis.module";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";

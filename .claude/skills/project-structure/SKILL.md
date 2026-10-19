@@ -8,8 +8,9 @@ description: Reanit LMS folder map and where new code belongs. Use when creating
 ```
 apps/web        Next.js: school sites, dashboard, player (calls apps/api)
 apps/api        NestJS on Fastify: REST API, one Nest module per domain module
-apps/worker     BullMQ jobs: email, webhooks, video, certificates, stats
+apps/worker     Nest standalone app (no HTTP) with @nestjs/bullmq: email, webhooks, video, certificates, stats
 packages/db     @reanit/db: Prisma schema, migrations, RLS, tenant client
+packages/nest   @reanit/nest: Nest modules both apps share (env, database, logging)
 packages/core   @reanit/core: pure domain logic, one folder per module
 packages/api-client @reanit/api-client: typed apps/api client from openapi.json (`pnpm openapi` regenerates)
 packages/ui     @reanit/ui: shared shadcn components

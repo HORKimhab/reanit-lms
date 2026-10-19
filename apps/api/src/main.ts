@@ -5,7 +5,9 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
 import { AppModule } from "./app.module";
 import { setupApp } from "./app.setup";
-import { ENV, type Env } from "./config/env";
+import { ENV } from "@reanit/nest";
+
+import type { Env } from "./config/env";
 import { createAdapter } from "./context/request-id";
 
 /**

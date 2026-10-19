@@ -1,7 +1,7 @@
 import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { createDbClient, type DbClient } from "@reanit/db";
 
-import { ENV, type Env } from "../config/env";
+import { ENV, type BaseEnv } from "./env";
 
 /** Injection token for the process-wide, unscoped Prisma client. Wrap it with `forSchool` for tenant data. */
 export const DB_CLIENT = Symbol("DB_CLIENT");
@@ -12,7 +12,7 @@ export const DB_CLIENT = Symbol("DB_CLIENT");
  * @param env Validated environment.
  * @returns The client.
  */
-function openDb(env: Env) {
+function openDb(env: BaseEnv) {
   return createDbClient(env.DATABASE_URL);
 }
 
