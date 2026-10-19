@@ -8,7 +8,7 @@ export {
   PaymentMethodUnavailableError,
   UnknownPaymentError,
 } from "./errors";
-export { moneyFormat } from "./money";
+export { moneyFormat, toMinorUnits } from "./money";
 export type {
   CommerceStore,
   Coupon,
@@ -25,8 +25,10 @@ export type {
 } from "./ports";
 export {
   checkoutSchema,
+  COUPON_CODE_MAX_LENGTH,
   couponSchema,
   CURRENCIES,
+  MAX_PERCENT_OFF,
   offerQuerySchema,
   PAYMENT_METHODS,
   priceSchema,

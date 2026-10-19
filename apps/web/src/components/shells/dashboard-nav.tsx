@@ -1,4 +1,4 @@
-import { BookOpen, LayoutDashboard, Settings, Users } from "lucide-react";
+import { BookOpen, LayoutDashboard, Settings, TicketPercent, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { NavLink } from "./nav-link";
@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/dashboard", key: "overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/courses", key: "courses", icon: BookOpen, exact: false },
   { href: "/dashboard/students", key: "students", icon: Users, exact: false },
+  { href: "/dashboard/coupons", key: "coupons", icon: TicketPercent, exact: false },
   { href: "/dashboard/settings", key: "settings", icon: Settings, exact: false },
 ] as const;
 

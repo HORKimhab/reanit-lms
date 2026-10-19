@@ -21,7 +21,7 @@ async function signUp(page: Page, name: string) {
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
-test("a creator sells a course and a student buys it and watches the first lesson", async ({ page, browser }) => {
+test("a creator sells a course with a coupon and a student buys it and watches the first lesson", async ({ page, browser }) => {
   const subdomain = `e2e-${RUN}`;
 
   await test.step("the creator signs up and opens a school", async () => {
@@ -58,15 +58,26 @@ test("a creator sells a course and a student buys it and watches the first lesso
     expect((await page.request.put(`/api/courses/${course.id}/price`, { data: PRICE })).ok()).toBe(true);
   });
 
+  await test.step("the creator makes a launch coupon", async () => {
+    await page.goto("/dashboard/coupons");
+    await page.getByLabel("Code").fill("launch20");
+    await page.getByRole("spinbutton", { name: "Percent" }).fill("20");
+    await page.getByRole("button", { name: "Create coupon" }).click();
+    await expect(page.getByRole("rowheader", { name: "LAUNCH20" })).toBeVisible();
+  });
+
   const student = await (await browser.newContext()).newPage();
 
-  await test.step("a student finds the course, signs up and pays", async () => {
+  await test.step("a student finds the course, signs up and pays with the coupon", async () => {
     await student.goto(`/s/${subdomain}/courses/brand-design-basics`);
     await student.getByRole("link", { name: "Enroll now" }).first().click();
     await student.getByRole("link", { name: "Create an account" }).click();
     await signUp(student, "Sophea Student");
     await student.getByRole("radio", { name: "Card" }).check();
-    await student.getByRole("button", { name: "Pay $49.00" }).click();
+    await student.getByLabel("Coupon code").fill("launch20");
+    await student.getByRole("button", { name: "Apply" }).click();
+    await expect(student.getByText("LAUNCH20 applied: $9.80 off")).toBeVisible();
+    await student.getByRole("button", { name: "Pay $39.20" }).click();
     await expect(student.getByRole("status")).toHaveText("Payment received. You're enrolled!");
   });
 

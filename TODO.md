@@ -72,7 +72,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 
 ## M2 growth (backlog, refine before starting)
 - [x] API-12 Coupons: percent/fixed, expiry, usage limit, applied at checkout
-- [ ] WEB-19 Coupon management + checkout coupon field. Needs API-12.
+- [x] WEB-19 Coupon management + checkout coupon field. Needs API-12.
 - [ ] API-13 Bundles: multiple courses, one price, enroll all on payment
 - [ ] WEB-20 Bundle builder + bundle sales page. Needs API-13.
 - [ ] API-14 Quizzes: questions, attempts, pass mark

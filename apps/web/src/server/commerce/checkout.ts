@@ -1,4 +1,4 @@
-import type { OrderSummary, PaymentMethod, PriceInput } from "@reanit/core/commerce";
+import type { Discount, OrderSummary, PaymentMethod, PriceInput } from "@reanit/core/commerce";
 
 import { getApi } from "../api";
 import { checkPublicResponse } from "../schools/site";
@@ -11,6 +11,20 @@ export type Offer = { price: PriceInput | null; methods: PaymentMethod[] };
 export type Order = Omit<OrderSummary, "providerRef">;
 
 /**
+ * Asks the API how a published course can be bought, priced with a coupon when one is given.
+ *
+ * @param subdomain The school's subdomain.
+ * @param slug The course's slug.
+ * @param coupon The coupon code, upper case.
+ * @returns The typed client's answer.
+ */
+async function fetchOffer(subdomain: string, slug: string, coupon?: string) {
+  return (await getApi()).GET("/schools/by-subdomain/{subdomain}/courses/{slug}/offer", {
+    params: { path: { subdomain, slug }, query: coupon ? { coupon } : {} },
+  });
+}
+
+/**
  * Loads how a published course can be bought.
  *
  * @param subdomain The school's subdomain.
@@ -19,12 +33,28 @@ export type Order = Omit<OrderSummary, "providerRef">;
  * @throws {Error} Next's not-found signal for an unknown school or course, or an unexpected-response error.
  */
 export async function getOffer(subdomain: string, slug: string): Promise<Offer> {
-  const { data, response } = await (await getApi()).GET("/schools/by-subdomain/{subdomain}/courses/{slug}/offer", {
-    params: { path: { subdomain, slug } },
-  });
+  const { data, response } = await fetchOffer(subdomain, slug);
   checkPublicResponse(response);
   // checkPublicResponse returned, so the API answered 2xx with the offer.
-  return data!;
+  const { price, methods } = data!;
+  return { price, methods };
+}
+
+/**
+ * Prices a published course with a coupon.
+ *
+ * @param subdomain The school's subdomain.
+ * @param slug The course's slug.
+ * @param coupon The coupon code, upper case.
+ * @returns What the coupon takes off, or null when it cannot be used (unknown, expired, used up, another currency) or the course has no price.
+ * @throws {Error} Next's not-found signal for an unknown school or course, or an unexpected-response error.
+ */
+export async function getDiscount(subdomain: string, slug: string, coupon: string): Promise<Discount | null> {
+  const { data, response } = await fetchOffer(subdomain, slug, coupon);
+  if (response.status === 400) return null;
+  checkPublicResponse(response);
+  // checkPublicResponse returned, so the API answered 2xx with the offer.
+  return data!.discount;
 }
 
 /**

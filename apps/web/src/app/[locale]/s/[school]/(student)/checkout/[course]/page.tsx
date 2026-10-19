@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
-import { getOrderStatus, startCheckout } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
+import { checkCoupon, getOrderStatus, startCheckout } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { requireUser } from "@/server/auth/session";
 import { getOffer, ordersPath } from "@/server/commerce/checkout";
@@ -35,6 +35,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[locale]/s/[s
         action={startCheckout.bind(null, school, course.slug)}
         ordersBase={ordersPath(school)}
         checkStatus={getOrderStatus.bind(null, school)}
+        checkCoupon={checkCoupon.bind(null, school, course.slug)}
       />
     </div>
   );

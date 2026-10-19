@@ -1,22 +1,23 @@
 "use client";
 
-import type { OrderStatus, PaymentMethod, PriceInput } from "@reanit/core/commerce";
+import type { Discount, OrderStatus, PaymentMethod, PriceInput } from "@reanit/core/commerce";
 import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
-import type { CheckoutState } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
+import type { CheckoutState, CouponCheck } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
 import { useMoney } from "@/i18n/format";
 import { Link } from "@/i18n/navigation";
 
+import { CouponField } from "./coupon-field";
 import { GatewayForm } from "./gateway-form";
 import { KhqrPayment } from "./khqr-payment";
 
 const IDLE: CheckoutState = { status: "idle" };
 
 /**
- * Picks a payment method and starts paying, then shows the gateway's next step: a form posted to
- * PayWay or a KHQR code to scan (Stripe is a redirect the server makes).
+ * Picks a payment method and an optional coupon and starts paying, then shows the gateway's next
+ * step: a form posted to PayWay or a KHQR code to scan (Stripe is a redirect the server makes).
  *
  * @param props - Component props.
  * @param props.methods - The methods that take the course's currency, in the order to offer them.
@@ -25,7 +26,8 @@ const IDLE: CheckoutState = { status: "idle" };
  * @param props.action - Starts the checkout; bound to the school and course.
  * @param props.ordersBase - The school's orders path; an order's status page is `<ordersBase>/<order id>`.
  * @param props.checkStatus - Reads an order's status; bound to the school.
- * @returns The method picker, or the step that follows it.
+ * @param props.checkCoupon - Checks a coupon code against the price; bound to the school and course.
+ * @returns The method picker and coupon box, or the step that follows them.
  */
 export function CheckoutForm({
   methods,
@@ -34,6 +36,7 @@ export function CheckoutForm({
   action,
   ordersBase,
   checkStatus,
+  checkCoupon,
 }: {
   methods: PaymentMethod[];
   price: PriceInput;
@@ -41,10 +44,20 @@ export function CheckoutForm({
   action: (previous: CheckoutState, formData: FormData) => Promise<CheckoutState>;
   ordersBase: string;
   checkStatus: (orderId: string) => Promise<OrderStatus>;
+  checkCoupon: (code: string) => Promise<CouponCheck>;
 }) {
   const t = useTranslations("Checkout");
   const [state, submit, isPending] = useActionState(action, IDLE);
-  const priceLabel = useMoney()(price.amount, price.currency);
+  const [discount, setDiscount] = useState<Discount | null>(null);
+  const money = useMoney();
+  /**
+   * Formats an amount in the course's currency.
+   *
+   * @param amount - Minor units.
+   * @returns The localized amount.
+   */
+  const formatMoney = (amount: number) => money(amount, price.currency);
+  const priceLabel = formatMoney(discount?.total ?? price.amount);
 
   if (state.status === "form") return <GatewayForm action={state.action} fields={state.fields} />;
   if (state.status === "qr") {
@@ -81,9 +94,10 @@ export function CheckoutForm({
           </label>
         ))}
       </fieldset>
-      {state.status === "unavailable" ? (
+      <CouponField applied={discount} formatMoney={formatMoney} checkCoupon={checkCoupon} onChange={setDiscount} />
+      {state.status === "unavailable" || state.status === "invalidCoupon" ? (
         <p role="alert" className="text-sm text-destructive">
-          {t("unavailable")}
+          {t(state.status === "unavailable" ? "unavailable" : "couponInvalid")}
         </p>
       ) : null}
       <Button type="submit" size="lg" disabled={isPending}>

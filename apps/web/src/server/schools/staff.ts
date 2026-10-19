@@ -7,6 +7,19 @@ import { ONBOARDING_PATH } from "@/app/[locale]/(auth)/onboarding/constants";
 import { getApi, unexpectedResponse } from "../api";
 import { loginPath } from "../auth/session";
 
+/** Roles that run the school's business (settings, coupons); the API refuses instructors. */
+const MANAGER_ROLES: ReadonlySet<MembershipRole> = new Set(["owner", "admin"]);
+
+/**
+ * Tells whether a role may change the school's settings and sales, such as its coupons.
+ *
+ * @param role The creator's role in the school.
+ * @returns True for owners and admins.
+ */
+export function canManageSchool(role: MembershipRole): boolean {
+  return MANAGER_ROLES.has(role);
+}
+
 /** Where creator pages send signed-out visitors back to after logging in. */
 const DASHBOARD_PATH = "/dashboard";
 

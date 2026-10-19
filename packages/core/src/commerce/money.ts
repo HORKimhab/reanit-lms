@@ -25,3 +25,24 @@ export function moneyFormat(amountMinor: number, currency: string): { value: num
     options: { style: "currency", currency, ...(digits !== undefined && { minimumFractionDigits: digits, maximumFractionDigits: digits }) },
   };
 }
+
+/**
+ * Reads an amount a person typed in major units ("10.50", "5,000") into integer minor units, allowing
+ * only as many decimals as the currency shows (none for riel).
+ *
+ * @param typed The amount as typed; thousands separators are ignored.
+ * @param currency ISO 4217 code.
+ * @returns The amount in minor units, or null when it is not a plain non-negative number with the allowed decimals.
+ * @example
+ * toMinorUnits("10.5", "USD"); // 1050
+ * toMinorUnits("5,000", "KHR"); // 500000
+ */
+export function toMinorUnits(typed: string, currency: string): number | null {
+  const minorDigits = MINOR_DIGITS[currency] ?? DEFAULT_MINOR_DIGITS;
+  const shownDigits = DISPLAY_DIGITS[currency] ?? minorDigits;
+  const fractionPattern = shownDigits > 0 ? `(?:\\.(\\d{1,${shownDigits}}))?` : "";
+  const match = new RegExp(`^(\\d+)${fractionPattern}$`).exec(typed.trim().replaceAll(",", ""));
+  if (!match) return null;
+  const [, whole = "", fraction = ""] = match;
+  return Number(whole) * 10 ** minorDigits + Number(fraction.padEnd(minorDigits, "0"));
+}

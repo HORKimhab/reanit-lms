@@ -42,6 +42,7 @@
     "overview": "Overview",
     "courses": "Courses",
     "students": "Students",
+    "coupons": "Coupons",
     "settings": "Settings"
   },
   "Dashboard": {
@@ -150,6 +151,45 @@
     "logoPreview": "Logo preview",
     "previewCourse": "Your course title",
     "staffOnly": "Only the school's owner and admins can change its settings."
+  },
+  "Coupons": {
+    "newTitle": "New coupon",
+    "code": "Code",
+    "codeHint": "Students type this at checkout.",
+    "kind": "Discount",
+    "kinds": {
+      "percent": "Percent off",
+      "fixed": "Amount off"
+    },
+    "percentOff": "Percent",
+    "amountOff": "Amount",
+    "currency": "Currency",
+    "expiresAt": "Last day (optional)",
+    "expiresHint": "It stops working at the end of this day.",
+    "maxRedemptions": "Usage limit (optional)",
+    "maxRedemptionsHint": "How many paid orders can use it. Leave empty for no limit.",
+    "create": "Create coupon",
+    "creating": "Creating…",
+    "created": "Coupon created",
+    "errors": {
+      "code": "Use 3 to 32 letters, digits, - or _ that no other coupon of yours uses.",
+      "percentOff": "Enter a whole number from 1 to 99.",
+      "amountOff": "Enter an amount in this currency, above zero.",
+      "expiresAt": "Pick a date.",
+      "maxRedemptions": "Enter a whole number above zero, or leave it empty."
+    },
+    "caption": "Your coupons",
+    "discount": "Discount",
+    "uses": "Uses",
+    "ends": "Ends",
+    "actions": "Actions",
+    "never": "Never",
+    "usesOf": "{used} of {max}",
+    "off": "{amount} off",
+    "delete": "Delete coupon {code}",
+    "emptyTitle": "No coupons yet",
+    "emptyText": "Create a code to give students a discount at checkout.",
+    "staffOnly": "Only the school's owner and admins can manage coupons."
   },
   "School": {
     "coursesHeading": "Courses",
@@ -298,7 +338,13 @@
     "scanTitle": "Scan to pay in any banking app",
     "qrLabel": "KHQR code to pay {price}",
     "expiresAt": "The code works until {time}.",
-    "waiting": "Waiting for your payment…"
+    "waiting": "Waiting for your payment…",
+    "couponLabel": "Coupon code",
+    "applyCoupon": "Apply",
+    "applyingCoupon": "Checking…",
+    "couponApplied": "{code} applied: {discount} off",
+    "removeCoupon": "Remove coupon",
+    "couponInvalid": "This coupon can't be used on this course."
   },
   "Order": {
     "title": "Your order",

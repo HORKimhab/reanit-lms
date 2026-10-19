@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CheckoutState } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
+import type { CheckoutState, CouponCheck } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
 import { renderWithIntl } from "@/test/render";
 
 import { CheckoutForm } from "./checkout-form";
@@ -14,9 +14,14 @@ const PRICE = { amount: 4900, currency: "USD" as const };
  *
  * @param answer - What the checkout action returns.
  * @param methods - The methods offered.
+ * @param coupon - What checking a coupon code returns.
  * @returns The user-event instance and the action spy.
  */
-async function setup(answer: CheckoutState, methods: ("stripe" | "aba_payway" | "bakong_khqr")[] = ["aba_payway", "bakong_khqr", "stripe"]) {
+async function setup(
+  answer: CheckoutState,
+  methods: ("stripe" | "aba_payway" | "bakong_khqr")[] = ["aba_payway", "bakong_khqr", "stripe"],
+  coupon: CouponCheck = { status: "invalid" },
+) {
   const user = userEvent.setup();
   const action = vi.fn<(previous: CheckoutState, formData: FormData) => Promise<CheckoutState>>().mockResolvedValue(answer);
   renderWithIntl(
@@ -27,6 +32,7 @@ async function setup(answer: CheckoutState, methods: ("stripe" | "aba_payway" | 
       action={action}
       ordersBase="/s/angkor/orders"
       checkStatus={vi.fn().mockResolvedValue("pending")}
+      checkCoupon={vi.fn().mockResolvedValue(coupon)}
     />,
   );
   await screen.findByText(methods.length > 0 ? "How do you want to pay?" : "No payment method takes this course's currency yet.");
@@ -47,6 +53,24 @@ describe("CheckoutForm", () => {
     await user.click(screen.getByRole("button", { name: "Pay $49.00" }));
 
     expect(action.mock.calls[0]?.[1].get("method")).toBe("stripe");
+  });
+
+  it("charges the discounted total once a coupon is applied, and pays with its code", async () => {
+    const { user, action } = await setup({ status: "unavailable" }, ["stripe"], { status: "applied", discount: { code: "SAVE20", amountOff: 980, total: 3920 } });
+
+    await user.type(screen.getByRole("textbox", { name: "Coupon code" }), "save20");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await user.click(await screen.findByRole("button", { name: "Pay $39.20" }));
+
+    expect(action.mock.calls[0]?.[1].get("couponCode")).toBe("SAVE20");
+  });
+
+  it("says the coupon stopped working when paying is refused for it", async () => {
+    const { user } = await setup({ status: "invalidCoupon" });
+
+    await user.click(screen.getByRole("button", { name: "Pay $49.00" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This coupon can't be used on this course.");
   });
 
   it("asks for another method when the chosen one cannot take the payment", async () => {

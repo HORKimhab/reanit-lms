@@ -6,7 +6,7 @@ import { setTestLocale } from "@/test/intl-server";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
-import { getOrderStatus, startCheckout, type CheckoutState } from "./actions";
+import { checkCoupon, getOrderStatus, startCheckout, type CheckoutState } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
@@ -14,16 +14,19 @@ vi.mock("next-intl/server", () => import("@/test/intl-server"));
 const ROUTE = "POST /schools/by-subdomain/angkor/checkout";
 const ORDER_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a05";
 const IDLE: CheckoutState = { status: "idle" };
+const OFFER_ROUTE = "GET /schools/by-subdomain/angkor/courses/brand/offer";
 
 /**
  * Submits the checkout form for the test course.
  *
  * @param method The chosen method.
+ * @param couponCode The applied coupon's code, if any.
  * @returns What the form shows next.
  */
-function pay(method: string | null) {
+function pay(method: string | null, couponCode?: string) {
   const formData = new FormData();
   if (method !== null) formData.set("method", method);
+  if (couponCode !== undefined) formData.set("couponCode", couponCode);
   return startCheckout("angkor", "brand", IDLE, formData);
 }
 
@@ -39,6 +42,51 @@ function started(payment: Record<string, unknown>) {
 
 beforeEach(() => {
   signIn();
+});
+
+describe("startCheckout with a coupon", () => {
+  it("sends the applied coupon's code with the order", async () => {
+    onApi(ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
+
+    await pay("aba_payway", "SAVE20");
+
+    expect(await requestTo(ROUTE)?.json()).toMatchObject({ couponCode: "SAVE20" });
+  });
+
+  it("sends no coupon when none was applied", async () => {
+    onApi(ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
+
+    await pay("aba_payway", "");
+
+    expect(await requestTo(ROUTE)?.json()).not.toHaveProperty("couponCode");
+  });
+
+  it("says the coupon stopped working when the API refuses it", async () => {
+    onApi(ROUTE, problem(400, "urn:reanit:problem:invalid-coupon"));
+
+    expect(await pay("stripe", "SAVE20")).toEqual({ status: "invalidCoupon" });
+  });
+});
+
+describe("checkCoupon", () => {
+  it("returns what the coupon takes off, asking with the code in upper case", async () => {
+    const discount = { code: "SAVE20", amountOff: 980, total: 3920 };
+    onApi(OFFER_ROUTE, Response.json({ price: { amount: 4900, currency: "USD" }, methods: ["stripe"], discount }));
+
+    expect(await checkCoupon("angkor", "brand", " save20 ")).toEqual({ status: "applied", discount });
+    expect(new URL(requestTo(OFFER_ROUTE)?.url ?? "").searchParams.get("coupon")).toBe("SAVE20");
+  });
+
+  it("says a coupon the API refuses cannot be used", async () => {
+    onApi(OFFER_ROUTE, problem(400, "urn:reanit:problem:invalid-coupon"));
+
+    expect(await checkCoupon("angkor", "brand", "OLD20")).toEqual({ status: "invalid" });
+  });
+
+  it("refuses a malformed code without asking the API", async () => {
+    expect(await checkCoupon("angkor", "brand", "no spaces")).toEqual({ status: "invalid" });
+    expect(requestTo(OFFER_ROUTE)).toBeUndefined();
+  });
 });
 
 describe("startCheckout", () => {

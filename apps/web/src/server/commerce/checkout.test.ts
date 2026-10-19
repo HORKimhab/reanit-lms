@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { onApi, problem } from "@/test/api";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 
-import { getOffer, getOrder, ordersPath } from "./checkout";
+import { getDiscount, getOffer, getOrder, ordersPath } from "./checkout";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 
@@ -15,7 +15,7 @@ const ORDER_ROUTE = `GET /schools/by-subdomain/angkor/orders/${ORDER_ID}`;
 describe("getOffer", () => {
   it("returns the course's price and methods", async () => {
     const offer = { price: { amount: 2_000_000, currency: "KHR" }, methods: ["aba_payway", "bakong_khqr"] };
-    onApi(OFFER_ROUTE, Response.json(offer));
+    onApi(OFFER_ROUTE, Response.json({ ...offer, discount: null }));
 
     expect(await getOffer("angkor", "brand")).toEqual(offer);
   });
@@ -24,6 +24,27 @@ describe("getOffer", () => {
     onApi(OFFER_ROUTE, problem(404));
 
     await expect(getOffer("angkor", "brand")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("getDiscount", () => {
+  it("returns what the coupon takes off", async () => {
+    const discount = { code: "SAVE20", amountOff: 400_000, total: 1_600_000 };
+    onApi(OFFER_ROUTE, Response.json({ price: { amount: 2_000_000, currency: "KHR" }, methods: ["bakong_khqr"], discount }));
+
+    expect(await getDiscount("angkor", "brand", "SAVE20")).toEqual(discount);
+  });
+
+  it("returns null for a coupon the API refuses", async () => {
+    onApi(OFFER_ROUTE, problem(400, "urn:reanit:problem:invalid-coupon"));
+
+    expect(await getDiscount("angkor", "brand", "OLD20")).toBeNull();
+  });
+
+  it("404s on an unknown course", async () => {
+    onApi(OFFER_ROUTE, problem(404));
+
+    await expect(getDiscount("angkor", "brand", "SAVE20")).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

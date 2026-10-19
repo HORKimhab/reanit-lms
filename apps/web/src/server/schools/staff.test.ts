@@ -7,7 +7,7 @@ import { signIn } from "@/test/session";
 import { STAFF_SCHOOL } from "@/test/staff";
 
 import { loginPath } from "../auth/session";
-import { getStaffSchool } from "./staff";
+import { canManageSchool, getStaffSchool } from "./staff";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 
@@ -32,5 +32,13 @@ describe("getStaffSchool", () => {
     onApi("GET /schools/current", problem(401));
 
     await expect(getStaffSchool()).rejects.toEqual(new RedirectError(loginPath("/dashboard")));
+  });
+});
+
+describe("canManageSchool", () => {
+  it("lets owners and admins manage the school, not instructors", () => {
+    expect(canManageSchool("owner")).toBe(true);
+    expect(canManageSchool("admin")).toBe(true);
+    expect(canManageSchool("instructor")).toBe(false);
   });
 });

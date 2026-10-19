@@ -47,10 +47,15 @@ export const priceSchema = z
   });
 
 /** Highest percent a coupon takes off: an order always charges something, since only a confirmed payment enrolls. */
-const MAX_PERCENT_OFF = 99;
+export const MAX_PERCENT_OFF = 99;
 
-/** Letters, digits, `-` and `_`, 3 to 32 long; compared in upper case. */
-const COUPON_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
+/** Shortest coupon code. */
+const COUPON_CODE_MIN_LENGTH = 3;
+/** Longest coupon code. */
+export const COUPON_CODE_MAX_LENGTH = 32;
+
+/** Letters, digits, `-` and `_`, starting with a letter or digit; compared in upper case. */
+const COUPON_CODE_PATTERN = new RegExp(`^[A-Z0-9][A-Z0-9_-]{${COUPON_CODE_MIN_LENGTH - 1},${COUPON_CODE_MAX_LENGTH - 1}}$`);
 
 /** A coupon code as a student or creator types it, normalized to upper case. */
 const couponCodeSchema = z.string().trim().toUpperCase().regex(COUPON_CODE_PATTERN, "Use 3 to 32 letters, digits, - or _");

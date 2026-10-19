@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moneyFormat } from "./money";
+import { moneyFormat, toMinorUnits } from "./money";
 
 /**
  * Formats a stored amount the way the web app and emails do.
@@ -33,5 +33,27 @@ describe("moneyFormat", () => {
 
   it("treats an unknown currency as having two minor digits", () => {
     expect(moneyFormat(1050, "EUR").value).toBe(10.5);
+  });
+});
+
+describe("toMinorUnits", () => {
+  it.each([
+    ["10", "USD", 1000],
+    ["10.5", "USD", 1050],
+    [" 1,234.99 ", "USD", 123_499],
+    ["0.01", "USD", 1],
+    ["5,000", "KHR", 500_000],
+  ])("reads %j %s as %i minor units", (typed, currency, minor) => {
+    expect(toMinorUnits(typed, currency)).toBe(minor);
+  });
+
+  it.each([
+    ["more decimals than the currency shows", "10.505", "USD"],
+    ["decimals on riel", "5000.5", "KHR"],
+    ["a negative amount", "-10", "USD"],
+    ["nothing", "", "USD"],
+    ["text", "ten", "USD"],
+  ])("refuses %s", (_case, typed, currency) => {
+    expect(toMinorUnits(typed, currency)).toBeNull();
   });
 });
