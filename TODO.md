@@ -23,7 +23,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] TEST-02 Remove page/layout tests that only re-check composed components (keep `notFound()`/`redirect()`/param branch tests); move any logic left in pages into tested components. Done when `pnpm test`, `lint`, `knip`, `dup` pass.
 
 ## Connect to backend
-- [ ] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.
+- [x] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.
 - [ ] DB-01 Prisma core schema, tenant client, RLS. Done when the RLS isolation test passes.
 - [ ] API-01 Auth: sign-up, login, magic link, sessions
 - [ ] WEB-10 Login/sign-up screens. Needs API-01.
