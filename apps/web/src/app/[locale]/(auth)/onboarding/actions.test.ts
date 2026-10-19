@@ -2,11 +2,11 @@
 import { SubdomainTakenError } from "@reanit/core/schools";
 import { describe, expect, it, vi } from "vitest";
 
-import { SESSION_COOKIE } from "@/server/auth/session";
-import { authService, SESSION } from "@/test/auth-service";
-import { cookieJar } from "@/test/headers";
+import { SESSION } from "@/test/auth-service";
+import { formData } from "@/test/form";
 import { RedirectError } from "@/test/navigation";
 import { schoolService } from "@/test/school-service";
+import { signIn } from "@/test/session";
 
 import { createSchool, type CreateSchoolState } from "./actions";
 
@@ -24,16 +24,7 @@ const IDLE: CreateSchoolState = { status: "idle", invalidFields: [] };
  * @returns The form data.
  */
 function form(name: string, subdomain: string) {
-  const data = new FormData();
-  data.set("name", name);
-  data.set("subdomain", subdomain);
-  return data;
-}
-
-/** Signs the test user in through the session cookie. */
-function signIn() {
-  cookieJar.set(SESSION_COOKIE, SESSION.token);
-  authService.getSessionUser.mockResolvedValue(SESSION.user);
+  return formData({ name, subdomain });
 }
 
 describe("createSchool", () => {

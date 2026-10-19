@@ -25,6 +25,21 @@ export function createSchoolStore(db: DbClient) {
     },
 
     /**
+     * Lists a user's schools across tenants, with their role in each; this is how a
+     * signed-in creator's school is found before any tenant is set.
+     *
+     * @param userId The user's id.
+     * @returns Schools and roles, oldest membership first.
+     */
+    findSchoolsForUser(userId: string) {
+      return db.membership.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+        select: { role: true, school: { select: SCHOOL_FIELDS } },
+      });
+    },
+
+    /**
      * Creates a school and its owner membership in one statement, so neither exists without the other.
      *
      * @param school New school.

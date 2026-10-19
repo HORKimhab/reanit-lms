@@ -29,7 +29,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] WEB-10 Login/sign-up screens. Needs API-01.
 - [x] API-02 Schools: create school, subdomain middleware
 - [x] WEB-11 Create-school onboarding wizard. Needs API-02.
-- [ ] API-03 Catalog: courses/sections/lessons CRUD
+- [x] API-03 Catalog: courses/sections/lessons CRUD
 - [ ] WEB-12 Connect builder + sales page. Needs API-03.
 - [ ] API-04 Media: presigned upload + video ⚠ video provider
 - [ ] WEB-13 Video upload in builder. Needs API-04.

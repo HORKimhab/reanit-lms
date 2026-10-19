@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { ZodError } from "zod";
-import { createDbClient, forSchool, type DbClient } from "../src";
+import { createDbClient, forSchool, inSchoolTransaction, type DbClient } from "../src";
 
 const db: DbClient = createDbClient(inject("databaseUrl"));
 
@@ -102,6 +102,37 @@ describe("tenant client RLS isolation", () => {
 
     await expect(tenant.session.findMany()).rejects.toThrow(/permission denied/);
     await expect(tenant.magicLinkToken.findMany()).rejects.toThrow(/permission denied/);
+  });
+
+  it("limits every statement of a school transaction to that school", async () => {
+    const seen = await inSchoolTransaction(db, alpha.schoolId, async (tx) => [
+      await tx.course.findMany({ select: { id: true } }),
+      await tx.course.findUnique({ where: { id: beta.courseId } }),
+    ]);
+
+    expect(seen).toEqual([[{ id: alpha.courseId }], null]);
+  });
+
+  it("rolls back a school transaction when its work throws", async () => {
+    const failing = inSchoolTransaction(db, alpha.schoolId, async (tx) => {
+      await tx.course.create({ data: { schoolId: alpha.schoolId, title: "Rolled back", slug: "rolled-back" } });
+      throw new Error("abort");
+    });
+
+    await expect(failing).rejects.toThrow("abort");
+    expect(await db.course.findFirst({ where: { slug: "rolled-back" } })).toBeNull();
+  });
+
+  it("rejects a school transaction writing another school's row", async () => {
+    const planting = inSchoolTransaction(db, alpha.schoolId, (tx) =>
+      tx.course.create({ data: { schoolId: beta.schoolId, title: "Planted", slug: "planted-tx" } }),
+    );
+
+    await expect(planting).rejects.toThrow();
+  });
+
+  it("throws before opening a school transaction when the school id is not a UUID", async () => {
+    await expect(inSchoolTransaction(db, "alpha", async () => "ran")).rejects.toThrow(ZodError);
   });
 
   it("has RLS enabled on every table with a school_id column", async () => {

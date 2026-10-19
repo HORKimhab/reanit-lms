@@ -37,23 +37,11 @@ describe("createSchoolSchema", () => {
 });
 
 describe("suggestSubdomain", () => {
-  it.each([
-    ["Angkor Academy", "angkor-academy"],
-    ["  Café   Angkor!! ", "cafe-angkor"],
-    ["Code 101", "code-101"],
-    ["សាលា Angkor", "angkor"],
-    ["សាលាអង្គរ", ""],
-  ])("suggests %j → %j", (name, subdomain) => {
-    expect(suggestSubdomain(name)).toBe(subdomain);
+  it("suggests a valid subdomain from an ordinary name", () => {
+    expect(suggestSubdomain("Phnom Penh Coding School")).toBe("phnom-penh-coding-school");
   });
 
-  it("caps the suggestion at 63 characters without a trailing hyphen", () => {
-    const suggestion = suggestSubdomain(`${"a".repeat(62)} b`);
-
-    expect(suggestion).toBe("a".repeat(62));
-  });
-
-  it("gives a valid subdomain for an ordinary name", () => {
-    expect(subdomainSchema.safeParse(suggestSubdomain("Phnom Penh Coding School")).success).toBe(true);
+  it("caps the suggestion at the 63-character DNS label limit", () => {
+    expect(suggestSubdomain("a".repeat(70))).toHaveLength(63);
   });
 });

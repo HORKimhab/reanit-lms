@@ -1,0 +1,88 @@
+import { CourseNotFoundError } from "./errors";
+import type { CatalogStore, Course, CourseWithOutline } from "./ports";
+import { uniqueCourseSlug, type CreateCourseInput, type Outline, type UpdateCourseInput } from "./rules";
+
+/**
+ * Builds one school's catalog use cases over a store scoped to that school.
+ *
+ * @param dependencies Store for the school's catalog.
+ * @param dependencies.store The school's courses, sections and lessons.
+ * @returns Course and outline operations.
+ * @example
+ * const catalog = createCatalogService({ store: createCatalogStore(db, school.id) });
+ */
+export function createCatalogService({ store }: { store: CatalogStore }) {
+  return {
+    /**
+     * Lists the school's courses, newest first.
+     *
+     * @returns The courses without outlines.
+     */
+    listCourses(): Promise<Course[]> {
+      return store.listCourses();
+    },
+
+    /**
+     * Loads a course with its outline.
+     *
+     * @param slug The course's slug.
+     * @returns The course.
+     * @throws {CourseNotFoundError} When the school has no course with that slug.
+     */
+    async getCourse(slug: string): Promise<CourseWithOutline> {
+      const course = await store.findCourseBySlug(slug);
+      if (!course) throw new CourseNotFoundError();
+      return course;
+    },
+
+    /**
+     * Creates a draft course with a slug made from its title.
+     *
+     * @param input Parsed new-course form.
+     * @returns The new course.
+     */
+    async createCourse(input: CreateCourseInput): Promise<Course> {
+      const slug = uniqueCourseSlug(input.title, await store.listCourseSlugs());
+      return store.createCourse({ title: input.title, slug });
+    },
+
+    /**
+     * Changes a course's title, description or status. The slug stays, so links keep working.
+     *
+     * @param id The course's id.
+     * @param changes Parsed course-details form.
+     * @returns The updated course.
+     * @throws {CourseNotFoundError} When the school has no course with that id.
+     */
+    async updateCourse(id: string, changes: UpdateCourseInput): Promise<Course> {
+      const course = await store.updateCourse(id, changes);
+      if (!course) throw new CourseNotFoundError();
+      return course;
+    },
+
+    /**
+     * Deletes a course with its sections and lessons.
+     *
+     * @param id The course's id.
+     * @throws {CourseNotFoundError} When the school has no course with that id.
+     */
+    async deleteCourse(id: string): Promise<void> {
+      if (!(await store.deleteCourse(id))) throw new CourseNotFoundError();
+    },
+
+    /**
+     * Saves the builder's outline: sections and lessons are created, updated, reordered
+     * and removed to match it, all at once.
+     *
+     * @param courseId The course's id.
+     * @param outline Parsed outline.
+     * @throws {CourseNotFoundError} When the school has no course with that id.
+     */
+    async saveOutline(courseId: string, outline: Outline): Promise<void> {
+      if (!(await store.replaceOutline(courseId, outline))) throw new CourseNotFoundError();
+    },
+  };
+}
+
+/** One school's catalog use cases. */
+export type CatalogService = ReturnType<typeof createCatalogService>;

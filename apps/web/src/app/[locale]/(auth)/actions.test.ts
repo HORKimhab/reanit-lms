@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SESSION_COOKIE } from "@/server/auth/session";
 import { authService, SESSION } from "@/test/auth-service";
+import { formData as form } from "@/test/form";
 import { cookieJar } from "@/test/headers";
 import { RedirectError } from "@/test/navigation";
 
@@ -21,18 +22,6 @@ beforeEach(() => {
   vi.stubEnv("SMTP_URL", "smtp://localhost:1025");
   vi.stubEnv("MAIL_FROM", "Reanit <no-reply@reanit.test>");
 });
-
-/**
- * Builds a form submission.
- *
- * @param fields Field names and values.
- * @returns The form data.
- */
-function form(fields: Record<string, string>) {
-  const data = new FormData();
-  Object.entries(fields).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
 
 const SIGN_UP = { name: " Dara ", email: " Dara@Example.com ", password: "correct horse" };
 

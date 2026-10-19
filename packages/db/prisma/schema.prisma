@@ -22,6 +22,12 @@ enum CourseStatus {
   published
 }
 
+enum LessonType {
+  video
+  text
+  pdf
+}
+
 enum OrderStatus {
   pending
   paid
@@ -152,11 +158,14 @@ model Section {
 }
 
 model Lesson {
-  id        String @id @default(uuid()) @db.Uuid
-  schoolId  String @map("school_id") @db.Uuid
-  sectionId String @map("section_id") @db.Uuid
-  title     String
-  position  Int
+  id              String     @id @default(uuid()) @db.Uuid
+  schoolId        String     @map("school_id") @db.Uuid
+  sectionId       String     @map("section_id") @db.Uuid
+  title           String
+  position        Int
+  type            LessonType @default(text)
+  /// 0 for lessons without a running time, such as text and PDFs.
+  durationSeconds Int        @default(0) @map("duration_seconds")
 
   school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   section  Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)

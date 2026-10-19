@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { slugify } from "../shared/slug";
+
 /** DNS label limits; 3 keeps out ambiguous one- and two-letter names. */
 const SUBDOMAIN_MIN_LENGTH = 3;
 const SUBDOMAIN_MAX_LENGTH = 63;
@@ -31,12 +33,7 @@ export const subdomainSchema = z
  * suggestSubdomain("Café Angkor Academy!"); // "cafe-angkor-academy"
  */
 export function suggestSubdomain(name: string): string {
-  return name
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .slice(0, SUBDOMAIN_MAX_LENGTH)
-    .replace(/^-+|-+$/g, "");
+  return slugify(name, SUBDOMAIN_MAX_LENGTH);
 }
 
 /** Create-school form input. */

@@ -1,11 +1,13 @@
 // In-memory fake of the schools port, for unit tests of the school service.
-import type { School, SchoolStore } from "../schools";
+import type { MembershipRole, School, SchoolStore } from "../schools";
 
 /** In-memory `SchoolStore` whose rows tests can inspect. */
 export class FakeSchoolStore implements SchoolStore {
   readonly schools: School[] = [];
   /** Owner user id by school id. */
   readonly owners = new Map<string, string>();
+  /** Memberships in creation order. */
+  readonly memberships: { schoolId: string; userId: string; role: MembershipRole }[] = [];
 
   /**
    * Finds a school by exact subdomain.
@@ -30,6 +32,19 @@ export class FakeSchoolStore implements SchoolStore {
     const school = { id: `school-${this.schools.length + 1}`, name, subdomain };
     this.schools.push(school);
     this.owners.set(school.id, ownerId);
+    this.memberships.push({ schoolId: school.id, userId: ownerId, role: "owner" });
     return school;
+  }
+
+  /**
+   * Lists the user's schools in membership order.
+   *
+   * @param userId The user's id.
+   * @returns Each school with the user's role.
+   */
+  async findSchoolsForUser(userId: string) {
+    return this.memberships
+      .filter((membership) => membership.userId === userId)
+      .map(({ schoolId, role }) => ({ school: this.schools.find((school) => school.id === schoolId)!, role })); // memberships only reference stored schools
   }
 }

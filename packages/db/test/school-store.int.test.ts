@@ -38,6 +38,19 @@ describe("school store", () => {
     expect(await store.findSchoolBySubdomain("bayon-store")).toEqual(school);
   });
 
+  it("lists a user's schools with their role, oldest membership first", async () => {
+    const ownerId = await createOwner("owner-4@example.com");
+    const studentId = await createOwner("student-4@example.com");
+    const first = await store.createSchoolWithOwner({ name: "First", subdomain: "first-store", ownerId });
+    await forSchool(db, first.id).membership.create({ data: { schoolId: first.id, userId: studentId, role: "student", createdAt: new Date("2020-01-01") } });
+    const own = await store.createSchoolWithOwner({ name: "Own", subdomain: "own-store", ownerId: studentId });
+
+    expect(await store.findSchoolsForUser(studentId)).toEqual([
+      { school: first, role: "student" },
+      { school: own, role: "owner" },
+    ]);
+  });
+
   it("returns null for an unknown subdomain", async () => {
     expect(await store.findSchoolBySubdomain("no-such-school")).toBeNull();
   });

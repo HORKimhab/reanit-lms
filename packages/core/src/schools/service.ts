@@ -1,6 +1,9 @@
-import { SubdomainTakenError } from "./errors";
-import type { School, SchoolStore } from "./ports";
+import { NotSchoolStaffError, SubdomainTakenError } from "./errors";
+import type { MembershipRole, School, SchoolStore } from "./ports";
 import type { CreateSchoolInput } from "./rules";
+
+/** Roles that may run a school's dashboard and edit its catalog. */
+const STAFF_ROLES: ReadonlySet<MembershipRole> = new Set(["owner", "admin", "instructor"]);
 
 /**
  * Builds the school use cases over an injected store.
@@ -24,6 +27,20 @@ export function createSchoolService({ store }: { store: SchoolStore }) {
     async createSchool(input: CreateSchoolInput, ownerId: string): Promise<School> {
       if (await store.findSchoolBySubdomain(input.subdomain)) throw new SubdomainTakenError();
       return store.createSchoolWithOwner({ ...input, ownerId });
+    },
+
+    /**
+     * Picks the school a creator's dashboard works on: their first school as staff.
+     * M1 creators run one school; choosing between several comes later.
+     *
+     * @param userId The signed-in user's id.
+     * @returns The school and the user's role in it.
+     * @throws {NotSchoolStaffError} When the user is staff in no school.
+     */
+    async getStaffSchool(userId: string): Promise<{ school: School; role: MembershipRole }> {
+      const membership = (await store.findSchoolsForUser(userId)).find(({ role }) => STAFF_ROLES.has(role));
+      if (!membership) throw new NotSchoolStaffError();
+      return membership;
     },
   };
 }

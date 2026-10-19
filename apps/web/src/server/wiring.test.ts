@@ -24,6 +24,12 @@ describe("server wiring", () => {
     expect(getAuthService()).toBe(getAuthService());
   });
 
+  it("builds a catalog service for a school", async () => {
+    const { getCatalogService } = await import("./catalog/service");
+
+    expect(Object.keys(getCatalogService("6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a10"))).toContain("saveOutline");
+  });
+
   it("builds the school service once", async () => {
     const { getSchoolService } = await import("./schools/service");
 

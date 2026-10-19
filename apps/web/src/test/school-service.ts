@@ -6,6 +6,7 @@ import { vi, type Mock } from "vitest";
 /** Stubbed school use cases; `setup.ts` resets them after each test. */
 export const schoolService = {
   createSchool: vi.fn(),
+  getStaffSchool: vi.fn(),
 } satisfies Record<keyof SchoolService, Mock>;
 
 /**
@@ -16,3 +17,9 @@ export const schoolService = {
 export function getSchoolService() {
   return schoolService as unknown as SchoolService;
 }
+
+/** The signed-in creator's school, as `getStaffSchool` returns it. */
+export const STAFF_SCHOOL = {
+  school: { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a10", name: "Angkor Academy", subdomain: "angkor" },
+  role: "owner" as const,
+};
