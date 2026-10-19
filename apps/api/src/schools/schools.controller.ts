@@ -3,6 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
 import type { SchoolService } from "@reanit/core/schools";
 
+import { Audited, currentSchool } from "../audit/audit.decorator";
 import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { RequestContext } from "../context/request-context";
 import { UploadResponse } from "../media/media.dto";
@@ -69,6 +70,7 @@ export class SchoolsController {
    * @throws {MediaNotUploadedError} When the logo upload has not arrived (409).
    */
   @Patch("current")
+  @Audited("school.settings.update", currentSchool)
   @Roles("owner", "admin")
   @ApiOkResponse({ type: SchoolResponse })
   async updateSettings(@CurrentSchool() current: StaffSchool, @Body() body: SchoolSettingsBody): Promise<SchoolResponse> {

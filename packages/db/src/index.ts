@@ -1,3 +1,4 @@
+export { createAuditStore } from "./audit-store";
 export { createAuthStore } from "./auth-store";
 export { createCatalogStore } from "./catalog-store";
 export { createCommerceStore, createPaymentConfirmationStore } from "./commerce-store";

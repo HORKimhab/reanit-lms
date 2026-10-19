@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Pat
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { CatalogService } from "@reanit/core/catalog";
 
+import { Audited, pathParam } from "../audit/audit.decorator";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "../schools/schools.decorators";
 import {
@@ -60,6 +61,7 @@ export class CoursesController {
    * @returns The new course.
    */
   @Post()
+  @Audited("course.create", ({ response }) => (response as CourseResponse).course.id)
   @ApiCreatedResponse({ type: CourseResponse })
   async create(@CurrentSchool() school: StaffSchool, @Body() body: CreateCourseBody): Promise<CourseResponse> {
     return { course: await this.catalog(school).createCourse(body) };
@@ -89,6 +91,7 @@ export class CoursesController {
    * @throws {CourseNotFoundError} When the school has no such course (404).
    */
   @Patch(":id")
+  @Audited("course.update", pathParam("id"))
   @ApiOkResponse({ type: CourseResponse })
   async update(
     @CurrentSchool() school: StaffSchool,
@@ -106,6 +109,7 @@ export class CoursesController {
    * @throws {CourseNotFoundError} When the school has no such course (404).
    */
   @Delete(":id")
+  @Audited("course.delete", pathParam("id"))
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentSchool() school: StaffSchool, @Param() params: CourseIdParams) {
     await this.catalog(school).deleteCourse(params.id);
@@ -120,6 +124,7 @@ export class CoursesController {
    * @throws {CourseNotFoundError} When the school has no such course (404).
    */
   @Put(":id/outline")
+  @Audited("course.outline.save", pathParam("id"))
   @HttpCode(HttpStatus.NO_CONTENT)
   async saveOutline(@CurrentSchool() school: StaffSchool, @Param() params: CourseIdParams, @Body() body: OutlineBody) {
     await this.catalog(school).saveOutline(params.id, body);

@@ -2,6 +2,7 @@ import { uploadRequestSchema } from "@reanit/core/media";
 import { createSchoolSchema, schoolSettingsSchema, studentSearchSchema, subdomainSchema } from "@reanit/core/schools";
 import { z } from "zod";
 
+import { pageResponseSchema } from "../http/page-response";
 import { createZodDto } from "../http/zod-dto";
 
 /** `POST /schools` body. */
@@ -42,19 +43,15 @@ export class StaffSchoolResponse extends createZodDto(
 
 /** One page of the school's students, newest first. */
 export class StudentsResponse extends createZodDto(
-  z.object({
-    students: z.array(
-      z.object({
-        id: z.uuid(),
-        name: z.string().nullable(),
-        email: z.string(),
-        joinedAt: z.iso.datetime(),
-        courses: z.number().int(),
-        completedCourses: z.number().int(),
-      }),
-    ),
-    total: z.number().int(),
-    page: z.number().int(),
-    pageSize: z.number().int(),
-  }),
+  pageResponseSchema(
+    "students",
+    z.object({
+      id: z.uuid(),
+      name: z.string().nullable(),
+      email: z.string(),
+      joinedAt: z.iso.datetime(),
+      courses: z.number().int(),
+      completedCourses: z.number().int(),
+    }),
+  ),
 ) {}

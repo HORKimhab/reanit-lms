@@ -31,6 +31,18 @@ afterAll(async () => {
 });
 
 describe("tenant client RLS isolation", () => {
+  it("has row-level security with a policy on every table that has a school_id", async () => {
+    const unprotected = await db.$queryRaw<{ table: string }[]>`
+      SELECT c.relname AS table
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'school_id' AND NOT a.attisdropped
+      WHERE c.relkind = 'r'
+        AND (NOT c.relrowsecurity OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid))`;
+
+    expect(unprotected).toEqual([]);
+  });
+
   it("returns only its own school's courses when several schools have courses", async () => {
     const courses = await forSchool(db, alpha.schoolId).course.findMany();
 

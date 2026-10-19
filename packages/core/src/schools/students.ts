@@ -1,3 +1,4 @@
+import { pageWindow } from "../shared/paging";
 import type { StudentStore, StudentSummary } from "./ports";
 import type { StudentSearchInput } from "./rules";
 
@@ -33,11 +34,7 @@ export function createStudentService({ store }: { store: StudentStore }) {
      * @returns The page's students and how many match in total.
      */
     async searchStudents({ q, page }: StudentSearchInput): Promise<StudentPage> {
-      const { students, total } = await store.searchStudents({
-        search: q || null,
-        limit: STUDENTS_PAGE_SIZE,
-        offset: (page - 1) * STUDENTS_PAGE_SIZE,
-      });
+      const { students, total } = await store.searchStudents({ search: q || null, ...pageWindow(page, STUDENTS_PAGE_SIZE) });
       return { students, total, page, pageSize: STUDENTS_PAGE_SIZE };
     },
   };

@@ -1,6 +1,7 @@
 import { Body, Controller, Inject, Param, Put } from "@nestjs/common";
 import { ApiOkResponse } from "@nestjs/swagger";
 
+import { Audited, pathParam } from "../audit/audit.decorator";
 import { CourseIdParams } from "../catalog/catalog.dto";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "../schools/schools.decorators";
@@ -28,6 +29,7 @@ export class PriceController {
    * @throws {CourseNotFoundError} When the school has no such course (404).
    */
   @Put()
+  @Audited("course.price.set", pathParam("id"))
   @ApiOkResponse({ type: PriceResponse })
   async set(
     @CurrentSchool() school: NonNullable<RequestContext["school"]>,

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { DbModule, EnvModule, LoggingModule, MailModule } from "@reanit/nest";
 
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { CommerceModule } from "./commerce/commerce.module";
@@ -34,6 +35,7 @@ import { SchoolsModule } from "./schools/schools.module";
     CommerceModule,
     LearningModule,
     AnalyticsModule,
+    AuditModule,
   ],
 })
 export class AppModule {}

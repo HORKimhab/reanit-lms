@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { pageSchema } from "../shared/paging";
 import { slugify } from "../shared/slug";
 
 /** DNS label limits; 3 keeps out ambiguous one- and two-letter names. */
@@ -71,7 +72,7 @@ export type SchoolSettingsInput = z.infer<typeof schoolSettingsSchema>;
 /** Students list query: an optional name or email search and a 1-based page. */
 export const studentSearchSchema = z.object({
   q: z.string().trim().max(STUDENT_SEARCH_MAX_LENGTH).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: pageSchema,
 });
 
 /** Parsed students list query. */

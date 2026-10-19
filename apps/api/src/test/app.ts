@@ -3,6 +3,7 @@ import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModuleBuilder } from "@nestjs/testing";
 import type { AnalyticsService } from "@reanit/core/analytics";
+import type { AuditLog } from "@reanit/core/audit";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
@@ -15,6 +16,7 @@ import { afterEach, beforeEach, vi, type Mock } from "vitest";
 
 import { ANALYTICS_FOR_SCHOOL } from "../analytics/analytics.tokens";
 import { AppModule } from "../app.module";
+import { AUDIT_FOR_SCHOOL } from "../audit/audit.tokens";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
 import { COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION } from "../commerce/commerce.tokens";
@@ -84,6 +86,9 @@ export type FakeClients = {
   /** Stands in for every school's stats service; `analyticsFor` records which school was asked for. */
   analytics: Record<keyof AnalyticsService, Mock>;
   analyticsFor: Mock<(schoolId: string) => AnalyticsService>;
+  /** Stands in for every school's audit log; `auditFor` records which school was asked for. */
+  audit: Record<keyof AuditLog, Mock>;
+  auditFor: Mock<(schoolId: string) => AuditLog>;
 };
 
 /** Extras a test can boot the app with. */
@@ -123,6 +128,7 @@ const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as cons
 const COMMERCE_METHODS = ["setPrice", "getOffer", "checkout", "getOrder"] as const satisfies readonly (keyof CommerceService)[];
 const LEARNING_METHODS = ["getCourse", "getLessonMedia", "recordProgress"] as const satisfies readonly (keyof LearningService)[];
 const ANALYTICS_METHODS = ["getCourseStats"] as const satisfies readonly (keyof AnalyticsService)[];
+const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
 
 /**
  * Creates a fake of a core service with one spy per use case.
@@ -137,7 +143,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning and stats services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, stats and audit services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -148,6 +154,7 @@ export function createFakeClients(): FakeClients {
   const learning = fakeService(LEARNING_METHODS);
   const analytics = fakeService(ANALYTICS_METHODS);
   const students = fakeService(STUDENT_METHODS);
+  const audit = fakeService(AUDIT_METHODS);
   return {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
@@ -166,6 +173,8 @@ export function createFakeClients(): FakeClients {
     learningFor: vi.fn(() => learning as unknown as LearningService),
     analytics,
     analyticsFor: vi.fn(() => analytics as unknown as AnalyticsService),
+    audit,
+    auditFor: vi.fn(() => audit as unknown as AuditLog),
   };
 }
 
@@ -206,7 +215,9 @@ export async function createTestApp(
     .overrideProvider(LEARNING_FOR_SCHOOL)
     .useValue(clients.learningFor)
     .overrideProvider(ANALYTICS_FOR_SCHOOL)
-    .useValue(clients.analyticsFor);
+    .useValue(clients.analyticsFor)
+    .overrideProvider(AUDIT_FOR_SCHOOL)
+    .useValue(clients.auditFor);
   for (const { provide, useValue } of options.overrides ?? []) builder = builder.overrideProvider(provide).useValue(useValue);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });

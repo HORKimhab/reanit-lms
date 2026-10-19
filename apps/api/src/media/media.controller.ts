@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Put } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 
+import { Audited, pathParam } from "../audit/audit.decorator";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "../schools/schools.decorators";
 import { AttachMediaBody, LessonParams, PlaybackResponse, UploadRequestBody, UploadResponse } from "./media.dto";
@@ -53,6 +54,7 @@ export class MediaController {
    * @throws {MediaNotUploadedError} When the upload has not arrived (409).
    */
   @Put()
+  @Audited("lesson.media.attach", pathParam("lessonId"))
   @HttpCode(HttpStatus.NO_CONTENT)
   async attach(@CurrentSchool() school: StaffSchool, @Param() params: LessonParams, @Body() body: AttachMediaBody) {
     await this.mediaFor(school.id).attachMedia(params.lessonId, body.key);

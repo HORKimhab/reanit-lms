@@ -61,6 +61,7 @@ model User {
   orders      Order[]
   enrollments Enrollment[]
   sessions    Session[]
+  auditEvents AuditEvent[]
 
   @@map("users")
 }
@@ -113,6 +114,7 @@ model School {
   dailySales       DailySales[]
   dailyCompletions DailyCompletions[]
   outboxEvents     OutboxEvent[]
+  auditEvents      AuditEvent[]
 
   @@map("schools")
 }
@@ -349,4 +351,25 @@ model OutboxEvent {
   @@index([publishedAt, occurredAt])
   @@index([schoolId])
   @@map("outbox_events")
+}
+
+/// What a school's staff did (create, edit, delete, settings), written after the action succeeded.
+model AuditEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  /// Null once the staff member's account is deleted; the entry stays.
+  actorId   String?  @map("actor_id") @db.Uuid
+  /// `<thing>.<what was done>`, e.g. `course.update`.
+  action    String
+  /// The id of what was acted on: a course, a lesson, the school.
+  targetId  String   @map("target_id")
+  /// The request that did it, to find its logs.
+  requestId String   @map("request_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, createdAt])
+  @@map("audit_events")
 }

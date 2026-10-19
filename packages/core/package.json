@@ -12,7 +12,8 @@
     "./learning": "./src/learning/index.ts",
     "./analytics": "./src/analytics/index.ts",
     "./events": "./src/events/index.ts",
-    "./notifications": "./src/notifications/index.ts"
+    "./notifications": "./src/notifications/index.ts",
+    "./audit": "./src/audit/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
