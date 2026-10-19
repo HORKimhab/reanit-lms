@@ -60,8 +60,7 @@
       "draft": "សេចក្តីព្រាង",
       "published": "បានផ្សព្វផ្សាយ"
     },
-    "price": "តម្លៃ",
-    "lessons": "មេរៀន"
+    "completions": "ការបញ្ចប់"
   },
   "Builder": {
     "status": {

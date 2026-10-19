@@ -60,8 +60,7 @@
       "draft": "Draft",
       "published": "Published"
     },
-    "price": "Price",
-    "lessons": "Lessons"
+    "completions": "Completions"
   },
   "Builder": {
     "status": {

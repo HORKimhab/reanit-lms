@@ -55,7 +55,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-06 Learning: access check, progress heartbeat
 - [x] WEB-15 Connect player. Needs API-06.
 - [x] API-07 Dashboard stats (pre-aggregated)
-- [ ] WEB-16 Connect dashboard. Needs API-07.
+- [x] WEB-16 Connect dashboard. Needs API-07.
 - [ ] API-08 Students + school settings: list/search students, update logo/color/name
 - [ ] WEB-17 Connect students list + settings. Needs API-08.
 

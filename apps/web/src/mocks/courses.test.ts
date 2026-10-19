@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { courseStats, flattenLessons, getMockCourse, getMockCourses, type MockCourse } from "./courses";
+import { flattenLessons, getMockCourse, getMockCourses, type MockCourse } from "./courses";
 import { MOCK_SCHOOL_SLUG } from "./schools";
 
 const EMPTY_COURSE = { ...(getMockCourse(MOCK_SCHOOL_SLUG, "brand-design-basics") as MockCourse), sections: [] };
@@ -24,17 +24,6 @@ describe("getMockCourse", () => {
 
   it("does not return a course through another school's slug", () => {
     expect(getMockCourse("other-school", "brand-design-basics")).toBeUndefined();
-  });
-});
-
-describe("courseStats", () => {
-  it("counts lessons and sums their durations", () => {
-    const course = getMockCourse(MOCK_SCHOOL_SLUG, "social-media-content") as MockCourse;
-    expect(courseStats(course)).toEqual({ lessons: 4, durationSec: 480 + 0 + 1100 + 780 });
-  });
-
-  it("returns zeros when the course has no lessons", () => {
-    expect(courseStats(EMPTY_COURSE)).toEqual({ lessons: 0, durationSec: 0 });
   });
 });
 

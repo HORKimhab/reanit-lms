@@ -139,17 +139,6 @@ export function getMockCourse(schoolSlug: string, slug: string) {
   return COURSES.find((c) => c.schoolSlug === schoolSlug && c.slug === slug);
 }
 
-/**
- * Totals a course's lesson count and running time for cards and the sales page.
- *
- * @param course - The course to measure.
- * @returns The number of lessons and their total duration in seconds.
- */
-export function courseStats(course: MockCourse) {
-  const lessons = course.sections.flatMap((s) => s.lessons);
-  return { lessons: lessons.length, durationSec: lessons.reduce((sum, l) => sum + l.durationSec, 0) };
-}
-
 /** A lesson placed in course order, with the section it belongs to. */
 type FlatLesson = MockLesson & {
   /** Stable id: "1-2" is section 1, lesson 2. */
