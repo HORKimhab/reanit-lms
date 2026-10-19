@@ -15,6 +15,7 @@ describe("DashboardNav", () => {
       ["Courses", "/dashboard/courses"],
       ["Bundles", "/dashboard/bundles"],
       ["Students", "/dashboard/students"],
+      ["Comments", "/dashboard/comments"],
       ["Coupons", "/dashboard/coupons"],
       ["Settings", "/dashboard/settings"],
     ]);

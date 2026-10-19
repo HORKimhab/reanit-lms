@@ -1,11 +1,17 @@
 "use server";
 
 import { safeRedirectPath } from "@reanit/core/auth";
-import { progressSchema, quizAnswersSchema, type ProgressInput, type QuizAnswers, type QuizResult } from "@reanit/core/learning";
+import { commentSchema, progressSchema, quizAnswersSchema, type ProgressInput, type QuizAnswers, type QuizResult } from "@reanit/core/learning";
+import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 
 import { redirect } from "@/i18n/navigation";
 import { getApi, unexpectedResponse } from "@/server/api";
+import { idPath } from "@/server/id-path";
+import { checkStudentResponse } from "@/server/schools/student";
+
+/** Result of the last comment or reply sent from a comment form. */
+export type CommentFormState = { status: "idle" | "posted" | "invalid" };
 
 /**
  * Sends progress for a lesson to the API.
@@ -71,4 +77,51 @@ export async function submitQuizAnswers(subdomain: string, lessonId: string, ans
   if (!response.ok) throw unexpectedResponse(response);
   // The API answered 2xx with the result.
   return data!.result;
+}
+
+/**
+ * Posts the student's comment under a lesson, or their reply when the form names a thread, and
+ * refreshes the lesson. Bind the school, lesson and lesson page: `postLessonComment.bind(null, school, lessonId, path)`.
+ *
+ * @param subdomain The school's subdomain.
+ * @param lessonId The lesson.
+ * @param lessonPath The lesson's player page, refreshed after posting.
+ * @param _previous The form's last state; unused, but `useActionState` passes it first.
+ * @param formData Untrusted `body` and optional `parentId`.
+ * @returns `posted`, or `invalid` when the text is blank or too long.
+ * @throws {Error} Next's redirect or not-found signal, or an unexpected-response error.
+ */
+export async function postLessonComment(
+  subdomain: string,
+  lessonId: string,
+  lessonPath: string,
+  _previous: CommentFormState,
+  formData: FormData,
+): Promise<CommentFormState> {
+  const parsed = commentSchema.safeParse({ body: formData.get("body"), parentId: formData.get("parentId") || undefined });
+  if (!parsed.success) return { status: "invalid" };
+  const { response } = await (await getApi()).POST("/schools/by-subdomain/{subdomain}/lessons/{lessonId}/comments", {
+    params: { path: { subdomain, lessonId } },
+    body: parsed.data,
+  });
+  checkStudentResponse(response, lessonPath);
+  revalidatePath(lessonPath);
+  return { status: "posted" };
+}
+
+/**
+ * Deletes one of the student's own comments and refreshes the lesson. Bind the school and lesson
+ * page, then the comment: `deleteLessonComment.bind(null, school, path)`.
+ *
+ * @param subdomain The school's subdomain.
+ * @param lessonPath The lesson's player page, refreshed after deleting.
+ * @param commentId The comment.
+ * @throws {Error} Next's redirect or not-found signal, or an unexpected-response error (403 for someone else's comment).
+ */
+export async function deleteLessonComment(subdomain: string, lessonPath: string, commentId: string): Promise<void> {
+  const { response } = await (await getApi()).DELETE("/schools/by-subdomain/{subdomain}/comments/{commentId}", {
+    params: { path: { subdomain, commentId: idPath(commentId).path.id } },
+  });
+  checkStudentResponse(response, lessonPath);
+  revalidatePath(lessonPath);
 }

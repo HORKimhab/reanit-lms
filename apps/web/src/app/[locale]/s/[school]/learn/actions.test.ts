@@ -4,12 +4,15 @@ import { ZodError } from "zod";
 
 import { onApi, problem, requestTo } from "@/test/api";
 import { RedirectError } from "@/test/navigation";
+import { revalidatePath } from "@/test/cache";
+import { formData as form } from "@/test/form";
 import { signIn } from "@/test/session";
 
-import { completeLesson, saveVideoPosition, submitQuizAnswers } from "./actions";
+import { completeLesson, deleteLessonComment, postLessonComment, saveVideoPosition, submitQuizAnswers } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
+vi.mock("next/cache", () => import("@/test/cache"));
 
 const LESSON_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02";
 const ROUTE = `PUT /schools/by-subdomain/angkor/lessons/${LESSON_ID}/progress`;
@@ -82,5 +85,34 @@ describe("submitQuizAnswers", () => {
     onApi(ATTEMPTS, problem(403, "urn:reanit:problem:not-enrolled"));
 
     await expect(submitQuizAnswers("angkor", LESSON_ID, ANSWERS)).rejects.toThrow();
+  });
+});
+
+describe("lesson comments", () => {
+  const COMMENTS = `POST /schools/by-subdomain/angkor/lessons/${LESSON_ID}/comments`;
+  const LESSON_PATH = `/s/angkor/learn/brand/${LESSON_ID}`;
+  const THREAD_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a71";
+
+  it("posts a reply to a thread and refreshes the lesson", async () => {
+    onApi(COMMENTS, Response.json({ comment: {} }, { status: 201 }));
+
+    expect(await postLessonComment("angkor", LESSON_ID, LESSON_PATH, { status: "idle" }, form({ body: " Me too ", parentId: THREAD_ID }))).toEqual({ status: "posted" });
+    expect(await requestTo(COMMENTS)?.json()).toEqual({ body: "Me too", parentId: THREAD_ID });
+    expect(revalidatePath).toHaveBeenCalledWith(LESSON_PATH);
+  });
+
+  it("refuses a blank comment without calling the API", async () => {
+    expect(await postLessonComment("angkor", LESSON_ID, LESSON_PATH, { status: "idle" }, form({ body: "  " }))).toEqual({ status: "invalid" });
+    expect(requestTo(COMMENTS)).toBeUndefined();
+  });
+
+  it("deletes the student's comment and refreshes the lesson", async () => {
+    const route = `DELETE /schools/by-subdomain/angkor/comments/${THREAD_ID}`;
+    onApi(route, new Response(null, { status: 204 }));
+
+    await deleteLessonComment("angkor", LESSON_PATH, THREAD_ID);
+
+    expect(requestTo(route)).toBeDefined();
+    expect(revalidatePath).toHaveBeenCalledWith(LESSON_PATH);
   });
 });

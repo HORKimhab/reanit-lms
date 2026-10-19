@@ -43,6 +43,7 @@
     "courses": "Courses",
     "bundles": "Bundles",
     "students": "Students",
+    "comments": "Comments",
     "coupons": "Coupons",
     "settings": "Settings"
   },
@@ -137,7 +138,9 @@
     "searchButton": "Search",
     "noMatchTitle": "No students found",
     "noMatchText": "No student's name or email contains “{q}”.",
-    "pages": "Students pages",
+    "pages": "Students pages"
+  },
+  "Pager": {
     "previous": "Previous page",
     "next": "Next page",
     "pageOf": "Page {page} of {pages}"
@@ -293,6 +296,35 @@
     "incorrect": "Wrong",
     "retry": "Try again",
     "notReady": "This quiz has no questions yet."
+  },
+  "Comments": {
+    "title": "Questions and comments",
+    "newLabel": "Ask a question or leave a comment",
+    "post": "Post",
+    "posting": "Posting…",
+    "replyLabel": "Reply to {name}",
+    "reply": "Reply",
+    "replying": "Replying…",
+    "invalid": "Write up to {max} characters.",
+    "empty": "No comments yet. Be the first to ask.",
+    "staff": "Instructor",
+    "hidden": "Hidden",
+    "deletedAuthor": "Deleted account",
+    "noName": "Student",
+    "delete": "Delete your comment",
+    "hide": "Hide from students",
+    "show": "Show to students",
+    "inboxPages": "Comment pages",
+    "filters": {
+      "unanswered": "Unanswered",
+      "all": "All"
+    },
+    "filterLabel": "Show",
+    "inboxEmptyTitle": "You're all caught up",
+    "inboxEmptyText": "New questions from students will show up here.",
+    "allEmptyTitle": "No comments yet",
+    "allEmptyText": "Questions students ask under your lessons will show up here.",
+    "where": "{course} · {lesson}"
   },
   "ThemeToggle": {
     "label": "Toggle theme"

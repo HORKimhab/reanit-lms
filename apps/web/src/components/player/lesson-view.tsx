@@ -1,4 +1,4 @@
-import type { PlayerLesson, QuizAnswers, QuizResult } from "@reanit/core/learning";
+import type { CommentThread, PlayerLesson, QuizAnswers, QuizResult } from "@reanit/core/learning";
 import { Button } from "@reanit/ui/components/button";
 import { ArrowLeft, ArrowRight, Download, FileText, Lock } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { StudentQuizView } from "@/server/learning/quizzes";
 
+import { LessonComments, type LessonCommentActions } from "./lesson-comments";
 import { LessonVideo } from "./lesson-video";
 import { QuizPlayer } from "./quiz-player";
 
@@ -23,6 +24,7 @@ type LessonQuiz = { view: StudentQuizView | null; submit: (answers: QuizAnswers)
  * @param props.base - The course's player path.
  * @param props.fileUrl - Signed URL of the lesson's video or PDF; null for text lessons and files not uploaded yet.
  * @param props.quiz - The quiz of a quiz lesson; null for other lessons.
+ * @param props.comments - The lesson's comments with the signed-in student and the comment actions; null while the lesson is closed.
  * @param props.nextHref - Where the student goes after this lesson.
  * @param props.savePosition - The video heartbeat, bound to the lesson.
  * @param props.complete - Marks the lesson completed and moves on, bound to the lesson and the next page.
@@ -34,6 +36,7 @@ export function LessonView({
   base,
   fileUrl,
   quiz,
+  comments,
   nextHref,
   savePosition,
   complete,
@@ -43,6 +46,7 @@ export function LessonView({
   base: string;
   fileUrl: string | null;
   quiz: LessonQuiz | null;
+  comments: { threads: CommentThread[]; userId: string; actions: LessonCommentActions } | null;
   nextHref: string;
   savePosition: (positionSeconds: number) => Promise<void>;
   complete: () => Promise<void>;
@@ -97,6 +101,8 @@ export function LessonView({
           </form>
         )}
       </nav>
+
+      {comments ? <LessonComments threads={comments.threads} userId={comments.userId} actions={comments.actions} /> : null}
     </div>
   );
 }

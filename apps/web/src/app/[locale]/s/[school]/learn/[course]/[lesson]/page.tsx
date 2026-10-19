@@ -1,13 +1,16 @@
 import { playerLessons } from "@reanit/core/learning";
 import { notFound } from "next/navigation";
 
-import { completeLesson, saveVideoPosition, submitQuizAnswers } from "@/app/[locale]/s/[school]/learn/actions";
+import { completeLesson, deleteLessonComment, postLessonComment, saveVideoPosition, submitQuizAnswers } from "@/app/[locale]/s/[school]/learn/actions";
 import { LessonView } from "@/components/player/lesson-view";
 import { getLessonFileUrl, getPlayerCourse } from "@/server/learning/player";
+import { getCurrentUser } from "@/server/auth/session";
+import { getLessonComments } from "@/server/learning/comments";
 import { getStudentQuiz } from "@/server/learning/quizzes";
 
 /**
- * One lesson in the player, with its file signed or its quiz loaded for the student. 404s when the lesson is not in the course.
+ * One lesson in the player, with its file signed or its quiz loaded for the student, and its comments.
+ * 404s when the lesson is not in the course.
  *
  * @param props - Page props.
  * @param props.params - Route params with the school's subdomain, the course slug and the lesson id.
@@ -31,6 +34,15 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/s/[sch
     isOpen && lesson.type === "quiz"
       ? { view: await getStudentQuiz(school, lesson.id, lessonPath), submit: submitQuizAnswers.bind(null, school, lesson.id) }
       : null;
+  const [threads, user] = isOpen ? await Promise.all([getLessonComments(school, lesson.id, lessonPath), getCurrentUser()]) : [null, null];
+  const comments =
+    threads && user
+      ? {
+          threads,
+          userId: user.id,
+          actions: { post: postLessonComment.bind(null, school, lesson.id, lessonPath), remove: deleteLessonComment.bind(null, school, lessonPath) },
+        }
+      : null;
   return (
     <LessonView
       lessons={lessons}
@@ -38,6 +50,7 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/s/[sch
       base={base}
       fileUrl={fileUrl}
       quiz={quiz}
+      comments={comments}
       nextHref={nextHref}
       savePosition={saveVideoPosition.bind(null, school, lesson.id)}
       complete={completeLesson.bind(null, school, lesson.id, nextHref)}

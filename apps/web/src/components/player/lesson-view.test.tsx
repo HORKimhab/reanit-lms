@@ -35,6 +35,7 @@ function renderLesson(
       base={PLAYER_BASE}
       fileUrl={fileUrl}
       quiz={isQuiz ? { view: STUDENT_QUIZ, submit: vi.fn() } : null}
+      comments={null}
       nextHref={NEXT_HREF}
       savePosition={vi.fn()}
       complete={complete}

@@ -1,5 +1,5 @@
 // A course and a quiz as the player API returns them for their enrolled student, for player component and page tests.
-import { playerLessons, type PlayerCourse } from "@reanit/core/learning";
+import { playerLessons, type CommentThread, type PlayerCourse } from "@reanit/core/learning";
 
 import type { StudentQuizView } from "@/server/learning/quizzes";
 
@@ -36,4 +36,23 @@ export const STUDENT_QUIZ: StudentQuizView = {
     },
   ],
   lastAttempt: null,
+};
+
+/** A student's question under a lesson, answered by the school's instructor. */
+export const COMMENT_THREAD: CommentThread = {
+  id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a71",
+  lessonId: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02",
+  body: "Where is the workbook?",
+  author: { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a00", name: "Dara", isStaff: false },
+  isHidden: false,
+  createdAt: new Date("2026-10-20T01:00:00Z"),
+  replies: [
+    {
+      id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a72",
+      body: "Under the second lesson.",
+      author: { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a79", name: "Vanna", isStaff: true },
+      isHidden: false,
+      createdAt: new Date("2026-10-20T02:30:00Z"),
+    },
+  ],
 };

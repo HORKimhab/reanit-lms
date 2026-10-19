@@ -84,7 +84,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [ ] API-16 Custom domains: DNS ownership verification, TLS
 - [ ] WEB-24 Custom domain settings screen. Needs API-16.
 - [x] API-17 Lesson comments + instructor replies, moderation
-- [ ] WEB-25 Comments under lessons + dashboard inbox. Needs API-17.
+- [x] WEB-25 Comments under lessons + dashboard inbox. Needs API-17.
 - [ ] WRK-04 Email notifications: new sale, new comment, course completed, preferences + unsubscribe
 - [ ] API-18 Sales analytics: revenue by day/course/currency, refunds, completion funnel
 - [ ] WEB-26 Analytics dashboard. Needs API-18.

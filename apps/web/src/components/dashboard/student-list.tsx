@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { INPUT_CLASS } from "@/components/form/field";
 import { EmptyState } from "@/components/shells/empty-state";
-import { Link } from "@/i18n/navigation";
+import { Pager } from "@/components/shells/pager";
 
 import { StudentTable } from "./student-table";
 
@@ -57,23 +57,7 @@ export function StudentList({ result, q }: { result: StudentPage; q?: string }) 
       ) : (
         <>
           <StudentTable rows={result.students} />
-          <nav aria-label={t("pages")} className="flex items-center justify-between gap-4 text-sm">
-            {result.page > 1 ? (
-              <Link href={pageHref(result.page - 1)} className="text-primary hover:underline">
-                {t("previous")}
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span className="text-muted-foreground">{t("pageOf", { page: result.page, pages })}</span>
-            {result.page < pages ? (
-              <Link href={pageHref(result.page + 1)} className="text-primary hover:underline">
-                {t("next")}
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
+          <Pager label={t("pages")} page={result.page} pages={pages} hrefFor={pageHref} />
         </>
       )}
     </div>
