@@ -1240,13 +1240,17 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "hasMedia": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
                           "id",
                           "title",
                           "type",
-                          "durationSeconds"
+                          "durationSeconds",
+                          "hasMedia"
                         ]
                       }
                     }

@@ -42,7 +42,12 @@ export class CourseResponse extends createZodDto(z.object({ course: courseSchema
 /** Courses without outlines, newest first. */
 export class CoursesResponse extends createZodDto(z.object({ courses: z.array(courseSchema) })) {}
 
-/** One course with its sections and lessons in order. */
+const sectionSchema = outlineSchema.shape.sections.element;
+const loadedSectionSchema = sectionSchema.extend({
+  lessons: z.array(sectionSchema.shape.lessons.element.extend({ hasMedia: z.boolean() })),
+});
+
+/** One course with its sections and lessons in order; each lesson says whether a file is attached. */
 export class CourseWithOutlineResponse extends createZodDto(
-  z.object({ course: z.object({ ...courseSchema.shape, sections: outlineSchema.shape.sections }) }),
+  z.object({ course: z.object({ ...courseSchema.shape, sections: z.array(loadedSectionSchema) }) }),
 ) {}

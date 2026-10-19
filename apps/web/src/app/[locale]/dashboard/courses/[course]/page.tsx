@@ -1,3 +1,4 @@
+import type { CourseWithOutline } from "@reanit/core/catalog";
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -7,7 +8,17 @@ import { DeleteCourseButton } from "@/components/builder/delete-course-button";
 import { Link } from "@/i18n/navigation";
 import { getStaffCourse } from "@/server/catalog/courses";
 
-import { deleteCourse, saveOutline, updateCourse } from "../actions";
+import { attachLessonMedia, deleteCourse, saveOutline, startLessonUpload, updateCourse } from "../actions";
+
+/**
+ * Lists the lessons that already have a video or PDF.
+ *
+ * @param course - The course with its outline.
+ * @returns Their ids.
+ */
+function lessonsWithMedia(course: CourseWithOutline): string[] {
+  return course.sections.flatMap((section) => section.lessons.filter((lesson) => lesson.hasMedia).map((lesson) => lesson.id));
+}
 
 /**
  * Course editor for one of the school's courses: details, curriculum builder and delete.
@@ -42,7 +53,11 @@ export default async function CourseBuilderPage({ params }: PageProps<"/[locale]
       </section>
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">{form("curriculum")}</h2>
-        <CourseBuilder initial={{ sections }} save={saveOutline.bind(null, course.id)} />
+        <CourseBuilder
+          initial={{ sections }}
+          save={saveOutline.bind(null, course.id)}
+          media={{ lessonsWithMedia: lessonsWithMedia(course), start: startLessonUpload, attach: attachLessonMedia }}
+        />
       </section>
       <DeleteCourseButton action={deleteCourse.bind(null, course.id)} />
     </div>

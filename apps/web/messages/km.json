@@ -87,6 +87,30 @@
       "dropped": "{item} ត្រូវបានដាក់នៅ {target}។",
       "outside": "{item} នៅក្រៅបញ្ជី។",
       "cancelled": "ការផ្លាស់ទី {item} ត្រូវបានបោះបង់។"
+    },
+    "media": {
+      "upload": {
+        "video": "ផ្ទុកវីដេអូសម្រាប់ {title}",
+        "pdf": "ផ្ទុក PDF សម្រាប់ {title}"
+      },
+      "replace": {
+        "video": "ប្តូរវីដេអូរបស់ {title}",
+        "pdf": "ប្តូរ PDF របស់ {title}"
+      },
+      "status": {
+        "uploading": "កំពុងផ្ទុក…",
+        "attached": "បានភ្ជាប់ឯកសារ",
+        "unsupported": "ប្រភេទឯកសារនេះមិនសមនឹងមេរៀននេះទេ។",
+        "tooLarge": "ឯកសារនេះធំពេក។",
+        "notSaved": "សូមរង់ចាំមេរៀនរក្សាទុក រួចសាកល្បងម្តងទៀត។",
+        "failed": "ការផ្ទុកបានបរាជ័យ។ សូមសាកល្បងម្តងទៀត។"
+      }
+    },
+    "lessonType": "ប្រភេទមេរៀន",
+    "lessonTypes": {
+      "text": "អត្ថបទ",
+      "video": "វីដេអូ",
+      "pdf": "PDF"
     }
   },
   "Students": {

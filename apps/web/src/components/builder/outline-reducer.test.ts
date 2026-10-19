@@ -85,6 +85,12 @@ describe("outlineReducer", () => {
     expect(next.sections[0]?.lessons.map((l) => l.title)).toEqual(["Welcome", "Install", "Workbook"]);
   });
 
+  it("changes a lesson's type, leaving the others alone", () => {
+    const next = outlineReducer(OUTLINE, { type: "setLessonType", sectionId: "a", lessonId: "a2", lessonType: "video" });
+    expect(next.sections[0]?.lessons.map((l) => l.type)).toEqual(["video", "video", "pdf"]);
+    expect(OUTLINE.sections[0]?.lessons[1]?.type).toBe("text");
+  });
+
   it("removes a lesson", () => {
     expect(lessonIds(outlineReducer(OUTLINE, { type: "removeLesson", sectionId: "a", lessonId: "a1" }))).toEqual([
       "a2",

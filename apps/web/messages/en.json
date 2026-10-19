@@ -87,6 +87,30 @@
       "dropped": "{item} was dropped at {target}.",
       "outside": "{item} is outside the list.",
       "cancelled": "Moving {item} was cancelled."
+    },
+    "media": {
+      "upload": {
+        "video": "Upload video for {title}",
+        "pdf": "Upload PDF for {title}"
+      },
+      "replace": {
+        "video": "Replace video of {title}",
+        "pdf": "Replace PDF of {title}"
+      },
+      "status": {
+        "uploading": "Uploading…",
+        "attached": "File attached",
+        "unsupported": "This file type does not fit this lesson.",
+        "tooLarge": "This file is too large.",
+        "notSaved": "Wait for the lesson to save, then try again.",
+        "failed": "Upload failed. Try again."
+      }
+    },
+    "lessonType": "Lesson type",
+    "lessonTypes": {
+      "text": "Text",
+      "video": "Video",
+      "pdf": "PDF"
     }
   },
   "Students": {

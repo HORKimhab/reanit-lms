@@ -8,7 +8,7 @@ import type { Env } from "../config/env";
 const SIGNED_UPLOAD_HEADERS = new Set(["content-type", "content-length"]);
 
 /** The S3 settings the adapter reads. */
-type S3Env = Pick<
+export type S3Env = Pick<
   Env,
   "S3_ENDPOINT" | "S3_PUBLIC_ENDPOINT" | "S3_REGION" | "S3_BUCKET" | "S3_ACCESS_KEY_ID" | "S3_SECRET_ACCESS_KEY" | "S3_FORCE_PATH_STYLE"
 >;
@@ -20,7 +20,7 @@ type S3Env = Pick<
  * @param endpoint The endpoint to call, or undefined for AWS.
  * @returns The client.
  */
-function s3Client(env: S3Env, endpoint: string | undefined) {
+export function s3Client(env: S3Env, endpoint: string | undefined) {
   return new S3Client({
     endpoint,
     region: env.S3_REGION,

@@ -230,12 +230,13 @@ cp packages/db/.env.example packages/db/.env
 cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
 pnpm db:migrate
+pnpm storage:setup         # media bucket + CORS for browser uploads (also run once against R2 per environment)
 pnpm dev                 # web on http://localhost:3000, API on http://localhost:4000
 curl localhost:4000/health
 ```
 
 - Mailpit's inbox (magic-link emails) is at http://localhost:8025.
-- Lesson videos and PDFs go to the local S3 store (SeaweedFS) on http://localhost:8333; compose creates the `reanit-media` bucket.
+- Lesson videos and PDFs go to the local S3 store (SeaweedFS) on http://localhost:8333; `pnpm storage:setup` creates the `reanit-media` bucket and lets `APP_URL` upload to it.
 - The browser reaches the API through the web app: Next rewrites `/api/*` to `API_URL`, so there is one origin and one cookie.
 - To run the API as its production image instead of `pnpm dev`'s: `docker compose -f infra/docker-compose.yml --profile api up -d --build --wait` (multi-stage `apps/api/Dockerfile`, runs as `node`). Stop `pnpm dev`'s API first; both use port 4000.
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.

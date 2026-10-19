@@ -89,7 +89,7 @@ export class FakeCatalogStore implements CatalogStore {
   }
 
   /**
-   * Replaces a course's outline.
+   * Replaces a course's outline; the fake never has files attached.
    *
    * @param courseId The course's id.
    * @param outline The new outline.
@@ -97,7 +97,12 @@ export class FakeCatalogStore implements CatalogStore {
    */
   async replaceOutline(courseId: string, outline: Outline) {
     const course = this.courses.find((candidate) => candidate.id === courseId);
-    if (course) course.sections = structuredClone(outline.sections);
+    if (course) {
+      course.sections = outline.sections.map((section) => ({
+        ...section,
+        lessons: section.lessons.map((lesson) => ({ ...lesson, hasMedia: false })),
+      }));
+    }
     return Boolean(course);
   }
 }

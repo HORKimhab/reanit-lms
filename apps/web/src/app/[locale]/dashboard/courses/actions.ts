@@ -17,7 +17,7 @@ export type CourseFormState = {
 };
 
 const COURSES_PATH = "/dashboard/courses";
-const courseIdSchema = z.uuid();
+const idSchema = z.uuid();
 
 /**
  * Checks a course id from the browser before it goes into an API path.
@@ -27,7 +27,7 @@ const courseIdSchema = z.uuid();
  * @throws {Error} Next's not-found signal when it is not a UUID.
  */
 function coursePath(courseId: unknown): { path: { id: string } } {
-  const id = courseIdSchema.safeParse(courseId);
+  const id = idSchema.safeParse(courseId);
   if (!id.success) notFound();
   return { path: { id: id.data } };
 }
@@ -100,4 +100,53 @@ export async function saveOutline(courseId: string, outline: unknown): Promise<v
   const body = outlineSchema.parse(outline);
   const { response } = await (await getApi()).PUT("/courses/{id}/outline", { params: coursePath(courseId), body });
   checkStaffResponse(response);
+}
+
+/** Answer to starting a lesson upload: where to PUT the file, or why the API refused. */
+export type LessonUploadStart =
+  | { status: "ready"; url: string; headers: Record<string, string>; key: string }
+  | { status: "unsupported" | "tooLarge" | "notSaved" };
+
+/** API answers to an upload request that the builder explains to the creator. */
+const UPLOAD_REFUSALS: Partial<Record<number, "unsupported" | "tooLarge" | "notSaved">> = {
+  415: "unsupported",
+  413: "tooLarge",
+  404: "notSaved",
+};
+
+/**
+ * Asks the API where to upload a lesson's video or PDF; the browser then sends the file straight to storage.
+ *
+ * @param lessonId The lesson, already saved by autosave.
+ * @param file What the browser is about to send.
+ * @param file.contentType Its content type.
+ * @param file.sizeBytes Its size in bytes.
+ * @returns The upload URL and key, or why it cannot be uploaded.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function startLessonUpload(lessonId: string, file: { contentType: string; sizeBytes: number }): Promise<LessonUploadStart> {
+  const params = { path: { lessonId: idSchema.parse(lessonId) } };
+  const { data, response } = await (await getApi()).POST("/lessons/{lessonId}/media/uploads", { params, body: file });
+  const refusal = UPLOAD_REFUSALS[response.status];
+  if (refusal) return { status: refusal };
+  checkStaffResponse(response);
+  // checkStaffResponse returned, so the API answered 2xx with the upload.
+  const { url, headers, key } = data!;
+  return { status: "ready", url, headers, key };
+}
+
+/**
+ * Attaches an uploaded file to its lesson.
+ *
+ * @param lessonId The lesson.
+ * @param key The key `startLessonUpload` returned.
+ * @returns Whether the file is attached, or `notUploaded` when storage does not have it.
+ * @throws {Error} Next's redirect or not-found signal, or an unexpected-response error.
+ */
+export async function attachLessonMedia(lessonId: string, key: string): Promise<{ status: "attached" | "notUploaded" }> {
+  const params = { path: { lessonId: idSchema.parse(lessonId) } };
+  const { response } = await (await getApi()).PUT("/lessons/{lessonId}/media", { params, body: { key } });
+  if (response.status === 409) return { status: "notUploaded" };
+  checkStaffResponse(response);
+  return { status: "attached" };
 }

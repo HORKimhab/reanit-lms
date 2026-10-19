@@ -24,6 +24,9 @@ const OUTLINE: Outline = {
   ],
 };
 
+/** Upload actions that are never reached in these tests. */
+const NO_MEDIA = { lessonsWithMedia: [], start: vi.fn(), attach: vi.fn() };
+
 /** The builder's save function, as a spy. */
 type SaveSpy = ReturnType<typeof vi.fn<(outline: Outline) => Promise<void>>>;
 
@@ -43,7 +46,7 @@ function okSave(): SaveSpy {
  * @returns The user-event instance.
  */
 function setup(save: SaveSpy = okSave()) {
-  renderWithIntl(<CourseBuilder initial={OUTLINE} save={save} />);
+  renderWithIntl(<CourseBuilder initial={OUTLINE} save={save} media={NO_MEDIA} />);
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
 }
 
@@ -158,8 +161,31 @@ describe("CourseBuilder", () => {
     expect(titles("Section title")).toEqual(["Intro", "Basics"]);
   });
 
+  it("offers an upload only for video and PDF lessons", async () => {
+    setup();
+    expect(await screen.findByLabelText("Upload video for Welcome")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Upload .* for Setup/)).not.toBeInTheDocument();
+  });
+
+  it("changes a lesson's type, autosaves it and offers the matching upload", async () => {
+    const save = okSave();
+    const user = setup(save);
+
+    const [, setupType] = await screen.findAllByRole("combobox", { name: "Lesson type" });
+    await user.selectOptions(setupType as HTMLElement, "PDF");
+    await waitForAutosave();
+
+    expect(screen.getByLabelText("Upload PDF for Setup")).toBeInTheDocument();
+    expect(save.mock.lastCall?.[0].sections[0]?.lessons[1]?.type).toBe("pdf");
+  });
+
+  it("offers to replace the file of a lesson that has one", async () => {
+    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={{ ...NO_MEDIA, lessonsWithMedia: ["a1"] }} />);
+    expect(await screen.findByLabelText("Replace video of Welcome")).toBeInTheDocument();
+  });
+
   it("uses Khmer labels when the locale is km", async () => {
-    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} />, { locale: "km" });
+    renderWithIntl(<CourseBuilder initial={OUTLINE} save={okSave()} media={NO_MEDIA} />, { locale: "km" });
     expect(await screen.findByRole("button", { name: "បន្ថែមផ្នែក" })).toBeInTheDocument();
   });
 });

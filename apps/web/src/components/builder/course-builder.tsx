@@ -1,14 +1,15 @@
 "use client";
 
-import { TITLE_MAX_LENGTH, type Outline } from "@reanit/core/catalog";
+import { LESSON_TYPES, TITLE_MAX_LENGTH, type LessonType, type Outline } from "@reanit/core/catalog";
 import { Button } from "@reanit/ui/components/button";
 import { cn } from "@reanit/ui/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useReducer, type Dispatch } from "react";
+import { useReducer, useRef, type Dispatch } from "react";
 
 import { LessonIcon } from "@/components/course/lesson-icon";
 
+import { LessonMediaUpload, type LessonMediaActions } from "./lesson-media-upload";
 import { outlineReducer, type OutlineAction, type OutlineSection } from "./outline-reducer";
 import { SortableItem, SortableList } from "./sortable-list";
 import { useAutosave, type SaveStatus } from "./use-autosave";
@@ -19,12 +20,32 @@ import { useAutosave, type SaveStatus } from "./use-autosave";
  * @param props - Component props.
  * @param props.initial - The outline as last saved.
  * @param props.save - Persists the outline; rejecting shows a save error.
+ * @param props.media - Lesson file uploads: lessons that already have a file, and the start and attach actions.
  * @returns The save status, the section list and an add-section button.
  */
-export function CourseBuilder({ initial, save }: { initial: Outline; save: (outline: Outline) => Promise<void> }) {
+export function CourseBuilder({
+  initial,
+  save,
+  media,
+}: {
+  initial: Outline;
+  save: (outline: Outline) => Promise<void>;
+  media: { lessonsWithMedia: string[] } & Omit<LessonMediaActions, "saveNow">;
+}) {
   const t = useTranslations("Builder");
   const [outline, dispatch] = useReducer(outlineReducer, initial);
   const status = useAutosave(outline, save);
+  const latest = useRef(outline);
+  latest.current = outline;
+  /**
+   * Saves the outline as it is now, ahead of an upload.
+   *
+   * @returns When the save is done.
+   */
+  function saveNow() {
+    return save(latest.current);
+  }
+  const mediaActions: LessonMediaActions = { saveNow, start: media.start, attach: media.attach };
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,7 +55,13 @@ export function CourseBuilder({ initial, save }: { initial: Outline; save: (outl
         onMove={(activeId, overId) => dispatch({ type: "moveSection", activeId, overId })}
       >
         {outline.sections.map((section) => (
-          <SectionEditor key={section.id} section={section} dispatch={dispatch} />
+          <SectionEditor
+            key={section.id}
+            section={section}
+            dispatch={dispatch}
+            lessonsWithMedia={media.lessonsWithMedia}
+            mediaActions={mediaActions}
+          />
         ))}
       </SortableList>
       <Button
@@ -71,9 +98,21 @@ function SaveStatusText({ status }: { status: SaveStatus }) {
  * @param props - Component props.
  * @param props.section - The section to edit.
  * @param props.dispatch - Sends edits to the builder's outline.
+ * @param props.lessonsWithMedia - Lessons that already have a file attached.
+ * @param props.mediaActions - Lesson file uploads.
  * @returns The section card.
  */
-function SectionEditor({ section, dispatch }: { section: OutlineSection; dispatch: Dispatch<OutlineAction> }) {
+function SectionEditor({
+  section,
+  dispatch,
+  lessonsWithMedia,
+  mediaActions,
+}: {
+  section: OutlineSection;
+  dispatch: Dispatch<OutlineAction>;
+  lessonsWithMedia: string[];
+  mediaActions: LessonMediaActions;
+}) {
   const t = useTranslations("Builder");
   const sectionId = section.id;
   const name = section.title || t("newSection");
@@ -108,6 +147,19 @@ function SectionEditor({ section, dispatch }: { section: OutlineSection; dispatc
                     value={lesson.title}
                     onChange={(title) => dispatch({ type: "renameLesson", sectionId, lessonId, title })}
                   />
+                  <LessonTypeSelect
+                    value={lesson.type}
+                    onChange={(lessonType) => dispatch({ type: "setLessonType", sectionId, lessonId, lessonType })}
+                  />
+                  {lesson.type === "text" ? null : (
+                    <LessonMediaUpload
+                      lessonId={lessonId}
+                      lessonType={lesson.type}
+                      lessonTitle={lessonName}
+                      hasMedia={lessonsWithMedia.includes(lessonId)}
+                      actions={mediaActions}
+                    />
+                  )}
                   <RemoveButton
                     label={t("removeLesson", { title: lessonName })}
                     onClick={() => dispatch({ type: "removeLesson", sectionId, lessonId })}
@@ -180,5 +232,31 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
     <Button variant="ghost" size="icon" aria-label={label} onClick={onClick} className="size-8 text-muted-foreground">
       <Trash2 aria-hidden />
     </Button>
+  );
+}
+
+/**
+ * Picks what a lesson holds: text, a video or a PDF.
+ *
+ * @param props - Component props.
+ * @param props.value - The lesson's type.
+ * @param props.onChange - Called with the new type.
+ * @returns The select.
+ */
+function LessonTypeSelect({ value, onChange }: { value: LessonType; onChange: (type: LessonType) => void }) {
+  const t = useTranslations("Builder");
+  return (
+    <select
+      aria-label={t("lessonType")}
+      value={value}
+      onChange={(event) => onChange(event.target.value as LessonType)}
+      className="h-8 rounded-md border bg-transparent px-2 text-sm"
+    >
+      {LESSON_TYPES.map((type) => (
+        <option key={type} value={type}>
+          {t(`lessonTypes.${type}`)}
+        </option>
+      ))}
+    </select>
   );
 }

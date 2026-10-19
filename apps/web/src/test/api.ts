@@ -1,4 +1,4 @@
-// Test double for apps/api at its network boundary: `fetch` is stubbed in setup.ts, so code under
+// Test double for apps/api (and object storage) at the network boundary: `fetch` is stubbed in setup.ts, so code under
 // test runs the real typed client. Program answers with `onApi` and inspect `apiRequests`.
 import type { AuthUser } from "@reanit/core/auth";
 
@@ -25,14 +25,17 @@ export function onApi(route: string, answer: Response | Answer) {
 
 /**
  * Stubbed `fetch`: records the request and returns the programmed answer, or 404 for any other route.
+ * Takes both forms: a `Request` (openapi-fetch) or a URL with options (browser uploads to storage).
  *
- * @param input The request openapi-fetch sends.
+ * @param input The request, or its URL.
+ * @param init Options when `input` is a URL.
  * @returns The programmed response.
  */
-export async function fakeFetch(input: Request): Promise<Response> {
-  apiRequests.push(input.clone());
-  const answer = answers.get(`${input.method} ${new URL(input.url).pathname}`);
-  return answer ? answer(input) : problem(404);
+export async function fakeFetch(input: Request | string, init?: RequestInit): Promise<Response> {
+  const request = typeof input === "string" ? new Request(input, init) : input;
+  apiRequests.push(request.clone());
+  const answer = answers.get(`${request.method} ${new URL(request.url).pathname}`);
+  return answer ? answer(request) : problem(404);
 }
 
 /** Forgets every programmed answer and recorded request. */

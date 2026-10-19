@@ -8,7 +8,15 @@ import { formData as form } from "@/test/form";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
-import { createCourse, deleteCourse, saveOutline, updateCourse, type CourseFormState } from "./actions";
+import {
+  attachLessonMedia,
+  createCourse,
+  deleteCourse,
+  saveOutline,
+  startLessonUpload,
+  updateCourse,
+  type CourseFormState,
+} from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 // Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
@@ -128,5 +136,56 @@ describe("saveOutline", () => {
     onApi(`PUT ${COURSE_URL}/outline`, problem(404));
 
     await expect(saveOutline(COURSE.id, OUTLINE)).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("startLessonUpload", () => {
+  const LESSON_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02";
+  const ROUTE = `POST /lessons/${LESSON_ID}/media/uploads`;
+
+  it("returns where to upload the file", async () => {
+    onApi(ROUTE, Response.json({ key: "k", url: "https://storage.test/k", headers: { "content-type": "video/mp4" }, expiresAt: "2026-10-19T00:15:00.000Z" }, { status: 201 }));
+
+    expect(await startLessonUpload(LESSON_ID, { contentType: "video/mp4", sizeBytes: 10 })).toEqual({
+      status: "ready",
+      url: "https://storage.test/k",
+      headers: { "content-type": "video/mp4" },
+      key: "k",
+    });
+    expect(await requestTo(ROUTE)?.json()).toEqual({ contentType: "video/mp4", sizeBytes: 10 });
+  });
+
+  it.each([
+    [415, "unsupported"],
+    [413, "tooLarge"],
+    [404, "notSaved"],
+  ])("explains an API %i as %s", async (status, result) => {
+    onApi(ROUTE, problem(status));
+
+    expect(await startLessonUpload(LESSON_ID, { contentType: "video/mp4", sizeBytes: 10 })).toEqual({ status: result });
+  });
+
+  it("sends a user who runs no school to onboarding", async () => {
+    onApi(ROUTE, problem(403));
+
+    await expect(startLessonUpload(LESSON_ID, { contentType: "video/mp4", sizeBytes: 10 })).rejects.toEqual(new RedirectError("/onboarding"));
+  });
+});
+
+describe("attachLessonMedia", () => {
+  const LESSON_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02";
+  const ROUTE = `PUT /lessons/${LESSON_ID}/media`;
+
+  it("attaches the uploaded key", async () => {
+    onApi(ROUTE, NO_CONTENT);
+
+    expect(await attachLessonMedia(LESSON_ID, "k")).toEqual({ status: "attached" });
+    expect(await requestTo(ROUTE)?.json()).toEqual({ key: "k" });
+  });
+
+  it("reports a file storage does not have yet", async () => {
+    onApi(ROUTE, problem(409));
+
+    expect(await attachLessonMedia(LESSON_ID, "k")).toEqual({ status: "notUploaded" });
   });
 });

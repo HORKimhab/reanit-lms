@@ -1,5 +1,5 @@
 import { arrayMove } from "@dnd-kit/sortable";
-import type { Outline } from "@reanit/core/catalog";
+import type { LessonType, Outline } from "@reanit/core/catalog";
 
 /** A section and its lessons, in order, as the builder edits it. */
 export type OutlineSection = Outline["sections"][number];
@@ -15,6 +15,7 @@ export type OutlineAction =
   | { type: "moveSection"; activeId: string; overId: string }
   | { type: "addLesson"; sectionId: string; id: string; title: string }
   | { type: "renameLesson"; sectionId: string; lessonId: string; title: string }
+  | { type: "setLessonType"; sectionId: string; lessonId: string; lessonType: LessonType }
   | { type: "removeLesson"; sectionId: string; lessonId: string }
   /** Drops the dragged lesson `activeId` where lesson `overId` is, inside one section. */
   | { type: "moveLesson"; sectionId: string; activeId: string; overId: string };
@@ -61,6 +62,24 @@ function updateSection(outline: Outline, sectionId: string, change: (section: Ou
 }
 
 /**
+ * Changes fields of one lesson.
+ *
+ * @param outline - The current outline.
+ * @param target - Where the lesson is.
+ * @param target.sectionId - Its section.
+ * @param target.lessonId - The lesson.
+ * @param changes - The new field values.
+ * @returns The new outline.
+ */
+function updateLesson(
+  outline: Outline,
+  { sectionId, lessonId }: { sectionId: string; lessonId: string },
+  changes: Partial<OutlineLesson>,
+) {
+  return updateLessons(outline, sectionId, (lessons) => lessons.map((l) => (l.id === lessonId ? { ...l, ...changes } : l)));
+}
+
+/**
  * Applies one builder edit to an outline without mutating it.
  *
  * @param outline - The current outline.
@@ -83,9 +102,9 @@ export function outlineReducer(outline: Outline, action: OutlineAction): Outline
         { id: action.id, title: action.title, type: NEW_LESSON_TYPE, durationSeconds: 0 },
       ]);
     case "renameLesson":
-      return updateLessons(outline, action.sectionId, (lessons) =>
-        lessons.map((l) => (l.id === action.lessonId ? { ...l, title: action.title } : l)),
-      );
+      return updateLesson(outline, action, { title: action.title });
+    case "setLessonType":
+      return updateLesson(outline, action, { type: action.lessonType });
     case "removeLesson":
       return updateLessons(outline, action.sectionId, (lessons) => lessons.filter((l) => l.id !== action.lessonId));
     case "moveLesson":

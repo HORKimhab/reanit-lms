@@ -14,7 +14,8 @@
     "knip": "knip",
     "dup": "jscpd",
     "db:migrate": "pnpm --filter @reanit/db migrate",
-    "openapi": "pnpm --filter api openapi && pnpm --filter @reanit/api-client build"
+    "openapi": "pnpm --filter api openapi && pnpm --filter @reanit/api-client build",
+    "storage:setup": "pnpm --filter api build && pnpm --filter api storage:setup"
   },
   "devDependencies": {
     "jscpd": "catalog:",

@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 // Bundles the app with the workspace packages it imports, which ship TypeScript source.
 // tsup compiles with SWC because tsconfig enables emitDecoratorMetadata, which esbuild lacks.
 export default defineConfig({
-  entry: ["src/main.ts", "src/openapi.ts"],
+  entry: ["src/main.ts", "src/openapi.ts", "src/storage-setup.ts"],
   format: "esm",
   platform: "node",
   target: "node24",

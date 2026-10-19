@@ -43,6 +43,24 @@ async function upsertOutline(tx: SchoolTransaction, schoolId: string, courseId: 
   }
 }
 
+/** A section as the course query loads it, with each lesson's storage key. */
+type SectionRow = {
+  id: string;
+  title: string;
+  lessons: { id: string; title: string; type: LessonType; durationSeconds: number; mediaKey: string | null }[];
+};
+
+/**
+ * Replaces each lesson's storage key with whether it has one; the key stays inside the media module.
+ *
+ * @param section A loaded section.
+ * @param section.lessons Its lessons with their storage keys.
+ * @returns The section with `hasMedia` on each lesson.
+ */
+function withMediaFlags({ lessons, ...section }: SectionRow) {
+  return { ...section, lessons: lessons.map(({ mediaKey, ...lesson }) => ({ ...lesson, hasMedia: mediaKey !== null })) };
+}
+
 /**
  * One school's catalog: courses with their sections and lessons. Every query goes through the
  * tenant client, so another school's rows are invisible; it satisfies `CatalogStore` from `@reanit/core/catalog`.
@@ -73,8 +91,8 @@ export function createCatalogStore(db: DbClient, schoolId: string) {
      * @param slug The course's slug.
      * @returns The course, or null when the school has none with that slug.
      */
-    findCourseBySlug(slug: string) {
-      return tenant.course.findUnique({
+    async findCourseBySlug(slug: string) {
+      const course = await tenant.course.findUnique({
         where: { schoolId_slug: { schoolId, slug } },
         select: {
           ...COURSE_FIELDS,
@@ -83,11 +101,15 @@ export function createCatalogStore(db: DbClient, schoolId: string) {
             select: {
               id: true,
               title: true,
-              lessons: { orderBy: IN_ORDER, select: { id: true, title: true, type: true, durationSeconds: true } },
+              lessons: {
+                orderBy: IN_ORDER,
+                select: { id: true, title: true, type: true, durationSeconds: true, mediaKey: true },
+              },
             },
           },
         },
       });
+      return course && { ...course, sections: course.sections.map(withMediaFlags) };
     },
 
     /**

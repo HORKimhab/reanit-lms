@@ -47,7 +47,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-12 Connect builder + dashboard course list to the API: list the school's courses, create one, edit title/description/status, delete, outline autosave. Needs API-03. (Sales page split out to WEB-27.)
 - [x] WEB-27 School site on the API, then the sales page: resolve the school from its subdomain (default brand color until API-08), sales page from the public catalog. Decided: use what the API has (title, description, curriculum); no price until API-05, instructor block shows the school owner (expose the owner's name from the API), FAQ hidden when empty, no schema change. Needs WEB-12.
 - [x] API-04 Media: presigned upload + video. Decided: S3-compatible object storage only for now (R2 in prod, SeaweedFS locally; MinIO no longer publishes free images) behind an `ObjectStorage` port in `@reanit/core`; presigned PUT for uploads, signed GET for playback of plain MP4/PDF; no transcoding yet.
-- [ ] WEB-13 Video upload in builder. Needs API-04.
+- [x] WEB-13 Video upload in builder. Needs API-04.
 - [ ] API-05 Checkout + WRK-01 webhook enrollment ⚠ payment provider
 - [ ] WEB-14 Checkout page. Needs API-05.
 - [ ] API-06 Learning: access check, progress heartbeat

@@ -14,8 +14,16 @@ export interface Course {
   status: CourseStatus;
 }
 
+/** A lesson as a loaded course lists it. */
+type LoadedLesson = Outline["sections"][number]["lessons"][number] & {
+  /** Whether a video or PDF is attached (see `@reanit/core/media`). */
+  hasMedia: boolean;
+};
+
 /** A course with its sections and lessons in display order. */
-export type CourseWithOutline = Course & Outline;
+export type CourseWithOutline = Course & {
+  sections: (Omit<Outline["sections"][number], "lessons"> & { lessons: LoadedLesson[] })[];
+};
 
 /**
  * One school's catalog. `@reanit/db` implements it with `createCatalogStore`,

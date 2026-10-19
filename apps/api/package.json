@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "openapi": "tsup && node dist/openapi.js ../../packages/api-client/openapi.json"
+    "openapi": "tsup && node dist/openapi.js ../../packages/api-client/openapi.json",
+    "storage:setup": "node --env-file-if-exists=.env dist/storage-setup.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",

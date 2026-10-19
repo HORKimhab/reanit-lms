@@ -31,6 +31,16 @@ function lesson(title: string, id: string = randomUUID()) {
   return { id, title, type: "video" as const, durationSeconds: 60 };
 }
 
+/**
+ * Describes sections as a loaded course lists them: lessons without files say so.
+ *
+ * @param sections Saved sections.
+ * @returns The sections with `hasMedia: false` on each lesson.
+ */
+function asLoaded(sections: { id: string; title: string; lessons: ReturnType<typeof lesson>[] }[]) {
+  return sections.map((section) => ({ ...section, lessons: section.lessons.map((saved) => ({ ...saved, hasMedia: false })) }));
+}
+
 beforeAll(async () => {
   ({ schoolId: alphaSchoolId, store: alpha } = await openSchool("catalog-alpha"));
   ({ store: beta } = await openSchool("catalog-beta"));
@@ -73,7 +83,7 @@ describe("catalog store", () => {
     };
 
     expect(await alpha.replaceOutline(course.id, outline)).toBe(true);
-    expect(await alpha.findCourseBySlug("outlined")).toEqual({ ...course, ...outline });
+    expect(await alpha.findCourseBySlug("outlined")).toEqual({ ...course, sections: asLoaded(outline.sections) });
   });
 
   it("renames, reorders, moves and removes to match a new outline", async () => {
@@ -96,7 +106,7 @@ describe("catalog store", () => {
     const next = { sections: [{ id: one, title: "One renamed", lessons: [lesson("Moved", moved), lesson("Kept", kept), lesson("New")] }] };
     await alpha.replaceOutline(course.id, next);
 
-    expect((await alpha.findCourseBySlug("edited"))?.sections).toEqual(next.sections);
+    expect((await alpha.findCourseBySlug("edited"))?.sections).toEqual(asLoaded(next.sections));
     expect(await db.lesson.count({ where: { id: { in: [dropped] } } })).toBe(0);
     expect(await db.section.count({ where: { id: two } })).toBe(0);
     expect(await db.lessonProgress.count({ where: { lessonId: moved } })).toBe(1);

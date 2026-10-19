@@ -44,6 +44,14 @@ describe("lesson media store", () => {
     expect((await store.findLesson(lessonId))?.mediaKey).toBe(`schools/${alphaId}/lessons/${lessonId}/a.mp4`);
   });
 
+  it("flags the lesson as having a file when its course is loaded, without exposing the key", async () => {
+    await createLessonMediaStore(db, alphaId).setMediaKey(lessonId, `schools/${alphaId}/lessons/${lessonId}/b.mp4`);
+
+    const course = await createCatalogStore(db, alphaId).findCourseBySlug("video-course");
+
+    expect(course?.sections[0]?.lessons).toEqual([{ id: lessonId, title: "Intro", type: "video", durationSeconds: 60, hasMedia: true }]);
+  });
+
   it("shows another school nothing and lets it change nothing", async () => {
     const before = await createLessonMediaStore(db, alphaId).findLesson(lessonId);
     const beta = createLessonMediaStore(db, betaId);
