@@ -50,3 +50,16 @@ export async function endSession() {
 export async function redirectIfSignedIn(next: unknown) {
   if (await getCurrentUser()) redirect(safeRedirectPath(next));
 }
+
+/**
+ * Returns the signed-in user, or sends the visitor to log in and come back to `next`.
+ *
+ * @param next Path to return to after logging in.
+ * @returns The signed-in user.
+ * @throws {Error} Next's redirect signal when signed out.
+ */
+export async function requireUser(next: string): Promise<AuthUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  return user;
+}

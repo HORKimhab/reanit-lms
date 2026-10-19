@@ -43,7 +43,7 @@ export function Landing() {
         <p className="max-w-xl text-lg text-muted-foreground">{t("subtitle")}</p>
         <div className="flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href="/dashboard">{t("createSchool")}</Link>
+            <Link href="/onboarding">{t("createSchool")}</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link href={`/s/${MOCK_SCHOOL_SLUG}`}>{t("browseCourses")}</Link>

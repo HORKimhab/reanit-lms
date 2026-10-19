@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createSchoolSchema, subdomainSchema } from "./rules";
+import { createSchoolSchema, subdomainSchema, suggestSubdomain } from "./rules";
 
 describe("subdomainSchema", () => {
   it("lower-cases and trims the subdomain", () => {
@@ -33,5 +33,27 @@ describe("createSchoolSchema", () => {
 
   it("rejects a blank name", () => {
     expect(createSchoolSchema.safeParse({ name: "  ", subdomain: "angkor" }).success).toBe(false);
+  });
+});
+
+describe("suggestSubdomain", () => {
+  it.each([
+    ["Angkor Academy", "angkor-academy"],
+    ["  Café   Angkor!! ", "cafe-angkor"],
+    ["Code 101", "code-101"],
+    ["សាលា Angkor", "angkor"],
+    ["សាលាអង្គរ", ""],
+  ])("suggests %j → %j", (name, subdomain) => {
+    expect(suggestSubdomain(name)).toBe(subdomain);
+  });
+
+  it("caps the suggestion at 63 characters without a trailing hyphen", () => {
+    const suggestion = suggestSubdomain(`${"a".repeat(62)} b`);
+
+    expect(suggestion).toBe("a".repeat(62));
+  });
+
+  it("gives a valid subdomain for an ordinary name", () => {
+    expect(subdomainSchema.safeParse(suggestSubdomain("Phnom Penh Coding School")).success).toBe(true);
   });
 });

@@ -204,5 +204,23 @@
       "subject": "Your sign-in link",
       "body": "Use this link to sign in:\n\n{url}\n\nIt expires in {minutes} minutes and works once. If you didn't ask for it, you can ignore this email."
     }
+  },
+  "Onboarding": {
+    "title": "Create your school",
+    "step": "Step {current} of {total}",
+    "name": "School name",
+    "nameHint": "You can change it later.",
+    "next": "Next",
+    "back": "Back",
+    "subdomain": "Subdomain",
+    "subdomainHint": "Lowercase letters, numbers and hyphens, 3 to 63 characters.",
+    "preview": "Your school will live at <b>{address}</b>",
+    "submit": "Create school",
+    "submitting": "Creating…",
+    "errors": {
+      "name": "Enter a name of up to 100 characters.",
+      "subdomain": "Use 3 to 63 lowercase letters, numbers or inner hyphens. Some names, like www, are reserved.",
+      "subdomainTaken": "Another school already uses this subdomain."
+    }
   }
 }

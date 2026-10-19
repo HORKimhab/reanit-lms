@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "@/i18n/navigation";
 
 /**
- * Centered, mobile-first frame for the log-in and sign-up pages.
+ * Centered, mobile-first frame for the log-in, sign-up and onboarding pages.
  *
  * @param props - Layout props.
  * @param props.children - The auth page.

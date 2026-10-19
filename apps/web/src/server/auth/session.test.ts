@@ -5,7 +5,14 @@ import { authService, SESSION } from "@/test/auth-service";
 import { cookieJar } from "@/test/headers";
 import { RedirectError } from "@/test/navigation";
 
-import { endSession, getCurrentUser, redirectIfSignedIn, SESSION_COOKIE, setSessionCookie } from "./session";
+import {
+  endSession,
+  getCurrentUser,
+  redirectIfSignedIn,
+  requireUser,
+  SESSION_COOKIE,
+  setSessionCookie,
+} from "./session";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("./service", () => import("@/test/auth-service"));
@@ -66,5 +73,18 @@ describe("redirectIfSignedIn", () => {
 
   it("lets a signed-out visitor stay", async () => {
     await expect(redirectIfSignedIn("/dashboard")).resolves.toBeUndefined();
+  });
+});
+
+describe("requireUser", () => {
+  it("returns the signed-in user", async () => {
+    cookieJar.set(SESSION_COOKIE, SESSION.token);
+    authService.getSessionUser.mockResolvedValue(SESSION.user);
+
+    expect(await requireUser("/onboarding")).toEqual(SESSION.user);
+  });
+
+  it("sends a signed-out visitor to log in and back", async () => {
+    await expect(requireUser("/onboarding?step=2")).rejects.toEqual(new RedirectError("/login?next=%2Fonboarding%3Fstep%3D2"));
   });
 });

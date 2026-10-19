@@ -7,10 +7,10 @@ import { renderWithIntl } from "@/test/render";
 import { Landing } from "./landing";
 
 describe("Landing", () => {
-  it("pitches the platform with links to the dashboard and a sample school", async () => {
+  it("pitches the platform with links to onboarding and a sample school", async () => {
     renderWithIntl(<Landing />);
     expect(await screen.findByRole("heading", { level: 1, name: "Teach what you know." })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create your school" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Create your school" })).toHaveAttribute("href", "/onboarding");
     expect(screen.getByRole("link", { name: "Browse courses" })).toHaveAttribute("href", `/s/${MOCK_SCHOOL_SLUG}`);
   });
 

@@ -3,9 +3,11 @@
 import { createSchoolSchema, SubdomainTakenError } from "@reanit/core/schools";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/server/auth/session";
+import { requireUser } from "@/server/auth/session";
 import { invalidFieldsOf } from "@/server/form-errors";
 import { getSchoolService } from "@/server/schools/service";
+
+import { ONBOARDING_PATH } from "./constants";
 
 /** Result of the last submit, shown by the onboarding wizard (WEB-11). */
 export type CreateSchoolState = {
@@ -14,8 +16,6 @@ export type CreateSchoolState = {
   invalidFields: string[];
 };
 
-/** Where the wizard lives, so a signed-out creator comes back to it after logging in. */
-const ONBOARDING_PATH = "/onboarding";
 const DASHBOARD_PATH = "/dashboard";
 
 /**
@@ -27,8 +27,7 @@ const DASHBOARD_PATH = "/dashboard";
  * @throws {Error} Next's redirect signal (to log in, or to the dashboard on success), or any unexpected failure.
  */
 export async function createSchool(_previous: CreateSchoolState, formData: FormData): Promise<CreateSchoolState> {
-  const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(ONBOARDING_PATH)}`);
+  const user = await requireUser(ONBOARDING_PATH);
 
   const parsed = createSchoolSchema.safeParse({ name: formData.get("name"), subdomain: formData.get("subdomain") });
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
