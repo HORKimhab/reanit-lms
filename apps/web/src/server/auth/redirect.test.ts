@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { safeRedirectPath } from "./redirect";
+import { nextFromQuery, safeRedirectPath } from "./redirect";
 
 describe("safeRedirectPath", () => {
   it.each(["/dashboard", "/km/s/angkor/my-courses?tab=all", "/"])("keeps the local path %s", (path) => {
@@ -16,5 +16,19 @@ describe("safeRedirectPath", () => {
 
   it("falls back to home when the value is missing", () => {
     expect(safeRedirectPath(null)).toBe("/");
+  });
+});
+
+describe("nextFromQuery", () => {
+  it("returns a safe local path", () => {
+    expect(nextFromQuery("/dashboard")).toBe("/dashboard");
+  });
+
+  it("returns home for an off-site path", () => {
+    expect(nextFromQuery("//evil.example")).toBe("/");
+  });
+
+  it.each([[undefined], [["/a", "/b"]]])("returns undefined for %j", (value) => {
+    expect(nextFromQuery(value)).toBeUndefined();
   });
 });

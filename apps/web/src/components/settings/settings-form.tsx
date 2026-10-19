@@ -2,10 +2,11 @@
 
 import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useState } from "react";
 import type * as React from "react";
 
 import type { SettingsField, SettingsState } from "@/app/[locale]/dashboard/settings/actions";
+import { Field, INPUT_CLASS } from "@/components/form/field";
 import {
   isAllowedLogo,
   LOGO_MAX_MB,
@@ -17,12 +18,6 @@ import {
 import { BrandPreview } from "./brand-preview";
 
 const INITIAL_STATE: SettingsState = { status: "idle", invalidFields: [] };
-
-const INPUT_CLASS =
-  "h-9 rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive";
-
-/** Props a `Field` hands to its control so the label, hint and error are wired up. */
-type ControlProps = { id: string; "aria-describedby"?: string; "aria-invalid"?: true };
 
 /**
  * School settings: name, brand color and logo, with a live preview that updates as they change.
@@ -137,51 +132,5 @@ export function SettingsForm({
       </div>
       <BrandPreview name={name} brand={brand} logoUrl={logoUrl} />
     </form>
-  );
-}
-
-/**
- * A labelled form field with an optional hint and error, both linked to the control for screen readers.
- *
- * @param props - Component props.
- * @param props.label - The field's label.
- * @param props.hint - Help shown under the control.
- * @param props.error - Error shown under the control; marks it invalid.
- * @param props.children - Renders the control from the wiring props it must spread.
- * @returns The label, control, hint and error.
- */
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: (control: ControlProps) => React.ReactNode;
-}) {
-  const id = useId();
-  const hintId = `${id}-hint`;
-  const errorId = `${id}-error`;
-  const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ");
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {children({ id, "aria-describedby": describedBy || undefined, "aria-invalid": error ? true : undefined })}
-      {hint ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p id={errorId} className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }

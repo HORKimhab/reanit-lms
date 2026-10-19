@@ -17,7 +17,10 @@ describe("SchoolHeader", () => {
       ["Courses", BASE],
       ["My courses", `${BASE}/my-courses`],
     ]);
-    expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent(`${BASE}/my-courses`)}`,
+    );
   });
 
   it("shows the student's links and avatar in the student area", async () => {

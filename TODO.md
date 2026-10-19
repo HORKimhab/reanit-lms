@@ -26,7 +26,7 @@ i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (
 - [x] INFRA-01 docker-compose: Postgres, Redis, Mailpit. Done when all services are healthy.
 - [x] DB-01 Prisma core schema, tenant client, RLS. Done when the RLS isolation test passes.
 - [x] API-01 Auth: sign-up, login, magic link, sessions
-- [ ] WEB-10 Login/sign-up screens. Needs API-01.
+- [x] WEB-10 Login/sign-up screens. Needs API-01.
 - [ ] API-02 Schools: create school, subdomain middleware
 - [ ] WEB-11 Create-school onboarding wizard. Needs API-02.
 - [ ] API-03 Catalog: courses/sections/lessons CRUD

@@ -53,7 +53,7 @@ export function SchoolHeader({ school, variant }: { school: MockSchool; variant:
           <span className="ml-2">
             {isSite ? (
               <Button asChild size="sm">
-                <Link href={`${base}/my-courses`}>{t("login")}</Link>
+                <Link href={{ pathname: "/login", query: { next: `${base}/my-courses` } }}>{t("login")}</Link>
               </Button>
             ) : (
               <UserAvatar />

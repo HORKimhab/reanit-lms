@@ -1,6 +1,8 @@
 import type { AuthSession, AuthUser } from "@reanit/core/auth";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
+import { safeRedirectPath } from "./redirect";
 import { getAuthService } from "./service";
 
 /** Cookie that holds the raw session token. */
@@ -37,4 +39,14 @@ export async function endSession() {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (token) await getAuthService().logOut(token);
   jar.delete(SESSION_COOKIE);
+}
+
+/**
+ * Sends a signed-in visitor on from the log-in and sign-up pages.
+ *
+ * @param next Untrusted `next` from the query string.
+ * @throws {Error} Next's redirect signal when someone is signed in.
+ */
+export async function redirectIfSignedIn(next: unknown) {
+  if (await getCurrentUser()) redirect(safeRedirectPath(next));
 }
