@@ -99,11 +99,24 @@ export function CourseDetails({
         </div>
       </section>
 
-      {/* Mobile: enroll pinned to the bottom. */}
-      <div className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 py-3 lg:hidden">
-        <PriceTag price={price} />
-        <EnrollButton price={price} checkoutHref={checkoutHref} />
-      </div>
+      <MobileBuyBar price={price} checkoutHref={checkoutHref} />
+    </div>
+  );
+}
+
+/**
+ * The price and enroll button pinned to the bottom of the screen on mobile, where the buy box is hidden.
+ *
+ * @param props - Component props.
+ * @param props.price - The price, or null when not for sale.
+ * @param props.checkoutHref - The checkout page.
+ * @returns The pinned bar, hidden on desktop.
+ */
+export function MobileBuyBar({ price, checkoutHref }: { price: CoursePrice; checkoutHref: string }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 py-3 lg:hidden">
+      <PriceTag price={price} />
+      <EnrollButton price={price} checkoutHref={checkoutHref} />
     </div>
   );
 }
@@ -141,15 +154,15 @@ function EnrollButton({ price, checkoutHref, className }: { price: CoursePrice; 
 }
 
 /**
- * Price, enroll button and what the purchase includes.
+ * Price, enroll button and what the purchase includes, for a course's or bundle's sales page.
  *
  * @param props - Component props.
  * @param props.price - The price, or null when not for sale.
- * @param props.checkoutHref - The course's checkout page.
+ * @param props.checkoutHref - The checkout page.
  * @param props.className - Extra classes for the card.
  * @returns The buy card.
  */
-function BuyBox({ price, checkoutHref, className }: { price: CoursePrice; checkoutHref: string; className?: string }) {
+export function BuyBox({ price, checkoutHref, className }: { price: CoursePrice; checkoutHref: string; className?: string }) {
   const t = useTranslations("Course");
   return (
     <Card className={className}>

@@ -1,11 +1,11 @@
 "use client";
 
 import { COURSE_STATUSES, DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH, type Course } from "@reanit/core/catalog";
-import { Button } from "@reanit/ui/components/button";
 import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
 
 import { Field, INPUT_CLASS } from "@/components/form/field";
+import { SubmitRow } from "@/components/form/submit-row";
 
 import { useCourseForm, type CourseFormAction } from "./use-course-form";
 
@@ -56,14 +56,7 @@ export function CourseSettingsForm({ course, action }: { course: Course; action:
           </select>
         )}
       </Field>
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? t("saving") : t("save")}
-        </Button>
-        <p role="status" className="text-sm text-muted-foreground">
-          {state.status === "saved" && !isPending ? t("saved") : null}
-        </p>
-      </div>
+      <SubmitRow label={t("save")} pendingLabel={t("saving")} isPending={isPending} savedMessage={state.status === "saved" ? t("saved") : undefined} />
     </form>
   );
 }

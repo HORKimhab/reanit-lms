@@ -1,6 +1,6 @@
 "use server";
 
-import { couponSchema, CURRENCIES, toMinorUnits } from "@reanit/core/commerce";
+import { couponSchema, toMinorUnits } from "@reanit/core/commerce";
 import { revalidatePath } from "next/cache";
 
 import { getApi } from "@/server/api";
@@ -56,8 +56,8 @@ function couponFrom(formData: FormData) {
   };
   if (formData.get("kind") !== "fixed") return { ...limits, kind: "percent", percentOff: Number(formData.get("percentOff")) };
   const currency = String(formData.get("currency"));
-  const isKnownCurrency = (CURRENCIES as readonly string[]).includes(currency);
-  return { ...limits, kind: "fixed", currency, amountOff: isKnownCurrency ? toMinorUnits(String(formData.get("amountOff") ?? ""), currency) : null };
+  // An unknown currency still reads as a number here; the schema then rejects the currency.
+  return { ...limits, kind: "fixed", currency, amountOff: toMinorUnits(String(formData.get("amountOff") ?? ""), currency) };
 }
 
 /**

@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 
-import { checkCoupon, getOrderStatus, startCheckout } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
-import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { ProductCheckout } from "@/components/checkout/product-checkout";
 import { requireUser } from "@/server/auth/session";
-import { getOffer, ordersPath } from "@/server/commerce/checkout";
+import { checkoutPath, getOffer } from "@/server/commerce/checkout";
 import { getSiteCourse } from "@/server/schools/site";
 
 /**
@@ -19,24 +17,17 @@ import { getSiteCourse } from "@/server/schools/site";
 export default async function CheckoutPage({ params }: PageProps<"/[locale]/s/[school]/checkout/[course]">) {
   const { school, course: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  await requireUser(`/s/${school}/checkout/${slug}`);
-  const [course, offer, t] = await Promise.all([getSiteCourse(school, slug), getOffer(school, slug), getTranslations("Checkout")]);
+  await requireUser(checkoutPath(school, "course", slug));
+  const [course, offer] = await Promise.all([getSiteCourse(school, slug), getOffer(school, slug)]);
   if (!offer.price) notFound();
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{course.title}</p>
-      </div>
-      <CheckoutForm
-        methods={offer.methods}
-        price={offer.price}
-        courseHref={`/s/${school}/learn/${course.slug}`}
-        action={startCheckout.bind(null, school, course.slug)}
-        ordersBase={ordersPath(school)}
-        checkStatus={getOrderStatus.bind(null, school)}
-        checkCoupon={checkCoupon.bind(null, school, course.slug)}
-      />
-    </div>
+    <ProductCheckout
+      school={school}
+      kind="course"
+      slug={course.slug}
+      title={course.title}
+      offer={{ price: offer.price, methods: offer.methods }}
+      ownedHref={`/s/${school}/learn/${course.slug}`}
+    />
   );
 }

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { onApi, problem } from "@/test/api";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 
-import { getDiscount, getOffer, getOrder, ordersPath } from "./checkout";
+import { checkoutPath, getDiscount, getOffer, getOrder, ordersPath } from "./checkout";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 
@@ -24,6 +24,23 @@ describe("getOffer", () => {
     onApi(OFFER_ROUTE, problem(404));
 
     await expect(getOffer("angkor", "brand")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("bundle offers", () => {
+  it("asks for a bundle's offer and discount on its own route", async () => {
+    const discount = { code: "KIT10", amountOff: 990, total: 8910 };
+    onApi("GET /schools/by-subdomain/angkor/bundles/kit/offer", Response.json({ price: { amount: 9900, currency: "USD" }, methods: ["stripe"], discount }));
+
+    expect(await getOffer("angkor", "kit", "bundle")).toEqual({ price: { amount: 9900, currency: "USD" }, methods: ["stripe"] });
+    expect(await getDiscount("angkor", "kit", "KIT10", "bundle")).toEqual(discount);
+  });
+});
+
+describe("checkoutPath", () => {
+  it("puts course and bundle checkouts under the school", () => {
+    expect(checkoutPath("angkor", "course", "brand")).toBe("/s/angkor/checkout/brand");
+    expect(checkoutPath("angkor", "bundle", "kit")).toBe("/s/angkor/bundle-checkout/kit");
   });
 });
 

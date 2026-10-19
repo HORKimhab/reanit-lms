@@ -41,6 +41,7 @@
   "DashboardNav": {
     "overview": "Overview",
     "courses": "Courses",
+    "bundles": "Bundles",
     "students": "Students",
     "coupons": "Coupons",
     "settings": "Settings"
@@ -213,6 +214,10 @@
     "metaDescription": "A course from {school}.",
     "ogLessons": "{count, plural, one {# lesson} other {# lessons}}"
   },
+  "BundlePage": {
+    "includes": "{count, plural, one {# course} other {# courses}} in one bundle",
+    "coursesTitle": "Courses in this bundle"
+  },
   "MyCourses": {
     "title": "My courses",
     "inProgress": "In progress",
@@ -318,6 +323,29 @@
     "deleteWarning": "This deletes the course with all its sections and lessons. It cannot be undone.",
     "deleting": "Deleting…",
     "curriculum": "Curriculum"
+  },
+  "Bundles": {
+    "newBundle": "New bundle",
+    "courses": "Courses",
+    "coursesHint": "Pick at least two courses. Students see them in this order.",
+    "coursesError": "Pick at least two of your courses.",
+    "noCourses": "Create at least two courses to make a bundle.",
+    "create": "Create bundle",
+    "statusHint": "Students only see published bundles.",
+    "caption": "Your bundles",
+    "bundle": "Bundle",
+    "courseCount": "{count, plural, one {# course} other {# courses}}",
+    "price": "Price",
+    "notPriced": "No price yet",
+    "emptyTitle": "No bundles yet",
+    "emptyText": "Sell several courses together at one price.",
+    "allBundles": "All bundles",
+    "details": "Bundle details",
+    "amount": "Amount",
+    "currency": "Currency",
+    "amountError": "Enter a price above zero in this currency.",
+    "savePrice": "Save price",
+    "priceStaffOnly": "Only the school's owner and admins can set prices."
   },
   "Checkout": {
     "title": "Checkout",

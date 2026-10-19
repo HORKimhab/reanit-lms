@@ -2,11 +2,12 @@
 
 import { createCourseSchema, outlineSchema, updateCourseSchema } from "@reanit/core/catalog";
 import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getApi } from "@/server/api";
 import { invalidFieldsOf } from "@/server/form-errors";
+import { idPath } from "@/server/id-path";
 import { checkStaffResponse } from "@/server/schools/staff";
 
 /** Result of the last submit of a course form (WEB-12). */
@@ -18,19 +19,6 @@ export type CourseFormState = {
 
 const COURSES_PATH = "/dashboard/courses";
 const idSchema = z.uuid();
-
-/**
- * Checks a course id from the browser before it goes into an API path.
- *
- * @param courseId Untrusted course id.
- * @returns The id, as the path parameter the API expects.
- * @throws {Error} Next's not-found signal when it is not a UUID.
- */
-function coursePath(courseId: unknown): { path: { id: string } } {
-  const id = idSchema.safeParse(courseId);
-  if (!id.success) notFound();
-  return { path: { id: id.data } };
-}
 
 /**
  * Creates a draft course in the creator's school and opens it in the builder.
@@ -69,7 +57,7 @@ export async function updateCourse(
   );
   const parsed = updateCourseSchema.safeParse(fields);
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
-  const { response } = await (await getApi()).PATCH("/courses/{id}", { params: coursePath(courseId), body: parsed.data });
+  const { response } = await (await getApi()).PATCH("/courses/{id}", { params: idPath(courseId), body: parsed.data });
   checkStaffResponse(response);
   revalidatePath(COURSES_PATH, "layout");
   return { status: "saved", invalidFields: [] };
@@ -82,7 +70,7 @@ export async function updateCourse(
  * @throws {Error} Next's redirect signal, its not-found signal for an unknown course, or any unexpected failure.
  */
 export async function deleteCourse(courseId: string): Promise<never> {
-  const { response } = await (await getApi()).DELETE("/courses/{id}", { params: coursePath(courseId) });
+  const { response } = await (await getApi()).DELETE("/courses/{id}", { params: idPath(courseId) });
   checkStaffResponse(response);
   revalidatePath(COURSES_PATH);
   redirect(COURSES_PATH);
@@ -98,7 +86,7 @@ export async function deleteCourse(courseId: string): Promise<never> {
  */
 export async function saveOutline(courseId: string, outline: unknown): Promise<void> {
   const body = outlineSchema.parse(outline);
-  const { response } = await (await getApi()).PUT("/courses/{id}/outline", { params: coursePath(courseId), body });
+  const { response } = await (await getApi()).PUT("/courses/{id}/outline", { params: idPath(courseId), body });
   checkStaffResponse(response);
 }
 

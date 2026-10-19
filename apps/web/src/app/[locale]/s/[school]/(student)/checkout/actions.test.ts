@@ -27,7 +27,7 @@ function pay(method: string | null, couponCode?: string) {
   const formData = new FormData();
   if (method !== null) formData.set("method", method);
   if (couponCode !== undefined) formData.set("couponCode", couponCode);
-  return startCheckout("angkor", "brand", IDLE, formData);
+  return startCheckout("angkor", "course", "brand", IDLE, formData);
 }
 
 /**
@@ -68,23 +68,54 @@ describe("startCheckout with a coupon", () => {
   });
 });
 
+describe("bundles", () => {
+  const BUNDLE_ROUTE = "POST /schools/by-subdomain/angkor/bundle-checkout";
+
+  it("starts buying a bundle with the chosen method and coupon", async () => {
+    onApi(BUNDLE_ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
+    const formData = new FormData();
+    formData.set("method", "aba_payway");
+    formData.set("couponCode", "KIT10");
+
+    expect(await startCheckout("angkor", "bundle", "design-kit", IDLE, formData)).toMatchObject({ status: "form" });
+    expect(await requestTo(BUNDLE_ROUTE)?.json()).toEqual({ bundleSlug: "design-kit", method: "aba_payway", couponCode: "KIT10", locale: "en" });
+  });
+
+  it("sends a signed-out buyer to log in and back to the bundle's checkout", async () => {
+    onApi(BUNDLE_ROUTE, problem(401));
+    const formData = new FormData();
+    formData.set("method", "stripe");
+
+    await expect(startCheckout("angkor", "bundle", "design-kit", IDLE, formData)).rejects.toEqual(
+      new RedirectError("/login?next=%2Fs%2Fangkor%2Fbundle-checkout%2Fdesign-kit"),
+    );
+  });
+
+  it("checks a coupon against the bundle's price", async () => {
+    const discount = { code: "KIT10", amountOff: 990, total: 8910 };
+    onApi("GET /schools/by-subdomain/angkor/bundles/design-kit/offer", Response.json({ price: { amount: 9900, currency: "USD" }, methods: ["stripe"], discount }));
+
+    expect(await checkCoupon("angkor", "bundle", "design-kit", "kit10")).toEqual({ status: "applied", discount });
+  });
+});
+
 describe("checkCoupon", () => {
   it("returns what the coupon takes off, asking with the code in upper case", async () => {
     const discount = { code: "SAVE20", amountOff: 980, total: 3920 };
     onApi(OFFER_ROUTE, Response.json({ price: { amount: 4900, currency: "USD" }, methods: ["stripe"], discount }));
 
-    expect(await checkCoupon("angkor", "brand", " save20 ")).toEqual({ status: "applied", discount });
+    expect(await checkCoupon("angkor", "course", "brand", " save20 ")).toEqual({ status: "applied", discount });
     expect(new URL(requestTo(OFFER_ROUTE)?.url ?? "").searchParams.get("coupon")).toBe("SAVE20");
   });
 
   it("says a coupon the API refuses cannot be used", async () => {
     onApi(OFFER_ROUTE, problem(400, "urn:reanit:problem:invalid-coupon"));
 
-    expect(await checkCoupon("angkor", "brand", "OLD20")).toEqual({ status: "invalid" });
+    expect(await checkCoupon("angkor", "course", "brand", "OLD20")).toEqual({ status: "invalid" });
   });
 
   it("refuses a malformed code without asking the API", async () => {
-    expect(await checkCoupon("angkor", "brand", "no spaces")).toEqual({ status: "invalid" });
+    expect(await checkCoupon("angkor", "course", "brand", "no spaces")).toEqual({ status: "invalid" });
     expect(requestTo(OFFER_ROUTE)).toBeUndefined();
   });
 });

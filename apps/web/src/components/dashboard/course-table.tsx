@@ -1,5 +1,4 @@
 import type { Course } from "@reanit/core/catalog";
-import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
@@ -7,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { EmptyState } from "@/components/shells/empty-state";
 
 import { Cell, DataTable, RowHeader } from "./data-table";
+import { StatusBadge } from "./status-badge";
 
 /**
  * The creator's courses with their publishing status.
@@ -27,14 +27,7 @@ export function CourseTable({ caption, courses }: { caption: string; courses: Co
         <tr key={course.id}>
           <CourseTitleCell course={course} />
           <Cell>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs font-medium",
-                course.status === "published" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
-              )}
-            >
-              {t(`courseStatus.${course.status}`)}
-            </span>
+            <StatusBadge status={course.status} />
           </Cell>
         </tr>
       ))}

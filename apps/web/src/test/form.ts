@@ -1,3 +1,6 @@
+/** A dashboard form before its first submit. */
+export const IDLE_FORM: { status: "idle"; invalidFields: string[] } = { status: "idle", invalidFields: [] };
+
 /**
  * Builds a form submission, as a server action receives it.
  *

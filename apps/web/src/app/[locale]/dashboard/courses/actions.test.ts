@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
 import { onApi, problem, requestTo } from "@/test/api";
-import { formData as form } from "@/test/form";
+import { formData as form, IDLE_FORM } from "@/test/form";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
@@ -19,10 +19,9 @@ import {
 } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
-// Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => import("@/test/cache"));
 
-const IDLE: CourseFormState = { status: "idle", invalidFields: [] };
+const IDLE: CourseFormState = IDLE_FORM;
 const COURSE = {
   id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a20",
   title: "Intro to Design",
