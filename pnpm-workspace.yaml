@@ -70,6 +70,7 @@ catalog:
   bakong-khqr: 1.0.20
   qrcode.react: 4.2.0
   "@nestjs/bullmq": 12.0.0
+  "@nestjs/throttler": 6.7.1
   bullmq: 6.3.11
   "@aws-sdk/client-s3": 3.1146.0
   "@aws-sdk/s3-request-presigner": 3.1146.0

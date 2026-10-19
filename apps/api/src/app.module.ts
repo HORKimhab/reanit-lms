@@ -11,6 +11,7 @@ import { HealthModule } from "./health/health.module";
 import { HttpModule } from "./http/http.module";
 import { LearningModule } from "./learning/learning.module";
 import { MediaModule } from "./media/media.module";
+import { RateLimitModule } from "./rate-limit/rate-limit";
 import { RedisModule } from "./redis/redis.module";
 import { SchoolsModule } from "./schools/schools.module";
 
@@ -23,6 +24,7 @@ import { SchoolsModule } from "./schools/schools.module";
     HttpModule,
     DbModule,
     RedisModule,
+    RateLimitModule,
     MailModule,
     HealthModule,
     AuthModule,

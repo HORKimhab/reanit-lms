@@ -15,11 +15,12 @@ const REQUIRED = {
 };
 
 describe("parseEnv", () => {
-  it("applies the default port, host and log level", () => {
+  it("applies the default port, host, log level and proxy trust", () => {
     expect(parseEnv(REQUIRED)).toEqual({
       ...REQUIRED,
       PORT: 4000,
       HOST: "0.0.0.0",
+      TRUST_PROXY_HOPS: 0,
       LOG_LEVEL: "info",
       S3_REGION: "auto",
       S3_FORCE_PATH_STYLE: false,
@@ -44,6 +45,11 @@ describe("parseEnv", () => {
 
   it("throws a ZodError for an unknown log level", () => {
     expect(() => parseEnv({ ...REQUIRED, LOG_LEVEL: "verbose" })).toThrow(ZodError);
+  });
+
+  it("reads TRUST_PROXY_HOPS as a count and rejects a negative one", () => {
+    expect(parseEnv({ ...REQUIRED, TRUST_PROXY_HOPS: "2" }).TRUST_PROXY_HOPS).toBe(2);
+    expect(() => parseEnv({ ...REQUIRED, TRUST_PROXY_HOPS: "-1" })).toThrow(ZodError);
   });
 
   it("reads the port as a number", () => {

@@ -1,4 +1,4 @@
-// Test double for next/headers: an in-memory cookie jar that tests can inspect.
+// Test double for next/headers: an in-memory cookie jar that tests can inspect, and the request's headers.
 // Use with: vi.mock("next/headers", () => import("@/test/headers"));
 
 /** A cookie as the code under test set it. */
@@ -58,4 +58,16 @@ export const cookieJar = {
  */
 export async function cookies() {
   return cookieJar;
+}
+
+/** The incoming request's headers; tests set them, and `setup.ts` empties them after each test. */
+export const requestHeaders = new Headers();
+
+/**
+ * Mocked `headers`.
+ *
+ * @returns The shared request headers.
+ */
+export async function headers() {
+  return requestHeaders;
 }

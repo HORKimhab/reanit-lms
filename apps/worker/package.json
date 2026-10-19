@@ -31,7 +31,6 @@
     "@swc/core": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
-    "testcontainers": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

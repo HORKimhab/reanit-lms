@@ -1,14 +1,17 @@
 // Boots the real app against the Testcontainers Postgres from `@reanit/db/testing/postgres`.
 // Only Redis (health checks) and SMTP are faked; everything else is the production wiring.
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import type { Mailer, MailMessage } from "@reanit/core/auth";
 import type { PaymentGateway } from "@reanit/core/commerce";
 import type { ObjectStorage } from "@reanit/core/media";
-// Types `inject("databaseUrl")` for the e2e files.
+import type { Redis } from "ioredis";
+// Types `inject("databaseUrl")` and `inject("redisUrl")` for the e2e files.
 import type {} from "@reanit/db/testing/postgres";
+import type {} from "@reanit/nest/testing/redis";
 import request from "supertest";
 import { afterAll, beforeAll, inject } from "vitest";
 
@@ -17,6 +20,7 @@ import { ENV, MAILER } from "@reanit/nest";
 import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
 import { OBJECT_STORAGE } from "../storage/storage.module";
 import { REDIS } from "../redis/redis.module";
+import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
 
 /** A supertest agent: keeps the cookies the API sets, like a browser. */
@@ -127,12 +131,13 @@ function createMemoryStorage(): MemoryStorage {
 }
 
 /**
- * Boots the app on a real, migrated database.
+ * Boots the app on a real, migrated database; rate limits count in a real Redis only when one is given.
  *
  * @param databaseUrl Owner connection from `inject("databaseUrl")`.
+ * @param redisUrl Redis from `inject("redisUrl")`, for the tests about rate limits; others never get blocked.
  * @returns The app, an inbox of every email it sends, and its in-memory object storage.
  */
-async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
+async function createE2eApp(databaseUrl: string, redisUrl?: string): Promise<E2eApp> {
   const mail: MailMessage[] = [];
   const storage = createMemoryStorage();
   const mailer: Mailer = {
@@ -145,29 +150,34 @@ async function createE2eApp(databaseUrl: string): Promise<E2eApp> {
       mail.push(message);
     },
   };
-  const builder = Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(OBJECT_STORAGE)
     .useValue(storage)
     .overrideProvider(PAYMENT_GATEWAYS)
     .useValue([e2ePayWayGateway, e2eStripeGateway])
     .overrideProvider(ENV)
-    .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl })
-    .overrideProvider(REDIS)
-    .useValue(createFakeClients().redis)
+    .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl, ...(redisUrl && { REDIS_URL: redisUrl }) })
     .overrideProvider(MAILER)
     .useValue(mailer);
-  return { app: await bootTestApp(builder), mail, storage, paidAtGateway };
+  if (!redisUrl) builder = builder.overrideProvider(REDIS).useValue(createFakeClients().redis).overrideProvider(RATE_LIMIT_STORAGE).useValue(UNLIMITED_RATE);
+  const app = await bootTestApp(builder);
+  // Rate limits let requests through uncounted until Redis has connected, so tests start once it has.
+  const redis = app.get<Redis>(REDIS);
+  if (redisUrl && redis.status !== "ready") await once(redis, "ready");
+  return { app, mail, storage, paidAtGateway };
 }
 
 /**
  * Boots the app before the file's tests and closes it after them.
  *
+ * @param options What the file's tests need.
+ * @param options.isRateLimited Counts rate limits in the test Redis; off, requests are never blocked.
  * @returns A getter for the app; call it inside tests and hooks, once `beforeAll` has run.
  */
-export function useE2eApp(): () => E2eApp {
+export function useE2eApp({ isRateLimited = false }: { isRateLimited?: boolean } = {}): () => E2eApp {
   let e2e: E2eApp | undefined;
   beforeAll(async () => {
-    e2e = await createE2eApp(inject("databaseUrl"));
+    e2e = await createE2eApp(inject("databaseUrl"), isRateLimited ? inject("redisUrl") : undefined);
   });
   afterAll(async () => {
     await e2e?.app.close();

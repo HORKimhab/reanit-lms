@@ -11,6 +11,8 @@ import {
 } from "@reanit/db";
 // Types `inject("databaseUrl")`.
 import type {} from "@reanit/db/testing/postgres";
+// Types `inject("redisUrl")`.
+import type {} from "@reanit/nest/testing/redis";
 import { DB_CLIENT, ENV, MAILER } from "@reanit/nest";
 import { Queue } from "bullmq";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";

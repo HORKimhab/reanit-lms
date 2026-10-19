@@ -27,10 +27,23 @@ function generateRequestId(request: IncomingMessage): string {
  * Creates the Fastify adapter. Fastify assigns every request's id, so its logs, the request
  * context and the response header all carry the same one; callers can quote it in bug reports.
  *
+ * @param options How the API is reached.
+ * @param options.trustProxyHops Proxies in front of the API whose X-Forwarded-For entries `request.ip` may come from; 0 trusts none.
  * @returns The adapter for `NestFactory.create`.
  */
-export function createAdapter(): FastifyAdapter {
-  const adapter = new FastifyAdapter({ genReqId: generateRequestId });
+export function createAdapter({ trustProxyHops = 0 }: { trustProxyHops?: number } = {}): FastifyAdapter {
+  /**
+   * Tells Fastify whether to look past an address for the caller's: it asks about each one from the
+   * socket outwards, and only the configured proxies are trusted.
+   *
+   * @param _address The address it is asking about.
+   * @param hop How far it is from the socket, 0 being the socket itself.
+   * @returns Whether that hop is one of the trusted proxies.
+   */
+  function isTrustedProxy(_address: string, hop: number) {
+    return hop < trustProxyHops;
+  }
+  const adapter = new FastifyAdapter({ genReqId: generateRequestId, trustProxy: isTrustedProxy });
   adapter.getInstance().addHook("onRequest", async (request, reply) => {
     reply.header(REQUEST_ID_HEADER, request.id);
   });

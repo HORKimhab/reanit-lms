@@ -1,6 +1,7 @@
 import { STATUS_CODES } from "node:http";
 
 import { HttpException, HttpStatus } from "@nestjs/common";
+import { ThrottlerException } from "@nestjs/throttler";
 import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import {
@@ -68,6 +69,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: MediaNotUploadedError, status: HttpStatus.CONFLICT, code: "media-not-uploaded", detail: "The upload has not finished." },
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
   { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },
+  { error: ThrottlerException, status: HttpStatus.TOO_MANY_REQUESTS, code: "rate-limited", detail: "Too many attempts. Wait a few minutes, then try again." },
 ];
 
 /**

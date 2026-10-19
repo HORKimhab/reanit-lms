@@ -23,6 +23,7 @@
     "@nestjs/platform-fastify": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
+    "@nestjs/throttler": "catalog:",
     "bakong-khqr": "catalog:",
     "fastify": "catalog:",
     "ioredis": "catalog:",

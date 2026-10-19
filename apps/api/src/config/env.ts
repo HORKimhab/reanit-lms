@@ -41,6 +41,12 @@ const envSchema = baseEnvSchema
   PORT: z.coerce.number().int().min(1).max(65535).default(DEFAULT_PORT),
   /** Interface to listen on; all of them by default, as a container needs. */
   HOST: z.string().min(1).default("0.0.0.0"),
+  /**
+   * Proxies in front of the API that append the caller's address to X-Forwarded-For (a load balancer,
+   * the web app's /api rewrite), so rate limits count the browser's address. 0 trusts none: every
+   * request counts as the address it came from. Never set it higher than the proxies there are, or callers can fake their address.
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
   })
   .refine((env) => Boolean(env.STRIPE_SECRET_KEY) === Boolean(env.STRIPE_WEBHOOK_SECRET), {
     message: "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together",

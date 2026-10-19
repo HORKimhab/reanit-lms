@@ -7,7 +7,7 @@ import { AppModule } from "./app.module";
 import { setupApp } from "./app.setup";
 import { ENV } from "@reanit/nest";
 
-import type { Env } from "./config/env";
+import { parseEnv, type Env } from "./config/env";
 import { createAdapter } from "./context/request-id";
 
 /**
@@ -16,7 +16,9 @@ import { createAdapter } from "./context/request-id";
  * @throws {z.ZodError} When the environment is invalid.
  */
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, createAdapter(), { bufferLogs: true, rawBody: true });
+  // The adapter exists before the app reads its environment, so it reads the proxy setting itself.
+  const adapter = createAdapter({ trustProxyHops: parseEnv(process.env).TRUST_PROXY_HOPS });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, { bufferLogs: true, rawBody: true });
   await setupApp(app);
   const { PORT, HOST } = app.get<Env>(ENV);
   await app.listen(PORT, HOST);

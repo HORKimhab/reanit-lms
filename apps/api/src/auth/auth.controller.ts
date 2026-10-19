@@ -14,6 +14,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { ENV } from "@reanit/nest";
 
 import type { Env } from "../config/env";
+import { RateLimit } from "../rate-limit/rate-limit";
 import { CurrentUser, Public } from "./auth.decorators";
 import { LogInBody, MagicLinkBody, SessionResponse, SignUpBody, VerifyMagicLinkQuery } from "./auth.dto";
 import { AUTH_SERVICE } from "./auth.tokens";
@@ -59,6 +60,7 @@ export class AuthController {
    */
   @Public()
   @Post("sign-up")
+  @RateLimit("signUp")
   @ApiCreatedResponse({ type: SessionResponse })
   async signUp(@Body() body: SignUpBody, @Res({ passthrough: true }) reply: FastifyReply) {
     return this.startSession(reply, await this.auth.signUp(body));
@@ -74,6 +76,7 @@ export class AuthController {
    */
   @Public()
   @Post("login")
+  @RateLimit("logIn")
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionResponse })
   async logIn(@Body() body: LogInBody, @Res({ passthrough: true }) reply: FastifyReply) {
@@ -87,6 +90,7 @@ export class AuthController {
    */
   @Public()
   @Post("magic-link")
+  @RateLimit("magicLink")
   @HttpCode(HttpStatus.ACCEPTED)
   async requestMagicLink(@Body() body: MagicLinkBody) {
     const next = safeRedirectPath(body.next);
@@ -105,6 +109,7 @@ export class AuthController {
    */
   @Public()
   @Get("magic-link/verify")
+  @RateLimit("verifyMagicLink")
   async verifyMagicLink(@Query() query: VerifyMagicLinkQuery, @Res() reply: FastifyReply) {
     try {
       if (!query.token) throw new InvalidMagicLinkError();

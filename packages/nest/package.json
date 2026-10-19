@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing/redis": "./src/testing/redis.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -29,6 +30,7 @@
     "pino": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
+    "testcontainers": "catalog:",
     "typescript": "catalog:",
     "unplugin-swc": "catalog:",
     "vitest": "catalog:"

@@ -1,4 +1,5 @@
-// Vitest global setup: one throwaway Redis for the integration tests, the version infra/docker-compose.yml runs.
+// Vitest global setup: one throwaway Redis for the tests that need Docker, the version infra/docker-compose.yml runs.
+// Exported as `@reanit/nest/testing/redis` for the apps' integration and e2e tests.
 import { GenericContainer } from "testcontainers";
 import type { TestProject } from "vitest/node";
 

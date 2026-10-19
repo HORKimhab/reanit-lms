@@ -4,5 +4,5 @@ import { nestVitestConfig } from "@reanit/config/vitest-nest";
 export default nestVitestConfig({
   name: "integration",
   include: ["test/**/*.int.test.ts"],
-  globalSetup: ["@reanit/db/testing/postgres", "./src/test/redis.ts"],
+  globalSetup: ["@reanit/db/testing/postgres", "@reanit/nest/testing/redis"],
 });

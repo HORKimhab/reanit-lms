@@ -28,6 +28,7 @@ import { loggerOptions } from "@reanit/nest";
 import { LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
+import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL } from "../schools/schools.tokens";
 
 /** Environment the test app boots with; nothing connects to these URLs (e2e tests swap in a real database). */
@@ -51,6 +52,7 @@ export const TEST_ENV: Env = {
   BAKONG_BASE_URL: "https://bakong.test",
   PORT: 4000,
   HOST: "127.0.0.1",
+  TRUST_PROXY_HOPS: 0,
   LOG_LEVEL: "silent",
 };
 
@@ -90,7 +92,7 @@ type TestAppOptions = {
   controllers?: Type[];
   /** Test-only modules, for probe controllers that need a feature module's providers. */
   imports?: Type[];
-  /** Extra providers to replace, e.g. a gateway the test controls. */
+  /** Extra providers to replace, e.g. a gateway the test controls, or `RATE_LIMIT_STORAGE` to count requests for real. */
   overrides?: { provide: symbol; useValue: unknown }[];
   /** Receives the app's logs at `info` level; logging is silent otherwise. nestjs-pino keeps the first app's logger for the whole test file. */
   logStream?: DestinationStream;
@@ -185,6 +187,8 @@ export async function createTestApp(
     .useValue(clients.db)
     .overrideProvider(REDIS)
     .useValue(clients.redis)
+    .overrideProvider(RATE_LIMIT_STORAGE)
+    .useValue(UNLIMITED_RATE)
     .overrideProvider(AUTH_SERVICE)
     .useValue(clients.auth)
     .overrideProvider(SCHOOL_SERVICE)
@@ -233,14 +237,15 @@ export type TestApp = { clients: FakeClients; app: NestFastifyApplication };
  * Boots a fresh app before each test and closes it after.
  *
  * @param prepare Programs the fakes before the app boots, e.g. to resolve a school.
+ * @param options Extras to boot each app with, made fresh for each test.
  * @returns An object whose fields are replaced before each test: read them inside tests, never destructure at file level.
  */
-export function useTestApp(prepare?: (clients: FakeClients) => void): TestApp {
+export function useTestApp(prepare?: (clients: FakeClients) => void, options?: () => TestAppOptions): TestApp {
   const testApp = {} as TestApp;
   beforeEach(async () => {
     const clients = createFakeClients();
     prepare?.(clients);
-    Object.assign(testApp, { clients, app: await createTestApp(clients) });
+    Object.assign(testApp, { clients, app: await createTestApp(clients, options?.()) });
   });
   afterEach(async () => {
     await testApp.app.close();

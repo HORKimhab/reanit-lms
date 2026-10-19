@@ -62,7 +62,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 ## Ship M1
 - [x] WRK-02 Outbox relay + BullMQ worker app, retries, dead-letter queue. Done when a failed job lands in the DLQ.
 - [x] API-09 Transactional email: magic link, purchase receipt, welcome to course (packages/email, en/km)
-- [ ] API-10 Rate limiting on auth and checkout (Redis)
+- [x] API-10 Rate limiting on auth and checkout (Redis)
 - [ ] API-11 Audit log for admin/instructor actions
 - [ ] WEB-18 Error, empty and loading states; 404/500 pages; SEO meta + OG images for sales page
 - [ ] TEST-01 Playwright E2E: sign-up → create school → build course → checkout → watch lesson. Done when green in CI.

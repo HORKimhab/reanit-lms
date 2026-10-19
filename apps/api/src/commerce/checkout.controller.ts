@@ -8,6 +8,7 @@ import { ENV } from "@reanit/nest";
 import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
+import { RateLimit } from "../rate-limit/rate-limit";
 import { CheckoutBody, CheckoutResponse, OfferParams, OfferResponse, OrderParams, OrderResponse, SchoolParams } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
@@ -83,6 +84,7 @@ export class CheckoutController {
    * @throws {PaymentMethodUnavailableError} When the method cannot take the payment (400).
    */
   @Post("checkout")
+  @RateLimit("checkout")
   @ApiCreatedResponse({ type: CheckoutResponse })
   async checkout(@Param() params: SchoolParams, @Body() body: CheckoutBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
     const schoolUrl = new URL(`/s/${params.subdomain}`, this.env.APP_URL).href;
