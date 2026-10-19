@@ -46,6 +46,7 @@ Every task adds tests for the behaviour it introduces or changes. Vitest + Testi
 - **Place:**
   - Unit and component tests go next to the source as `<name>.test.ts(x)`, so a file with no test is easy to spot and the test moves or is deleted with its file.
   - Integration tests against real Postgres go in `packages/db/test/` as `<name>.int.test.ts`.
+  - API e2e tests (HTTP through the whole Nest app, real Postgres) go in `apps/api/test/` as `<module>.e2e.test.ts`.
   - E2E tests go in `apps/web/e2e/` as `<flow>.spec.ts`.
   - Shared test helpers (render with intl, setup, mocks of framework modules, fakes of `core` interfaces) go in the package's `src/test/`, e.g. `apps/web/src/test/render.tsx`. Reuse them, and never copy setup into a test file. A helper used by a second package moves into that package's exports.
   - Test files never ship. Keep `*.test.*`, `*.spec.*` and `src/test/` out of package `exports` and out of production code imports.

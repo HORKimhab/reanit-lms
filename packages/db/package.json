@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing/postgres": "./src/test/postgres.ts"
   },
   "scripts": {
     "build": "prisma generate",

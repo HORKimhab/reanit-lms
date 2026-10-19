@@ -1,7 +1,7 @@
 // Builds the real Nest app for tests, with the database and Redis replaced by fakes at the provider boundary.
 import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { Test } from "@nestjs/testing";
+import { Test, type TestingModuleBuilder } from "@nestjs/testing";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { SchoolService } from "@reanit/core/schools";
@@ -20,8 +20,8 @@ import { loggerOptions } from "../logging/logger-options";
 import { REDIS } from "../redis/redis.module";
 import { SCHOOL_SERVICE } from "../schools/schools.tokens";
 
-/** Environment the test app boots with; nothing connects to these URLs. */
-const TEST_ENV: Env = {
+/** Environment the test app boots with; nothing connects to these URLs (e2e tests swap in a real database). */
+export const TEST_ENV: Env = {
   DATABASE_URL: "postgresql://reanit:reanit@localhost:5432/reanit",
   REDIS_URL: "redis://localhost:6379",
   APP_URL: "http://localhost:3000",
@@ -126,6 +126,16 @@ export async function createTestApp(
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });
     builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({ pinoHttp: [logged, options.logStream] });
   }
+  return bootTestApp(builder);
+}
+
+/**
+ * Compiles a testing module and boots it on Fastify, set up as `main.ts` does, without listening.
+ *
+ * @param builder The testing module, with its overrides.
+ * @returns The initialized app. Close it after the test.
+ */
+export async function bootTestApp(builder: TestingModuleBuilder): Promise<NestFastifyApplication> {
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter(), { bufferLogs: true });
   await setupApp(app);
