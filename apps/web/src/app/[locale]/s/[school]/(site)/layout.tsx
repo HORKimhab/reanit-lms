@@ -1,6 +1,6 @@
 import { SchoolFooter } from "@/components/shells/school-footer";
 import { SchoolHeader } from "@/components/shells/school-header";
-import { requireMockSchool } from "@/mocks/schools";
+import { getSiteSchool } from "@/server/schools/site";
 
 /**
  * Public school site shell: sticky header, content and footer.
@@ -11,7 +11,7 @@ import { requireMockSchool } from "@/mocks/schools";
  * @returns The header, page and footer.
  */
 export default async function SchoolSiteLayout({ children, params }: LayoutProps<"/[locale]/s/[school]">) {
-  const school = requireMockSchool((await params).school);
+  const school = await getSiteSchool((await params).school);
   return (
     <>
       <SchoolHeader school={school} variant="site" />

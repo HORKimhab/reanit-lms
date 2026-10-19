@@ -43,6 +43,18 @@ export function createSchoolService({ store }: { store: SchoolStore }) {
     },
 
     /**
+     * Resolves a school for its public site, with the name its courses are taught under.
+     *
+     * @param subdomain Normalized subdomain.
+     * @returns The school and its owner's name (null when they gave none).
+     * @throws {SchoolNotFoundError} When no school has the subdomain.
+     */
+    async getPublicSchool(subdomain: string): Promise<{ school: School; ownerName: string | null }> {
+      const school = await this.getSchoolBySubdomain(subdomain);
+      return { school, ownerName: await store.findOwnerName(school.id) };
+    },
+
+    /**
      * Picks the school a creator's dashboard works on: their first school as staff.
      * M1 creators run one school; choosing between several comes later.
      *

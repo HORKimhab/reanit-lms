@@ -13,10 +13,11 @@ afterAll(async () => {
  * Creates a user to own schools.
  *
  * @param email Unique email.
+ * @param name Display name, if any.
  * @returns The user's id.
  */
-async function createOwner(email: string) {
-  return (await db.user.create({ data: { email } })).id;
+async function createOwner(email: string, name?: string) {
+  return (await db.user.create({ data: { email, name } })).id;
 }
 
 describe("school store", () => {
@@ -29,6 +30,22 @@ describe("school store", () => {
     expect(await forSchool(db, school.id).membership.findMany({ select: { userId: true, role: true } })).toEqual([
       { userId: ownerId, role: "owner" },
     ]);
+  });
+
+  it("finds the owner's name, and null when they gave none", async () => {
+    const named = await store.createSchoolWithOwner({
+      name: "Preah Khan",
+      subdomain: "preah-khan-store",
+      ownerId: await createOwner("owner-named@example.com", "Dara Sok"),
+    });
+    const unnamed = await store.createSchoolWithOwner({
+      name: "Ta Som",
+      subdomain: "ta-som-store",
+      ownerId: await createOwner("owner-unnamed@example.com"),
+    });
+
+    expect(await store.findOwnerName(named.id)).toBe("Dara Sok");
+    expect(await store.findOwnerName(unnamed.id)).toBeNull();
   });
 
   it("finds a school by subdomain", async () => {

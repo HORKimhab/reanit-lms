@@ -1,7 +1,6 @@
-import { notFound } from "next/navigation";
 import type * as React from "react";
 
-import { getMockSchool } from "@/mocks/schools";
+import { getSiteSchool } from "@/server/schools/site";
 
 /**
  * Tenant root: 404s unknown schools and applies the school's brand color to everything inside.
@@ -12,8 +11,7 @@ import { getMockSchool } from "@/mocks/schools";
  * @returns A wrapper that sets `--brand`.
  */
 export default async function SchoolLayout({ children, params }: LayoutProps<"/[locale]/s/[school]">) {
-  const school = getMockSchool((await params).school);
-  if (!school) notFound();
+  const school = await getSiteSchool((await params).school);
   return (
     <div style={{ "--brand": school.brand } as React.CSSProperties} className="flex min-h-dvh flex-col">
       {children}

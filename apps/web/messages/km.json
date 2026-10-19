@@ -126,16 +126,8 @@
     "minutes": "{m} នាទី",
     "hoursMinutes": "{h} ម៉ោង {m} នាទី",
     "byInstructor": "ដោយ {name}",
-    "level": {
-      "beginner": "កម្រិតដំបូង",
-      "intermediate": "កម្រិតមធ្យម",
-      "advanced": "កម្រិតខ្ពស់"
-    },
-    "whatYouLearn": "អ្វីដែលអ្នកនឹងរៀន",
     "curriculum": "កម្មវិធីសិក្សា",
     "instructor": "គ្រូរបស់អ្នក",
-    "faq": "សំណួរដែលសួរញឹកញាប់",
-    "preview": "មើលសាកល្បង",
     "enroll": "ចុះឈ្មោះឥឡូវនេះ",
     "includes": {
       "lifetime": "ចូលមើលបានជារៀងរហូត",

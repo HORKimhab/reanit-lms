@@ -45,7 +45,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-11 Create-school onboarding wizard. Needs API-02.
 - [x] API-03 Catalog: courses/sections/lessons CRUD
 - [x] WEB-12 Connect builder + dashboard course list to the API: list the school's courses, create one, edit title/description/status, delete, outline autosave. Needs API-03. (Sales page split out to WEB-27.)
-- [ ] WEB-27 School site on the API, then the sales page: resolve the school from its subdomain (default brand color until API-08), sales page from the public catalog. Decided: use what the API has (title, description, curriculum); no price until API-05, instructor block shows the school owner (expose the owner's name from the API), FAQ hidden when empty, no schema change. Needs WEB-12.
+- [x] WEB-27 School site on the API, then the sales page: resolve the school from its subdomain (default brand color until API-08), sales page from the public catalog. Decided: use what the API has (title, description, curriculum); no price until API-05, instructor block shows the school owner (expose the owner's name from the API), FAQ hidden when empty, no schema change. Needs WEB-12.
 - [ ] API-04 Media: presigned upload + video ⚠ video provider
 - [ ] WEB-13 Video upload in builder. Needs API-04.
 - [ ] API-05 Checkout + WRK-01 webhook enrollment ⚠ payment provider

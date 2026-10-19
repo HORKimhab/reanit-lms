@@ -126,16 +126,8 @@
     "minutes": "{m} min",
     "hoursMinutes": "{h} h {m} min",
     "byInstructor": "By {name}",
-    "level": {
-      "beginner": "Beginner",
-      "intermediate": "Intermediate",
-      "advanced": "Advanced"
-    },
-    "whatYouLearn": "What you'll learn",
     "curriculum": "Curriculum",
     "instructor": "Your instructor",
-    "faq": "Frequently asked questions",
-    "preview": "Preview",
     "enroll": "Enroll now",
     "includes": {
       "lifetime": "Lifetime access",

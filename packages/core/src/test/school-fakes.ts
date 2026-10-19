@@ -6,6 +6,8 @@ export class FakeSchoolStore implements SchoolStore {
   readonly schools: School[] = [];
   /** Owner user id by school id. */
   readonly owners = new Map<string, string>();
+  /** Display names by user id; users missing here have no name. */
+  readonly userNames = new Map<string, string>();
   /** Memberships in creation order. */
   readonly memberships: { schoolId: string; userId: string; role: MembershipRole }[] = [];
 
@@ -34,6 +36,17 @@ export class FakeSchoolStore implements SchoolStore {
     this.owners.set(school.id, ownerId);
     this.memberships.push({ schoolId: school.id, userId: ownerId, role: "owner" });
     return school;
+  }
+
+  /**
+   * Looks up the name of a school's owner.
+   *
+   * @param schoolId The school's id.
+   * @returns The owner's name, or null when they have none.
+   */
+  async findOwnerName(schoolId: string) {
+    const ownerId = this.owners.get(schoolId);
+    return (ownerId && this.userNames.get(ownerId)) ?? null;
   }
 
   /**

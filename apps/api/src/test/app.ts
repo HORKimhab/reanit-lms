@@ -59,7 +59,7 @@ type TestAppOptions = {
 
 /** Every use case of each core service; the `FakeClients` type fails the build when a service gains one missing here. */
 const AUTH_METHODS = ["signUp", "logIn", "requestMagicLink", "verifyMagicLink", "getSessionUser", "logOut"] as const satisfies readonly (keyof AuthService)[];
-const SCHOOL_METHODS = ["createSchool", "getSchoolBySubdomain", "getStaffSchool"] as const satisfies readonly (keyof SchoolService)[];
+const SCHOOL_METHODS = ["createSchool", "getSchoolBySubdomain", "getPublicSchool", "getStaffSchool"] as const satisfies readonly (keyof SchoolService)[];
 const CATALOG_METHODS = [
   "listCourses",
   "getCourse",

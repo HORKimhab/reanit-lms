@@ -20,7 +20,7 @@ describe("schools", () => {
     const anonymous = request(e2e().app.getHttpServer());
 
     const found = await anonymous.get(`/schools/by-subdomain/${school.subdomain}`).expect(200);
-    expect(found.body.school).toEqual(school);
+    expect(found.body).toEqual({ school, owner: { name: school.name } });
 
     const missing = await anonymous.get(`/schools/by-subdomain/${uniqueName("missing")}`).expect(404);
     expect(missing.body.type).toBe("urn:reanit:problem:school-not-found");

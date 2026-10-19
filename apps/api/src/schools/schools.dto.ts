@@ -14,6 +14,11 @@ const schoolSchema = z.object({ id: z.uuid(), name: z.string(), subdomain: z.str
 /** A school, as the schools routes return it. */
 export class SchoolResponse extends createZodDto(z.object({ school: schoolSchema })) {}
 
+/** A school as its public site shows it, with the name its courses are taught under. */
+export class PublicSchoolResponse extends createZodDto(
+  z.object({ school: schoolSchema, owner: z.object({ name: z.string().nullable() }) }),
+) {}
+
 /** The caller's school and their role in it. */
 export class StaffSchoolResponse extends createZodDto(
   z.object({ school: schoolSchema, role: z.enum(["owner", "admin", "instructor", "student"]) }),

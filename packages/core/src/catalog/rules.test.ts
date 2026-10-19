@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createCourseSchema, outlineSchema, uniqueCourseSlug, updateCourseSchema } from "./rules";
+import { createCourseSchema, outlineSchema, outlineStats, uniqueCourseSlug, updateCourseSchema } from "./rules";
 
 const SECTION_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a01";
 const LESSON_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02";
@@ -68,5 +68,30 @@ describe("outlineSchema", () => {
 
   it("rejects an outline that reuses an id", () => {
     expect(outlineSchema.safeParse(outlineWith({ id: SECTION_ID })).success).toBe(false);
+  });
+});
+
+/**
+ * Builds a video lesson of the given length.
+ *
+ * @param durationSeconds Running time.
+ * @returns The lesson.
+ */
+function videoLesson(durationSeconds: number) {
+  return { id: "x", title: "x", type: "video" as const, durationSeconds };
+}
+
+describe("outlineStats", () => {
+  it("counts lessons across sections and adds up their length", () => {
+    const sections = [
+      { id: "a", title: "A", lessons: [videoLesson(60), videoLesson(0)] },
+      { id: "b", title: "B", lessons: [videoLesson(240)] },
+    ];
+
+    expect(outlineStats({ sections })).toEqual({ lessons: 3, durationSeconds: 300 });
+  });
+
+  it("is zero for a course without lessons", () => {
+    expect(outlineStats({ sections: [{ id: "a", title: "A", lessons: [] }] })).toEqual({ lessons: 0, durationSeconds: 0 });
   });
 });

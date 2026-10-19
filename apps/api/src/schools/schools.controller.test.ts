@@ -83,18 +83,18 @@ describe("POST /schools", () => {
 });
 
 describe("GET /schools/by-subdomain/:subdomain", () => {
-  it("returns the school to signed-out callers", async () => {
-    clients.schools.getSchoolBySubdomain.mockResolvedValue(TEST_SCHOOL);
+  it("returns the school and its owner's name to signed-out callers", async () => {
+    clients.schools.getPublicSchool.mockResolvedValue({ school: TEST_SCHOOL, ownerName: "Dara Sok" });
 
     const response = await app.inject({ method: "GET", url: "/schools/by-subdomain/angkor" });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ school: TEST_SCHOOL });
-    expect(clients.schools.getSchoolBySubdomain).toHaveBeenCalledWith("angkor");
+    expect(response.json()).toEqual({ school: TEST_SCHOOL, owner: { name: "Dara Sok" } });
+    expect(clients.schools.getPublicSchool).toHaveBeenCalledWith("angkor");
   });
 
   it("answers 404 when no school has the subdomain", async () => {
-    clients.schools.getSchoolBySubdomain.mockRejectedValue(new SchoolNotFoundError());
+    clients.schools.getPublicSchool.mockRejectedValue(new SchoolNotFoundError());
 
     const response = await app.inject({ method: "GET", url: "/schools/by-subdomain/missing" });
 
@@ -106,7 +106,7 @@ describe("GET /schools/by-subdomain/:subdomain", () => {
     const response = await app.inject({ method: "GET", url: "/schools/by-subdomain/ab" });
 
     expect(response.statusCode).toBe(400);
-    expect(clients.schools.getSchoolBySubdomain).not.toHaveBeenCalled();
+    expect(clients.schools.getPublicSchool).not.toHaveBeenCalled();
   });
 });
 

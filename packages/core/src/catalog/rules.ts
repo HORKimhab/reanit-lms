@@ -82,3 +82,17 @@ export function uniqueCourseSlug(title: string, takenSlugs: Iterable<string>): s
   for (let suffix = 2; taken.has(slug); suffix++) slug = `${base}-${suffix}`;
   return slug;
 }
+
+/**
+ * Counts a course's lessons and adds up their running time, for catalog cards and sales pages.
+ *
+ * @param outline The course's sections and lessons.
+ * @param outline.sections The sections in order.
+ * @returns The number of lessons and their total length in seconds.
+ * @example
+ * outlineStats(course); // { lessons: 12, durationSeconds: 5400 }
+ */
+export function outlineStats({ sections }: Pick<Outline, "sections">): { lessons: number; durationSeconds: number } {
+  const lessons = sections.flatMap((section) => section.lessons);
+  return { lessons: lessons.length, durationSeconds: lessons.reduce((total, lesson) => total + lesson.durationSeconds, 0) };
+}

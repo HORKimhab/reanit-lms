@@ -6,6 +6,7 @@ export {
   DESCRIPTION_MAX_LENGTH,
   LESSON_TYPES,
   outlineSchema,
+  outlineStats,
   TITLE_MAX_LENGTH,
   updateCourseSchema,
   type CreateCourseInput,

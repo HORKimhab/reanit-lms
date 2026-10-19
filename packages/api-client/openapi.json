@@ -463,7 +463,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SchoolResponse"
+                  "$ref": "#/components/schemas/PublicSchoolResponse"
                 }
               }
             }
@@ -921,6 +921,48 @@
         "required": [
           "school",
           "role"
+        ]
+      },
+      "PublicSchoolResponse": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "subdomain": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "subdomain"
+            ]
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "school",
+          "owner"
         ]
       },
       "CoursesResponse": {

@@ -6,7 +6,7 @@ import type { SchoolService } from "@reanit/core/schools";
 import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "./schools.decorators";
-import { CreateSchoolBody, SchoolResponse, StaffSchoolResponse, SubdomainParams } from "./schools.dto";
+import { CreateSchoolBody, PublicSchoolResponse, SchoolResponse, StaffSchoolResponse, SubdomainParams } from "./schools.dto";
 import { SCHOOL_SERVICE } from "./schools.tokens";
 
 /** Opening schools and finding them by subdomain, over `@reanit/core/schools`. */
@@ -48,16 +48,17 @@ export class SchoolsController {
   }
 
   /**
-   * Finds the school a subdomain belongs to, for school sites.
+   * Finds the school a subdomain belongs to, with its owner's name, for school sites.
    *
    * @param params The subdomain.
-   * @returns The school.
+   * @returns The school and its owner's name.
    * @throws {SchoolNotFoundError} When no school has the subdomain (404).
    */
   @Public()
   @Get("by-subdomain/:subdomain")
-  @ApiOkResponse({ type: SchoolResponse })
-  async bySubdomain(@Param() params: SubdomainParams): Promise<SchoolResponse> {
-    return { school: await this.schools.getSchoolBySubdomain(params.subdomain) };
+  @ApiOkResponse({ type: PublicSchoolResponse })
+  async bySubdomain(@Param() params: SubdomainParams): Promise<PublicSchoolResponse> {
+    const { school, ownerName } = await this.schools.getPublicSchool(params.subdomain);
+    return { school, owner: { name: ownerName } };
   }
 }

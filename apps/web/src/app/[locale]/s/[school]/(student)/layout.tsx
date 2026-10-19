@@ -1,5 +1,5 @@
 import { SchoolHeader } from "@/components/shells/school-header";
-import { requireMockSchool } from "@/mocks/schools";
+import { getSiteSchool } from "@/server/schools/site";
 
 /**
  * Signed-in student area shell: compact header, no marketing footer.
@@ -10,7 +10,7 @@ import { requireMockSchool } from "@/mocks/schools";
  * @returns The header and page.
  */
 export default async function StudentLayout({ children, params }: LayoutProps<"/[locale]/s/[school]">) {
-  const school = requireMockSchool((await params).school);
+  const school = await getSiteSchool((await params).school);
   return (
     <>
       <SchoolHeader school={school} variant="student" />

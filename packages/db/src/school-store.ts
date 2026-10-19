@@ -40,6 +40,21 @@ export function createSchoolStore(db: DbClient) {
     },
 
     /**
+     * Looks up the display name of a school's owner, for its public pages.
+     *
+     * @param schoolId The school's id.
+     * @returns The owner's name, or null when they gave none.
+     */
+    async findOwnerName(schoolId: string) {
+      const owner = await db.membership.findFirst({
+        where: { schoolId, role: "owner" },
+        orderBy: { createdAt: "asc" },
+        select: { user: { select: { name: true } } },
+      });
+      return owner?.user.name ?? null;
+    },
+
+    /**
      * Creates a school and its owner membership in one statement, so neither exists without the other.
      *
      * @param school New school.

@@ -42,6 +42,30 @@ describe("getSchoolBySubdomain", () => {
   });
 });
 
+describe("getPublicSchool", () => {
+  it("returns the school with its owner's name", async () => {
+    const store = new FakeSchoolStore();
+    store.userNames.set("user-1", "Dara Sok");
+    const schools = createSchoolService({ store });
+    const angkor = await schools.createSchool({ name: "Angkor", subdomain: "angkor" }, "user-1");
+
+    expect(await schools.getPublicSchool("angkor")).toEqual({ school: angkor, ownerName: "Dara Sok" });
+  });
+
+  it("returns a null owner name when the owner gave none", async () => {
+    const schools = createSchoolService({ store: new FakeSchoolStore() });
+    await schools.createSchool({ name: "Angkor", subdomain: "angkor" }, "user-1");
+
+    expect((await schools.getPublicSchool("angkor")).ownerName).toBeNull();
+  });
+
+  it("throws SchoolNotFoundError when no school has the subdomain", async () => {
+    const schools = createSchoolService({ store: new FakeSchoolStore() });
+
+    await expect(schools.getPublicSchool("missing")).rejects.toThrow(SchoolNotFoundError);
+  });
+});
+
 describe("getStaffSchool", () => {
   it("returns the first school the user runs, skipping ones they only study at", async () => {
     const store = new FakeSchoolStore();
