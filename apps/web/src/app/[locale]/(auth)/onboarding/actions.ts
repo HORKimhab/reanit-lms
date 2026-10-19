@@ -1,11 +1,11 @@
 "use server";
 
-import { createSchoolSchema, SubdomainTakenError } from "@reanit/core/schools";
+import { createSchoolSchema } from "@reanit/core/schools";
 import { redirect } from "next/navigation";
 
+import { getApi, unexpectedResponse } from "@/server/api";
 import { requireUser } from "@/server/auth/session";
 import { invalidFieldsOf } from "@/server/form-errors";
-import { getSchoolService } from "@/server/schools/service";
 
 import { ONBOARDING_PATH } from "./constants";
 
@@ -27,15 +27,12 @@ const DASHBOARD_PATH = "/dashboard";
  * @throws {Error} Next's redirect signal (to log in, or to the dashboard on success), or any unexpected failure.
  */
 export async function createSchool(_previous: CreateSchoolState, formData: FormData): Promise<CreateSchoolState> {
-  const user = await requireUser(ONBOARDING_PATH);
+  await requireUser(ONBOARDING_PATH);
 
   const parsed = createSchoolSchema.safeParse({ name: formData.get("name"), subdomain: formData.get("subdomain") });
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
-  try {
-    await getSchoolService().createSchool(parsed.data, user.id);
-  } catch (error) {
-    if (error instanceof SubdomainTakenError) return { status: "subdomainTaken", invalidFields: ["subdomain"] };
-    throw error;
-  }
+  const { response } = await (await getApi()).POST("/schools", { body: parsed.data });
+  if (response.status === 409) return { status: "subdomainTaken", invalidFields: ["subdomain"] };
+  if (!response.ok) throw unexpectedResponse(response);
   redirect(DASHBOARD_PATH);
 }

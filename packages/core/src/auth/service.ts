@@ -6,6 +6,8 @@ import { generateToken, hashToken } from "./token";
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
+/** Cookie that holds the raw session token; the API sets it and the web app forwards it. */
+export const SESSION_COOKIE = "reanit_session";
 /** How long a session cookie stays valid. */
 export const SESSION_TTL_MS = 30 * DAY_MS;
 /** How long a magic link can be used. */

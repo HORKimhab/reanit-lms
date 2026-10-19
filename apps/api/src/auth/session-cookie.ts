@@ -1,8 +1,5 @@
 import type { CookieSerializeOptions } from "@fastify/cookie";
 
-/** Cookie that holds the raw session token. Only its hash is stored. */
-export const SESSION_COOKIE = "reanit_session";
-
 /**
  * Cookie settings for the session: unreadable by scripts, sent on top-level navigation
  * but not on cross-site POSTs (SameSite=Lax), and Secure whenever the app is served over HTTPS.

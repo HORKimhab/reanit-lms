@@ -1,18 +1,14 @@
 // @vitest-environment node
-import { SubdomainTakenError } from "@reanit/core/schools";
 import { describe, expect, it, vi } from "vitest";
 
-import { SESSION } from "@/test/auth-service";
+import { onApi, problem, requestTo } from "@/test/api";
 import { formData } from "@/test/form";
 import { RedirectError } from "@/test/navigation";
-import { schoolService } from "@/test/school-service";
 import { signIn } from "@/test/session";
 
 import { createSchool, type CreateSchoolState } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
-vi.mock("@/server/auth/service", () => import("@/test/auth-service"));
-vi.mock("@/server/schools/service", () => import("@/test/school-service"));
 
 const IDLE: CreateSchoolState = { status: "idle", invalidFields: [] };
 
@@ -28,18 +24,17 @@ function form(name: string, subdomain: string) {
 }
 
 describe("createSchool", () => {
-  it("creates the school for the signed-in creator and goes to the dashboard", async () => {
+  it("opens the school with the normalized form and goes to the dashboard", async () => {
     signIn();
+    onApi("POST /schools", Response.json({ school: {} }, { status: 201 }));
 
     await expect(createSchool(IDLE, form(" Angkor Academy ", "Angkor"))).rejects.toEqual(new RedirectError("/dashboard"));
-    expect(schoolService.createSchool).toHaveBeenCalledWith({ name: "Angkor Academy", subdomain: "angkor" }, SESSION.user.id);
+    expect(await requestTo("POST /schools")?.json()).toEqual({ name: "Angkor Academy", subdomain: "angkor" });
   });
 
   it("sends a signed-out visitor to log in and back", async () => {
-    await expect(createSchool(IDLE, form("Angkor", "angkor"))).rejects.toEqual(
-      new RedirectError("/login?next=%2Fonboarding"),
-    );
-    expect(schoolService.createSchool).not.toHaveBeenCalled();
+    await expect(createSchool(IDLE, form("Angkor", "angkor"))).rejects.toEqual(new RedirectError("/login?next=%2Fonboarding"));
+    expect(requestTo("POST /schools")).toBeUndefined();
   });
 
   it("lists the invalid fields", async () => {
@@ -48,9 +43,9 @@ describe("createSchool", () => {
     expect(await createSchool(IDLE, form("", "www"))).toEqual({ status: "invalid", invalidFields: ["name", "subdomain"] });
   });
 
-  it("reports subdomainTaken when another school has it", async () => {
+  it("reports subdomainTaken when the API answers 409", async () => {
     signIn();
-    schoolService.createSchool.mockRejectedValue(new SubdomainTakenError());
+    onApi("POST /schools", problem(409, "urn:reanit:problem:subdomain-taken"));
 
     expect(await createSchool(IDLE, form("Angkor", "angkor"))).toEqual({
       status: "subdomainTaken",
@@ -58,10 +53,10 @@ describe("createSchool", () => {
     });
   });
 
-  it("rethrows unexpected failures", async () => {
+  it("throws when the API fails", async () => {
     signIn();
-    schoolService.createSchool.mockRejectedValue(new Error("database down"));
+    onApi("POST /schools", problem(500));
 
-    await expect(createSchool(IDLE, form("Angkor", "angkor"))).rejects.toThrow("database down");
+    await expect(createSchool(IDLE, form("Angkor", "angkor"))).rejects.toThrow("API answered 500");
   });
 });

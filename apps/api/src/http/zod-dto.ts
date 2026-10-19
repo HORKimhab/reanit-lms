@@ -20,10 +20,11 @@ type ObjectJsonSchema = { properties?: Record<string, object>; required?: string
 function toSwaggerProperties(schema: z.ZodType): Record<string, object> {
   const json = z.toJSONSchema(schema, { target: "openapi-3.0", io: "input" }) as ObjectJsonSchema;
   return Object.fromEntries(
-    Object.entries(json.properties ?? {}).map(([key, property]) => [
-      key,
-      { ...property, required: json.required?.includes(key) ?? false },
-    ]),
+    Object.entries(json.properties ?? {}).map(([key, property]) => {
+      const isRequired = json.required?.includes(key) ?? false;
+      // An object property keeps its own `required` list; swagger reads `selfRequired` for the property itself.
+      return [key, "required" in property ? { ...property, selfRequired: isRequired } : { ...property, required: isRequired }];
+    }),
   );
 }
 

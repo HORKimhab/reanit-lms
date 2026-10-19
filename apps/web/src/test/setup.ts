@@ -1,17 +1,17 @@
-import { afterEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
-import { authService } from "./auth-service";
-import { catalogService, getCatalogService } from "./catalog-service";
+import { fakeFetch, resetApi, TEST_API_URL } from "./api";
 import { cookieJar } from "./headers";
 import { router, setPathname } from "./navigation";
-import { schoolService } from "./school-service";
+
+beforeEach(() => {
+  vi.stubEnv("API_URL", TEST_API_URL);
+  vi.stubGlobal("fetch", fakeFetch);
+});
 
 afterEach(() => {
   setPathname("/");
   Object.values(router).forEach((spy) => spy.mockClear());
-  [...Object.values(authService), ...Object.values(schoolService), ...Object.values(catalogService)].forEach((stub) =>
-    stub.mockReset(),
-  );
-  getCatalogService.mockClear();
+  resetApi();
   cookieJar.clear();
 });

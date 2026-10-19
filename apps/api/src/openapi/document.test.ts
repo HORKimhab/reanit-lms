@@ -21,6 +21,11 @@ class SignUpBody extends createZodDto(signUpSchema) {}
 /** Course outline body, with nested arrays. */
 class OutlineBody extends createZodDto(outlineSchema) {}
 
+/** A body with a nested object, one of whose fields is optional. */
+class UserBody extends createZodDto(
+  z.object({ user: z.object({ id: z.uuid(), email: z.string(), name: z.string().optional() }) }),
+) {}
+
 /** Paging query. */
 class PageQuery extends createZodDto(z.object({ page: z.coerce.number().int().min(1).default(1), search: z.string().optional() })) {}
 
@@ -47,6 +52,17 @@ class DocsProbeController {
    */
   @Post("outline")
   outline(@Body() body: OutlineBody) {
+    return body;
+  }
+
+  /**
+   * Accepts a body with a nested object.
+   *
+   * @param body The body.
+   * @returns The body.
+   */
+  @Post("user")
+  user(@Body() body: UserBody) {
     return body;
   }
 
@@ -90,6 +106,15 @@ describe("buildOpenApiDocument", () => {
       type: "object",
       properties: { name: { type: "string", minLength: 1 }, email: { type: "string" }, password: { type: "string", minLength: 8 } },
       required: ["name", "email", "password"],
+    });
+  });
+
+  it("keeps the required fields of a nested object and of the object itself", async () => {
+    const document = await probeDocument();
+
+    expect(document.components?.schemas?.UserBody).toMatchObject({
+      required: ["user"],
+      properties: { user: { type: "object", required: ["id", "email"] } },
     });
   });
 

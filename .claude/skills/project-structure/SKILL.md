@@ -26,7 +26,7 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 |---|---|
 | Business rule | `packages/core/<module>/`, no Next/Nest/Prisma/BullMQ imports |
 | Table / column / RLS | `packages/db` |
-| Page / server action | `apps/web` |
+| Page / server action | `apps/web`; data comes from `apps/api` through `getApi()` in `@/server/api` (importing `@reanit/db` is a lint error) |
 | API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config\|context\|logging\|http>/`. Request bodies: `class X extends createZodDto(coreSchema) {}`. A new core error gets its status in `apps/api/src/http/problem.ts`. Every route needs a session unless marked `@Public()`; read the user with `@CurrentUser()`. Staff-only routes add `@Roles("owner", …)` (import `SchoolsModule`) and read `@CurrentSchool()`. Request state goes through `ClsService<RequestContext>`, never REQUEST-scoped providers |
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |

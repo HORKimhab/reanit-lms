@@ -235,7 +235,7 @@ curl localhost:4000/health
 
 - Mailpit's inbox (magic-link emails) is at http://localhost:8025.
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
-- If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in the three env files to match.
+- If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in `packages/db/.env` and `apps/api/.env` to match.
 - Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.
 - After changing an API route or DTO, run `pnpm openapi`: it rewrites `packages/api-client/openapi.json` and the client types. `pnpm test` fails while the committed spec is stale.
 

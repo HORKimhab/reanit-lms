@@ -1,13 +1,12 @@
 import { Inject, Injectable, UnauthorizedException, type CanActivate, type ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { AuthService } from "@reanit/core/auth";
+import { SESSION_COOKIE, type AuthService } from "@reanit/core/auth";
 import type { FastifyRequest } from "fastify";
 import { ClsService } from "nestjs-cls";
 
 import type { RequestContext } from "../context/request-context";
 import { IS_PUBLIC } from "./auth.decorators";
 import { AUTH_SERVICE } from "./auth.tokens";
-import { SESSION_COOKIE } from "./session-cookie";
 
 /** Global guard: every route needs a valid session cookie unless it is marked `@Public()`. */
 @Injectable()

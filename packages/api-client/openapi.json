@@ -784,7 +784,12 @@
                 "nullable": true,
                 "type": "string"
               }
-            }
+            },
+            "required": [
+              "id",
+              "email",
+              "name"
+            ]
           }
         },
         "required": [
@@ -867,7 +872,12 @@
               "subdomain": {
                 "type": "string"
               }
-            }
+            },
+            "required": [
+              "id",
+              "name",
+              "subdomain"
+            ]
           }
         },
         "required": [
@@ -891,7 +901,12 @@
               "subdomain": {
                 "type": "string"
               }
-            }
+            },
+            "required": [
+              "id",
+              "name",
+              "subdomain"
+            ]
           },
           "role": {
             "type": "string",
@@ -994,7 +1009,14 @@
                   "published"
                 ]
               }
-            }
+            },
+            "required": [
+              "id",
+              "title",
+              "slug",
+              "description",
+              "status"
+            ]
           }
         },
         "required": [
@@ -1087,7 +1109,15 @@
                   ]
                 }
               }
-            }
+            },
+            "required": [
+              "id",
+              "title",
+              "slug",
+              "description",
+              "status",
+              "sections"
+            ]
           }
         },
         "required": [

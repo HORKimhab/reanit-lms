@@ -1,11 +1,16 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError, type AuthSession } from "@reanit/core/auth";
+import {
+  EmailTakenError,
+  InvalidCredentialsError,
+  InvalidMagicLinkError,
+  SESSION_COOKIE,
+  type AuthSession,
+} from "@reanit/core/auth";
 import type { LightMyRequestResponse } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createFakeClients, createTestApp, type FakeClients } from "../test/app";
 import { INVALID_MAGIC_LINK_PATH } from "./auth.controller";
-import { SESSION_COOKIE } from "./session-cookie";
 
 const SESSION: AuthSession = {
   user: { id: "9f1c2a4e-3b5d-4c6e-8f70-1a2b3c4d5e6f", email: "dara@example.com", name: "Dara" },

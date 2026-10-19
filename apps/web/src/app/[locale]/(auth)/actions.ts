@@ -1,20 +1,11 @@
 "use server";
 
-import {
-  EmailTakenError,
-  emailSchema,
-  InvalidCredentialsError,
-  logInSchema,
-  MAGIC_LINK_TTL_MS,
-  safeRedirectPath,
-  signUpSchema,
-} from "@reanit/core/auth";
+import { emailSchema, logInSchema, safeRedirectPath, signUpSchema } from "@reanit/core/auth";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 
-import { getAuthService } from "@/server/auth/service";
-import { endSession, setSessionCookie } from "@/server/auth/session";
-import { getServerEnv } from "@/server/env";
+import { getApi, unexpectedResponse } from "@/server/api";
+import { endSession, relaySessionCookie } from "@/server/auth/session";
 import { invalidFieldsOf } from "@/server/form-errors";
 
 /** Result of the last submit, shown by the auth forms (WEB-10). */
@@ -23,10 +14,6 @@ export type AuthFormState = {
   /** Form fields to mark invalid. */
   invalidFields: string[];
 };
-
-/** Route that verifies a magic link token (app/api/auth/magic-link). */
-const MAGIC_LINK_PATH = "/api/auth/magic-link";
-const MINUTE_MS = 60 * 1000;
 
 /**
  * Creates a password account, signs it in and goes to `next`.
@@ -43,12 +30,10 @@ export async function signUp(_previous: AuthFormState, formData: FormData): Prom
     password: formData.get("password"),
   });
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
-  try {
-    await setSessionCookie(await getAuthService().signUp(parsed.data));
-  } catch (error) {
-    if (error instanceof EmailTakenError) return { status: "emailTaken", invalidFields: ["email"] };
-    throw error;
-  }
+  const { response } = await (await getApi()).POST("/auth/sign-up", { body: parsed.data });
+  if (response.status === 409) return { status: "emailTaken", invalidFields: ["email"] };
+  if (!response.ok) throw unexpectedResponse(response);
+  await relaySessionCookie(response);
   redirect(safeRedirectPath(formData.get("next")));
 }
 
@@ -63,34 +48,28 @@ export async function signUp(_previous: AuthFormState, formData: FormData): Prom
 export async function logIn(_previous: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = logInSchema.safeParse({ email: formData.get("email"), password: formData.get("password") });
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
-  try {
-    await setSessionCookie(await getAuthService().logIn(parsed.data));
-  } catch (error) {
-    if (error instanceof InvalidCredentialsError) return { status: "invalidCredentials", invalidFields: [] };
-    throw error;
-  }
+  const { response } = await (await getApi()).POST("/auth/login", { body: parsed.data });
+  if (response.status === 401) return { status: "invalidCredentials", invalidFields: [] };
+  if (!response.ok) throw unexpectedResponse(response);
+  await relaySessionCookie(response);
   redirect(safeRedirectPath(formData.get("next")));
 }
 
 /**
- * Emails a sign-in link in the current locale. Always reports `sent` for a valid
+ * Has the API email a sign-in link in the current locale. Always reports `sent` for a valid
  * email, so the form never reveals whether an account exists.
  *
  * @param _previous The form's last state; unused, but `useActionState` passes it first.
  * @param formData Untrusted `email` and optional `next`.
  * @returns `sent`, or `invalid` when the email is malformed.
+ * @throws {Error} When the API fails.
  */
 export async function requestMagicLink(_previous: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = emailSchema.safeParse(formData.get("email"));
   if (!parsed.success) return { status: "invalid", invalidFields: ["email"] };
-  const t = await getTranslations("Auth.magicLinkEmail");
-  const next = safeRedirectPath(formData.get("next"));
-
-  await getAuthService().requestMagicLink(parsed.data, (token) => {
-    const url = new URL(MAGIC_LINK_PATH, getServerEnv().APP_URL);
-    url.search = new URLSearchParams({ token, next }).toString();
-    return { subject: t("subject"), text: t("body", { url: url.href, minutes: MAGIC_LINK_TTL_MS / MINUTE_MS }) };
-  });
+  const body = { email: parsed.data, next: safeRedirectPath(formData.get("next")), locale: await getLocale() };
+  const { response } = await (await getApi()).POST("/auth/magic-link", { body });
+  if (!response.ok) throw unexpectedResponse(response);
   return { status: "sent", invalidFields: [] };
 }
 

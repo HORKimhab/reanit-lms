@@ -10,4 +10,4 @@ export {
   type LogInInput,
   type SignUpInput,
 } from "./schemas";
-export { createAuthService, MAGIC_LINK_TTL_MS, type AuthService, type AuthSession } from "./service";
+export { createAuthService, MAGIC_LINK_TTL_MS, SESSION_COOKIE, type AuthService, type AuthSession } from "./service";

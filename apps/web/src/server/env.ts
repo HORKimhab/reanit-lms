@@ -1,14 +1,8 @@
 import { z } from "zod";
 
 const serverEnvSchema = z.object({
-  /** Postgres connection; see packages/db/.env.example. */
-  DATABASE_URL: z.url(),
-  /** Public origin of the app, used to build links in emails. */
-  APP_URL: z.url(),
-  /** SMTP server, e.g. smtp://localhost:1025 for Mailpit. */
-  SMTP_URL: z.url(),
-  /** Sender of transactional email, e.g. `Reanit <no-reply@reanit.com>`. */
-  MAIL_FROM: z.string().min(1),
+  /** Where server code reaches `apps/api` directly, e.g. http://localhost:4000. Browsers go through `/api/*`. */
+  API_URL: z.url(),
 });
 
 /** Validated server-only environment variables. */

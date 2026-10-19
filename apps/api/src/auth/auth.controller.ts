@@ -1,6 +1,13 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Query, Req, Res } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
-import { InvalidMagicLinkError, safeRedirectPath, type AuthService, type AuthSession, type AuthUser } from "@reanit/core/auth";
+import {
+  InvalidMagicLinkError,
+  safeRedirectPath,
+  SESSION_COOKIE,
+  type AuthService,
+  type AuthSession,
+  type AuthUser,
+} from "@reanit/core/auth";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { ENV, type Env } from "../config/env";
@@ -8,7 +15,7 @@ import { CurrentUser, Public } from "./auth.decorators";
 import { LogInBody, MagicLinkBody, SessionResponse, SignUpBody, VerifyMagicLinkQuery } from "./auth.dto";
 import { AUTH_SERVICE } from "./auth.tokens";
 import { composeMagicLinkEmail } from "./magic-link-email";
-import { SESSION_COOKIE, sessionCookieOptions } from "./session-cookie";
+import { sessionCookieOptions } from "./session-cookie";
 
 /** Web login page with the error it shows for a bad magic link. */
 export const INVALID_MAGIC_LINK_PATH = "/login?error=invalid-link";

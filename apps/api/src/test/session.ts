@@ -1,8 +1,7 @@
 // Signs a fake user in for route tests: the fake auth service resolves any session cookie to them.
-import type { AuthUser } from "@reanit/core/auth";
+import { SESSION_COOKIE, type AuthUser } from "@reanit/core/auth";
 import type { School } from "@reanit/core/schools";
 
-import { SESSION_COOKIE } from "../auth/session-cookie";
 import type { FakeClients } from "./app";
 
 /** The user test requests are signed in as. */
