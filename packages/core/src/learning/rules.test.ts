@@ -8,11 +8,11 @@ const COURSE = {
       id: "s1",
       title: "Start",
       lessons: [
-        { id: "l1", title: "Welcome", type: "video" as const, durationSeconds: 60, hasMedia: true },
-        { id: "l2", title: "Workbook", type: "pdf" as const, durationSeconds: 0, hasMedia: true },
+        { id: "l1", title: "Welcome", type: "video" as const, durationSeconds: 60, hasMedia: true, unlockAfterDays: null, unlockAt: null },
+        { id: "l2", title: "Workbook", type: "pdf" as const, durationSeconds: 0, hasMedia: true, unlockAfterDays: null, unlockAt: null },
       ],
     },
-    { id: "s2", title: "Logo", lessons: [{ id: "l3", title: "Sketching", type: "video" as const, durationSeconds: 90, hasMedia: false }] },
+    { id: "s2", title: "Logo", lessons: [{ id: "l3", title: "Sketching", type: "video" as const, durationSeconds: 90, hasMedia: false, unlockAfterDays: null, unlockAt: null }] },
   ],
 };
 

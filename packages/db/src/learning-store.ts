@@ -3,7 +3,21 @@ import { recordCompletion } from "./daily-stats";
 import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction } from "./tenant";
 
-const ENROLLMENT_FIELDS = { id: true, courseId: true, expiresAt: true } as const;
+const ENROLLMENT_FIELDS = { id: true, courseId: true, expiresAt: true, createdAt: true } as const;
+
+/**
+ * Names an enrollment's creation time as the learning module reads it: when the student enrolled.
+ *
+ * @param enrollment A stored enrollment, or null.
+ * @param enrollment.id Its id.
+ * @param enrollment.courseId Its course.
+ * @param enrollment.expiresAt When access ends, or null.
+ * @param enrollment.createdAt When it was made.
+ * @returns The enrollment with `enrolledAt`, or null.
+ */
+function toEnrollment(enrollment: { id: string; courseId: string; expiresAt: Date | null; createdAt: Date } | null) {
+  return enrollment && { id: enrollment.id, courseId: enrollment.courseId, expiresAt: enrollment.expiresAt, enrolledAt: enrollment.createdAt };
+}
 
 /**
  * One school's enrollments and lesson progress. Every query goes through the tenant client, so
@@ -27,8 +41,8 @@ export function createLearningStore(db: DbClient, schoolId: string) {
      * @param courseId The course.
      * @returns The enrollment, or null.
      */
-    findEnrollment(userId: string, courseId: string) {
-      return tenant.enrollment.findUnique({ where: { userId_courseId: { userId, courseId } }, select: ENROLLMENT_FIELDS });
+    async findEnrollment(userId: string, courseId: string) {
+      return toEnrollment(await tenant.enrollment.findUnique({ where: { userId_courseId: { userId, courseId } }, select: ENROLLMENT_FIELDS }));
     },
 
     /**
@@ -38,11 +52,24 @@ export function createLearningStore(db: DbClient, schoolId: string) {
      * @param lessonId The lesson.
      * @returns The enrollment, or null when there is none or the school has no such lesson.
      */
-    findEnrollmentForLesson(userId: string, lessonId: string) {
-      return tenant.enrollment.findFirst({
-        where: { userId, course: { sections: { some: { lessons: { some: { id: lessonId } } } } } },
-        select: ENROLLMENT_FIELDS,
-      });
+    async findEnrollmentForLesson(userId: string, lessonId: string) {
+      return toEnrollment(
+        await tenant.enrollment.findFirst({
+          where: { userId, course: { sections: { some: { lessons: { some: { id: lessonId } } } } } },
+          select: ENROLLMENT_FIELDS,
+        }),
+      );
+    },
+
+    /**
+     * Reads a lesson's drip settings.
+     *
+     * @param lessonId The lesson.
+     * @returns When it opens, or null when the school has no such lesson.
+     */
+    async findLessonUnlock(lessonId: string) {
+      const lesson = await tenant.lesson.findFirst({ where: { id: lessonId }, select: { unlockAfterDays: true, unlockAt: true } });
+      return lesson && { unlockAfterDays: lesson.unlockAfterDays, unlockAt: lesson.unlockAt?.toISOString() ?? null };
     },
 
     /**

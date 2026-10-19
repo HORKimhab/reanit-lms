@@ -16,7 +16,7 @@ beforeAll(async () => {
   const catalog = createCatalogStore(db, alphaId);
   const course = await catalog.createCourse({ title: "Video course", slug: "video-course" });
   await catalog.replaceOutline(course.id, {
-    sections: [{ id: randomUUID(), title: "One", lessons: [{ id: lessonId, title: "Intro", type: "video", durationSeconds: 60 }] }],
+    sections: [{ id: randomUUID(), title: "One", lessons: [{ id: lessonId, title: "Intro", type: "video", durationSeconds: 60, unlockAfterDays: null, unlockAt: null }] }],
   });
 });
 
@@ -39,7 +39,7 @@ describe("lesson media store", () => {
 
     const course = await createCatalogStore(db, alphaId).findCourseBySlug("video-course");
 
-    expect(course?.sections[0]?.lessons).toEqual([{ id: lessonId, title: "Intro", type: "video", durationSeconds: 60, hasMedia: true }]);
+    expect(course?.sections[0]?.lessons).toEqual([{ id: lessonId, title: "Intro", type: "video", durationSeconds: 60, hasMedia: true, unlockAfterDays: null, unlockAt: null }]);
   });
 
   it("shows another school nothing and lets it change nothing", async () => {

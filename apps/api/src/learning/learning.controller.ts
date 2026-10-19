@@ -55,7 +55,8 @@ export class LearningController {
   @Get("learn/:slug")
   @ApiOkResponse({ type: PlayerCourseResponse })
   async course(@Param() params: PlayerCourseParams, @CurrentUser() user: AuthUser): Promise<PlayerCourseResponse> {
-    return { course: await (await this.learning(params.subdomain)).getCourse(user.id, params.slug) };
+    const { enrolledAt, ...course } = await (await this.learning(params.subdomain)).getCourse(user.id, params.slug);
+    return { course: { ...course, enrolledAt: enrolledAt.toISOString() } };
   }
 
   /**

@@ -79,7 +79,19 @@ describe("staff course routes", () => {
     const response = await staff.app.inject({ method: "PUT", url: `/courses/${COURSE.id}/outline`, headers: staff.headers, payload: OUTLINE });
 
     expect(response.statusCode).toBe(204);
-    expect(staff.clients.catalog.saveOutline).toHaveBeenCalledWith(COURSE.id, OUTLINE);
+    const [section] = OUTLINE.sections;
+    expect(staff.clients.catalog.saveOutline).toHaveBeenCalledWith(COURSE.id, {
+      sections: [{ ...section, lessons: section?.lessons.map((lesson) => ({ ...lesson, unlockAfterDays: null, unlockAt: null })) }],
+    });
+  });
+
+  it("passes a lesson's drip date on", async () => {
+    const [section] = OUTLINE.sections;
+    const payload = { sections: [{ ...section, lessons: section?.lessons.map((lesson) => ({ ...lesson, unlockAt: "2026-12-01T00:00:00Z" })) }] };
+
+    await staff.app.inject({ method: "PUT", url: `/courses/${COURSE.id}/outline`, headers: staff.headers, payload });
+
+    expect(staff.clients.catalog.saveOutline.mock.calls[0]?.[1].sections[0].lessons[0].unlockAt).toBe("2026-12-01T00:00:00Z");
   });
 
   it("answers 400 for an outline that repeats an id", async () => {

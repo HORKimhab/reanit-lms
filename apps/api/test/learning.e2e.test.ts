@@ -108,3 +108,37 @@ describe("quizzes", () => {
     ]);
   });
 });
+
+describe("drip lessons", () => {
+  it("keeps a lesson closed to a new buyer until it opens, and opens the rest at once", async () => {
+    const [open, dripped] = [randomUUID(), randomUUID()];
+    const { course: dripCourse } = (await alpha.agent.post("/courses").send({ title: "Drip Course" }).expect(201)).body;
+    await alpha.agent
+      .put(`/courses/${dripCourse.id}/outline`)
+      .send({
+        sections: [
+          {
+            id: randomUUID(),
+            title: "Week",
+            lessons: [
+              { id: open, title: "Day one", type: "text", durationSeconds: 0 },
+              { id: dripped, title: "Day two", type: "text", durationSeconds: 0, unlockAfterDays: 1 },
+            ],
+          },
+        ],
+      })
+      .expect(204);
+    await alpha.agent.patch(`/courses/${dripCourse.id}`).send({ status: "published" }).expect(200);
+    await alpha.agent.put(`/courses/${dripCourse.id}/price`).send({ amount: 1000, currency: "USD" }).expect(200);
+
+    const { agent: student } = await signUp(e2e().app, uniqueName("drip-student"));
+    await buyCourse(e2e(), student, alpha.school.subdomain, dripCourse.slug);
+
+    const player = (await student.get(`${base}/learn/${dripCourse.slug}`).expect(200)).body.course;
+    expect(player.sections[0].lessons[1]).toMatchObject({ unlockAfterDays: 1, unlockAt: null });
+    expect(Date.parse(player.enrolledAt)).not.toBeNaN();
+    await student.put(`${base}/lessons/${open}/progress`).send({ completed: true }).expect(204);
+    const locked = await student.put(`${base}/lessons/${dripped}/progress`).send({ completed: true }).expect(403);
+    expect(locked.body.type).toBe("urn:reanit:problem:lesson-locked");
+  });
+});

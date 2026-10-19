@@ -23,7 +23,7 @@ beforeAll(async () => {
       {
         id: randomUUID(),
         title: "Start",
-        lessons: LESSONS.map((id) => ({ id, title: id, type: "video" as const, durationSeconds: 60 })),
+        lessons: LESSONS.map((id) => ({ id, title: id, type: "video" as const, durationSeconds: 60, unlockAfterDays: null, unlockAt: null })),
       },
     ],
   });
@@ -37,7 +37,8 @@ afterAll(async () => {
 describe("learning store", () => {
   it("finds a student's enrollment by course and by lesson, never from another school", async () => {
     const store = createLearningStore(db, alphaId);
-    const enrollment = { id: enrollmentId, courseId, expiresAt: null };
+    const { createdAt } = await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { createdAt: true } });
+    const enrollment = { id: enrollmentId, courseId, expiresAt: null, enrolledAt: createdAt };
 
     expect(await store.findEnrollment(studentId, courseId)).toEqual(enrollment);
     expect(await store.findEnrollmentForLesson(studentId, LESSONS[1])).toEqual(enrollment);
@@ -73,5 +74,32 @@ describe("learning store", () => {
     expect(await db.outboxEvent.findMany({ where: { type: "CourseCompleted", schoolId: alphaId }, select: { payload: true } })).toEqual([
       { payload: { enrollmentId, courseId } },
     ]);
+  });
+
+  it("reads a lesson's drip settings, written through the outline, and nothing of another school's lesson", async () => {
+    const unlockAt = "2026-12-01T00:00:00.000Z";
+    await createCatalogStore(db, alphaId).replaceOutline(courseId, {
+      sections: [
+        {
+          id: randomUUID(),
+          title: "Start",
+          lessons: [
+            { id: LESSONS[0], title: "a", type: "video", durationSeconds: 60, unlockAfterDays: 7, unlockAt: null },
+            { id: LESSONS[1], title: "b", type: "video", durationSeconds: 60, unlockAfterDays: null, unlockAt },
+          ],
+        },
+      ],
+    });
+    const store = createLearningStore(db, alphaId);
+
+    expect(await store.findLessonUnlock(LESSONS[0])).toEqual({ unlockAfterDays: 7, unlockAt: null });
+    expect(await store.findLessonUnlock(LESSONS[1])).toEqual({ unlockAfterDays: null, unlockAt });
+    expect(await createLearningStore(db, betaId).findLessonUnlock(LESSONS[0])).toBeNull();
+  });
+
+  it("refuses a lesson with both drip settings", async () => {
+    const lesson = { id: LESSONS[0], title: "a", type: "video" as const, durationSeconds: 60, unlockAfterDays: 7, unlockAt: "2026-12-01T00:00:00.000Z" };
+
+    await expect(createCatalogStore(db, alphaId).replaceOutline(courseId, { sections: [{ id: randomUUID(), title: "S", lessons: [lesson] }] })).rejects.toThrow();
   });
 });

@@ -1,4 +1,5 @@
 import type { LessonType } from "../catalog";
+import type { LessonUnlock } from "./drip";
 import type { Quiz, QuizAnswers, QuizResult } from "./quizzes";
 
 /** A student's access to one course. */
@@ -7,6 +8,8 @@ export interface Enrollment {
   courseId: string;
   /** Null for lifetime access. */
   expiresAt: Date | null;
+  /** When the student got the course; drip lessons count from it. */
+  enrolledAt: Date;
 }
 
 /** Where a student is in one lesson. */
@@ -28,6 +31,8 @@ export interface LearningStore {
   findEnrollment(userId: string, courseId: string): Promise<Enrollment | null>;
   /** The enrollment in the course the lesson belongs to; null when there is none or no such lesson. */
   findEnrollmentForLesson(userId: string, lessonId: string): Promise<Enrollment | null>;
+  /** The lesson's drip settings; null when the school has no such lesson. */
+  findLessonUnlock(lessonId: string): Promise<LessonUnlock | null>;
   listProgress(enrollmentId: string): Promise<LessonProgress[]>;
   saveProgress(enrollmentId: string, lessonId: string, update: ProgressUpdate): Promise<void>;
   /** Lessons the course has, and how many of them the enrollment completed. */

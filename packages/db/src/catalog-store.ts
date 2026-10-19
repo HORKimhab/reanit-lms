@@ -11,7 +11,7 @@ type OutlineInput = {
   sections: {
     id: string;
     title: string;
-    lessons: { id: string; title: string; type: LessonType; durationSeconds: number }[];
+    lessons: { id: string; title: string; type: LessonType; durationSeconds: number; unlockAfterDays: number | null; unlockAt: string | null }[];
   }[];
 };
 
@@ -35,8 +35,8 @@ async function upsertOutline(tx: SchoolTransaction, schoolId: string, courseId: 
     if (sectionIds.has(id)) await tx.section.update({ where: { id }, data: section });
     else await tx.section.create({ data: { id, schoolId, courseId, ...section } });
 
-    for (const [lessonPosition, { id: lessonId, ...fields }] of lessons.entries()) {
-      const lesson = { ...fields, sectionId: id, position: lessonPosition };
+    for (const [lessonPosition, { id: lessonId, unlockAt, ...fields }] of lessons.entries()) {
+      const lesson = { ...fields, unlockAt: unlockAt === null ? null : new Date(unlockAt), sectionId: id, position: lessonPosition };
       if (lessonIds.has(lessonId)) await tx.lesson.update({ where: { id: lessonId }, data: lesson });
       else await tx.lesson.create({ data: { id: lessonId, schoolId, ...lesson } });
     }
@@ -47,18 +47,22 @@ async function upsertOutline(tx: SchoolTransaction, schoolId: string, courseId: 
 type SectionRow = {
   id: string;
   title: string;
-  lessons: { id: string; title: string; type: LessonType; durationSeconds: number; mediaKey: string | null }[];
+  lessons: { id: string; title: string; type: LessonType; durationSeconds: number; unlockAfterDays: number | null; unlockAt: Date | null; mediaKey: string | null }[];
 };
 
 /**
- * Replaces each lesson's storage key with whether it has one; the key stays inside the media module.
+ * Replaces each lesson's storage key with whether it has one (the key stays inside the media module),
+ * and gives its drip date as ISO text, as the outline carries it.
  *
  * @param section A loaded section.
  * @param section.lessons Its lessons with their storage keys.
  * @returns The section with `hasMedia` on each lesson.
  */
 function withMediaFlags({ lessons, ...section }: SectionRow) {
-  return { ...section, lessons: lessons.map(({ mediaKey, ...lesson }) => ({ ...lesson, hasMedia: mediaKey !== null })) };
+  return {
+    ...section,
+    lessons: lessons.map(({ mediaKey, unlockAt, ...lesson }) => ({ ...lesson, unlockAt: unlockAt?.toISOString() ?? null, hasMedia: mediaKey !== null })),
+  };
 }
 
 /**
@@ -103,7 +107,7 @@ export function createCatalogStore(db: DbClient, schoolId: string) {
               title: true,
               lessons: {
                 orderBy: IN_ORDER,
-                select: { id: true, title: true, type: true, durationSeconds: true, mediaKey: true },
+                select: { id: true, title: true, type: true, durationSeconds: true, unlockAfterDays: true, unlockAt: true, mediaKey: true },
               },
             },
           },

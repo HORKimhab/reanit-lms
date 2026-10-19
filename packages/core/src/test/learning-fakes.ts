@@ -1,6 +1,6 @@
 // In-memory fakes of the learning ports, for unit tests of the learning service.
 import type { LessonType } from "../catalog";
-import type { Enrollment, LearningStore, LessonProgress, ProgressUpdate, Quiz, QuizAnswers, QuizResult, QuizStore } from "../learning";
+import type { Enrollment, LearningStore, LessonProgress, LessonUnlock, ProgressUpdate, Quiz, QuizAnswers, QuizResult, QuizStore } from "../learning";
 
 /** A stored enrollment with its student. */
 type FakeEnrollment = Enrollment & { userId: string };
@@ -10,6 +10,8 @@ export class FakeLearningStore implements LearningStore {
   readonly enrollments: FakeEnrollment[] = [];
   /** Lesson id → course id, for the school's lessons. */
   readonly lessonCourses = new Map<string, string>();
+  /** Lesson id → drip settings; lessons missing here open at once. */
+  readonly lessonUnlocks = new Map<string, LessonUnlock>();
   /** Progress rows keyed by `<enrollment id>:<lesson id>`. */
   readonly progress = new Map<string, LessonProgress>();
   /** Completions recorded by `completeCourse`, once per enrollment. */
@@ -24,7 +26,7 @@ export class FakeLearningStore implements LearningStore {
    */
   async findEnrollment(userId: string, courseId: string) {
     const found = this.enrollments.find((enrollment) => enrollment.userId === userId && enrollment.courseId === courseId);
-    return found ? { id: found.id, courseId: found.courseId, expiresAt: found.expiresAt } : null;
+    return found ? { id: found.id, courseId: found.courseId, expiresAt: found.expiresAt, enrolledAt: found.enrolledAt } : null;
   }
 
   /**
@@ -37,6 +39,17 @@ export class FakeLearningStore implements LearningStore {
   async findEnrollmentForLesson(userId: string, lessonId: string) {
     const courseId = this.lessonCourses.get(lessonId);
     return courseId ? this.findEnrollment(userId, courseId) : null;
+  }
+
+  /**
+   * Reads a lesson's drip settings.
+   *
+   * @param lessonId The lesson.
+   * @returns Its settings, opening at once when none were set, or null for an unknown lesson.
+   */
+  async findLessonUnlock(lessonId: string) {
+    if (!this.lessonCourses.has(lessonId)) return null;
+    return this.lessonUnlocks.get(lessonId) ?? { unlockAfterDays: null, unlockAt: null };
   }
 
   /**

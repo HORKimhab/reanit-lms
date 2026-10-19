@@ -66,6 +66,20 @@ describe("outlineSchema", () => {
     expect(outlineSchema.safeParse(outlineWith(lesson)).success).toBe(false);
   });
 
+  it("keeps a lesson's drip date and defaults to opening at once", () => {
+    const parsed = outlineSchema.parse(outlineWith({ unlockAt: "2026-12-01T00:00:00Z" }));
+
+    expect(parsed.sections[0]?.lessons[0]).toMatchObject({ unlockAfterDays: null, unlockAt: "2026-12-01T00:00:00Z" });
+  });
+
+  it.each([
+    ["both drip settings", { unlockAfterDays: 3, unlockAt: "2026-12-01T00:00:00Z" }],
+    ["zero days", { unlockAfterDays: 0 }],
+    ["more than ten years", { unlockAfterDays: 3651 }],
+  ])("rejects %s", (_case, lesson) => {
+    expect(outlineSchema.safeParse(outlineWith(lesson)).success).toBe(false);
+  });
+
   it("rejects an outline that reuses an id", () => {
     expect(outlineSchema.safeParse(outlineWith({ id: SECTION_ID })).success).toBe(false);
   });
@@ -78,7 +92,7 @@ describe("outlineSchema", () => {
  * @returns The lesson.
  */
 function videoLesson(durationSeconds: number) {
-  return { id: "x", title: "x", type: "video" as const, durationSeconds };
+  return { id: "x", title: "x", type: "video" as const, durationSeconds, unlockAfterDays: null, unlockAt: null };
 }
 
 describe("outlineStats", () => {

@@ -36,7 +36,7 @@ const OUTLINE = {
     {
       id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a01",
       title: "Basics",
-      lessons: [{ id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02", title: "Hello", type: "video", durationSeconds: 90 }],
+      lessons: [{ id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02", title: "Hello", type: "video", durationSeconds: 90, unlockAfterDays: 7, unlockAt: null }],
     },
   ],
 };

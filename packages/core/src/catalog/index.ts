@@ -5,6 +5,7 @@ export {
   createCourseSchema,
   DESCRIPTION_MAX_LENGTH,
   LESSON_TYPES,
+  MAX_UNLOCK_AFTER_DAYS,
   outlineSchema,
   outlineStats,
   TITLE_MAX_LENGTH,

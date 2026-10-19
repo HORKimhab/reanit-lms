@@ -9,7 +9,7 @@ import { checkStudentResponse } from "../schools/student";
  *
  * @param subdomain The school's subdomain.
  * @param slug The course's slug.
- * @returns The course with its outline and the student's progress.
+ * @returns The course with its outline, the student's progress, and when they enrolled as a Date.
  * @throws {Error} Next's redirect signal when signed out, its not-found signal when the student does not have the course, or an unexpected-response error.
  */
 export const getPlayerCourse = cache(async (subdomain: string, slug: string): Promise<PlayerCourse> => {
@@ -18,7 +18,8 @@ export const getPlayerCourse = cache(async (subdomain: string, slug: string): Pr
   });
   checkStudentResponse(response, `/s/${subdomain}/learn/${slug}`);
   // checkStudentResponse returned, so the API answered 2xx with the course.
-  return data!.course;
+  const { enrolledAt, ...course } = data!.course;
+  return { ...course, enrolledAt: new Date(enrolledAt) };
 });
 
 /**

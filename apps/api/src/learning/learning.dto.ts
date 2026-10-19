@@ -14,11 +14,12 @@ export class PlayerLessonParams extends createZodDto(z.object({ subdomain: subdo
 /** `PUT .../lessons/:lessonId/progress` body: a heartbeat's video position, completion, or both. */
 export class ProgressBody extends createZodDto(progressSchema) {}
 
-/** A course as its enrolled student plays it: the outline and their progress per lesson opened. */
+/** A course as its enrolled student plays it: the outline, their progress per lesson opened, and when they enrolled (drip lessons count from it). */
 export class PlayerCourseResponse extends createZodDto(
   z.object({
     course: courseWithOutlineSchema.extend({
       progress: z.array(z.object({ lessonId: z.uuid(), positionSeconds: z.number().int(), isCompleted: z.boolean() })),
+      enrolledAt: z.iso.datetime(),
     }),
   }),
 ) {}

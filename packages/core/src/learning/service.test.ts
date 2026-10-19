@@ -6,11 +6,12 @@ import { FakeClock } from "../test/auth-fakes";
 import { FakeCatalogStore } from "../test/catalog-fakes";
 import { FakeLearningStore, FakeQuizStore } from "../test/learning-fakes";
 import { FakeLessonMediaStore, FakeObjectStorage } from "../test/media-fakes";
-import { NotEnrolledError, QuizNotFoundError } from "./errors";
+import { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
 import type { Quiz } from "./quizzes";
 import { createLearningService, type LearningService } from "./service";
 
 const NOW = new Date("2026-10-19T00:00:00Z");
+const ENROLLED_AT = new Date("2026-10-01T00:00:00Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STUDENT = "user-1";
 
@@ -31,7 +32,7 @@ function courseWith(lessonIds: string[]): CourseWithOutline {
       {
         id: "section-1",
         title: "Start",
-        lessons: lessonIds.map((id) => ({ id, title: id, type: "video" as const, durationSeconds: 60, hasMedia: id === "l1" })),
+        lessons: lessonIds.map((id) => ({ id, title: id, type: "video" as const, durationSeconds: 60, hasMedia: id === "l1", unlockAfterDays: null, unlockAt: null })),
       },
     ],
   };
@@ -57,7 +58,7 @@ beforeEach(() => {
   catalog.courses.push(courseWith(["l1", "l2"]));
   store = new FakeLearningStore();
   store.lessonCourses.set("l1", "course-1").set("l2", "course-1");
-  store.enrollments.push({ id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: null });
+  store.enrollments.push({ id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: null, enrolledAt: ENROLLED_AT });
   lessonMedia = new FakeLessonMediaStore();
   lessonMedia.lessons.set("l1", { id: "l1", type: "video", mediaKey: "schools/s/lessons/l1/a.mp4" });
   lessonMedia.lessons.set("l2", { id: "l2", type: "video", mediaKey: null });
@@ -82,13 +83,13 @@ describe("getCourse", () => {
   });
 
   it("refuses a student whose enrollment has expired", async () => {
-    store.enrollments[0] = { id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: NOW };
+    store.enrollments[0] = { id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: NOW, enrolledAt: ENROLLED_AT };
 
     await expect(learning.getCourse(STUDENT, "brand")).rejects.toThrow(NotEnrolledError);
   });
 
   it("lets a student in until their enrollment expires", async () => {
-    store.enrollments[0] = { id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: new Date(NOW.getTime() + DAY_MS) };
+    store.enrollments[0] = { id: "enrollment-1", userId: STUDENT, courseId: "course-1", expiresAt: new Date(NOW.getTime() + DAY_MS), enrolledAt: ENROLLED_AT };
 
     await expect(learning.getCourse(STUDENT, "brand")).resolves.toMatchObject({ id: "course-1" });
   });
@@ -214,5 +215,32 @@ describe("quizzes", () => {
     await expect(learning.getQuiz(STUDENT, "l2")).rejects.toThrow(QuizNotFoundError);
     await expect(learning.submitQuiz(STUDENT, "l2", [])).rejects.toThrow(QuizNotFoundError);
     expect(quizzes.attempts).toEqual([]);
+  });
+});
+
+describe("drip lessons", () => {
+  it("gives the player when the student enrolled, so it can show when lessons open", async () => {
+    expect((await learning.getCourse(STUDENT, "brand")).enrolledAt).toEqual(ENROLLED_AT);
+  });
+
+  it("keeps a lesson closed until its days after enrollment have passed, then opens it", async () => {
+    // Enrolled 18 days before NOW.
+    store.lessonUnlocks.set("l1", { unlockAfterDays: 19, unlockAt: null });
+
+    const locked = learning.recordProgress(STUDENT, "l1", { positionSeconds: 1 });
+
+    await expect(locked).rejects.toThrow(LessonLockedError);
+    await expect(locked).rejects.toMatchObject({ unlocksAt: new Date("2026-10-20T00:00:00Z") });
+    expect(store.progress.size).toBe(0);
+    store.lessonUnlocks.set("l1", { unlockAfterDays: 18, unlockAt: null });
+    await expect(learning.recordProgress(STUDENT, "l1", { positionSeconds: 1 })).resolves.toBeUndefined();
+  });
+
+  it("keeps a lesson closed until its date, for its file too", async () => {
+    store.lessonUnlocks.set("l1", { unlockAfterDays: null, unlockAt: new Date(NOW.getTime() + 1).toISOString() });
+
+    await expect(learning.getLessonMedia(STUDENT, "l1")).rejects.toThrow(LessonLockedError);
+    store.lessonUnlocks.set("l1", { unlockAfterDays: null, unlockAt: NOW.toISOString() });
+    await expect(learning.getLessonMedia(STUDENT, "l1")).resolves.toMatchObject({ url: expect.any(String) });
   });
 });

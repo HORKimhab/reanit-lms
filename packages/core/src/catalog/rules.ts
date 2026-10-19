@@ -9,6 +9,9 @@ export const DESCRIPTION_MAX_LENGTH = 5000;
 /** Slug for a title with no Latin letters or digits. */
 const FALLBACK_SLUG = "course";
 
+/** Latest a drip lesson opens after enrollment: ten years. */
+export const MAX_UNLOCK_AFTER_DAYS = 3650;
+
 /** Every kind of content a lesson can hold. */
 export const LESSON_TYPES = ["video", "text", "pdf", "quiz"] as const;
 
@@ -44,6 +47,10 @@ export const outlineSchema = z
             title: outlineTitleSchema,
             type: z.enum(LESSON_TYPES),
             durationSeconds: z.number().int().nonnegative(),
+            /** Drip: opens this many days after the student enrolled; null opens at once. */
+            unlockAfterDays: z.number().int().min(1).max(MAX_UNLOCK_AFTER_DAYS).nullable().default(null),
+            /** Drip: opens at this moment (ISO date-time) for everyone; null opens at once. */
+            unlockAt: z.iso.datetime({ offset: true }).nullable().default(null),
           }),
         ),
       }),
@@ -55,7 +62,10 @@ export const outlineSchema = z
       return new Set(ids).size === ids.length;
     },
     { message: "Outline ids must be unique" },
-  );
+  )
+  .refine(({ sections }) => sections.every((section) => section.lessons.every((lesson) => lesson.unlockAfterDays === null || lesson.unlockAt === null)), {
+    message: "A lesson opens after some days or on a date, not both",
+  });
 
 /** Parsed new-course input. */
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;

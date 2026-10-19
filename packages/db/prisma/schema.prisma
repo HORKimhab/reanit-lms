@@ -195,6 +195,10 @@ model Lesson {
   durationSeconds Int        @default(0) @map("duration_seconds")
   /// Object-storage key of the lesson's video or PDF; null until a file is attached.
   mediaKey        String?    @map("media_key")
+  /// Drip: opens this many days after the student enrolled; null opens at once.
+  unlockAfterDays Int?       @map("unlock_after_days")
+  /// Drip: opens at this moment for everyone; null opens at once. Never set with `unlockAfterDays`.
+  unlockAt        DateTime?  @map("unlock_at")
 
   school       School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   section      Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)

@@ -99,7 +99,7 @@ export function outlineReducer(outline: Outline, action: OutlineAction): Outline
     case "addLesson":
       return updateLessons(outline, action.sectionId, (lessons) => [
         ...lessons,
-        { id: action.id, title: action.title, type: NEW_LESSON_TYPE, durationSeconds: 0 },
+        { id: action.id, title: action.title, type: NEW_LESSON_TYPE, durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
       ]);
     case "renameLesson":
       return updateLesson(outline, action, { title: action.title });

@@ -7,3 +7,17 @@ export class NotEnrolledError extends Error {
 export class QuizNotFoundError extends Error {
   override readonly name = "QuizNotFoundError";
 }
+
+/** The drip lesson is not open to the student yet; `unlocksAt` says when it opens. */
+export class LessonLockedError extends Error {
+  override readonly name = "LessonLockedError";
+
+  /**
+   * Records when the lesson opens.
+   *
+   * @param unlocksAt The moment it opens for this student.
+   */
+  constructor(readonly unlocksAt: Date) {
+    super(`Lesson opens at ${unlocksAt.toISOString()}`);
+  }
+}

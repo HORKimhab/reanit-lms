@@ -23,14 +23,14 @@ export const PUBLISHED_COURSE_WITH_OUTLINE: CourseWithOutline = {
       id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a01",
       title: "Getting started",
       lessons: [
-        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02", title: "Welcome", type: "video", durationSeconds: 300, hasMedia: true },
-        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a03", title: "Workbook", type: "pdf", durationSeconds: 0, hasMedia: false },
+        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a02", title: "Welcome", type: "video", durationSeconds: 300, hasMedia: true, unlockAfterDays: null, unlockAt: null },
+        { id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a03", title: "Workbook", type: "pdf", durationSeconds: 0, hasMedia: false, unlockAfterDays: null, unlockAt: null },
       ],
     },
     {
       id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a04",
       title: "Logo design",
-      lessons: [{ id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a05", title: "Sketching", type: "video", durationSeconds: 5400, hasMedia: true }],
+      lessons: [{ id: "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a05", title: "Sketching", type: "video", durationSeconds: 5400, hasMedia: true, unlockAfterDays: null, unlockAt: null }],
     },
   ],
 };

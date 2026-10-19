@@ -1,7 +1,8 @@
 import type { Clock } from "../auth";
 import { CourseNotFoundError, type CatalogStore, type CourseWithOutline } from "../catalog";
 import type { MediaService } from "../media";
-import { NotEnrolledError, QuizNotFoundError } from "./errors";
+import { lessonUnlocksAt } from "./drip";
+import { LessonLockedError, NotEnrolledError, QuizNotFoundError } from "./errors";
 import type { Enrollment, LearningStore, LessonProgress, QuizAttemptSummary, QuizStore } from "./ports";
 import { DEFAULT_PASS_PERCENT, gradeQuiz, toStudentQuiz, type Quiz, type QuizAnswers, type QuizResult, type StudentQuiz } from "./quizzes";
 import type { ProgressInput } from "./rules";
@@ -18,8 +19,8 @@ export interface LearningDependencies {
   clock: Clock;
 }
 
-/** A course as its enrolled student plays it: the outline and the student's progress. */
-export type PlayerCourse = CourseWithOutline & { progress: LessonProgress[] };
+/** A course as its enrolled student plays it: the outline, the student's progress, and when they enrolled (drip lessons count from it). */
+export type PlayerCourse = CourseWithOutline & { progress: LessonProgress[]; enrolledAt: Date };
 
 /**
  * Builds one school's learning use cases: the player's course, lesson files, progress and quizzes.
@@ -49,15 +50,20 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
   }
 
   /**
-   * Finds the student's current enrollment in the course a lesson belongs to.
+   * Finds the student's current enrollment in the course a lesson belongs to, once the lesson is open to them.
    *
    * @param userId The student.
    * @param lessonId The lesson.
    * @returns The enrollment.
    * @throws {NotEnrolledError} When the student cannot open the lesson.
+   * @throws {LessonLockedError} When it is a drip lesson that has not opened for them yet.
    */
   async function requireLessonAccess(userId: string, lessonId: string): Promise<Enrollment> {
-    return requireCurrent(await store.findEnrollmentForLesson(userId, lessonId));
+    const enrollment = requireCurrent(await store.findEnrollmentForLesson(userId, lessonId));
+    const unlock = await store.findLessonUnlock(lessonId);
+    const opensAt = unlock && lessonUnlocksAt(unlock, enrollment.enrolledAt);
+    if (opensAt && opensAt > clock.now()) throw new LessonLockedError(opensAt);
+    return enrollment;
   }
 
   /**
@@ -99,7 +105,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
      *
      * @param userId The student.
      * @param slug The course's slug.
-     * @returns The course with its outline and the student's progress.
+     * @returns The course with its outline, the student's progress and when they enrolled.
      * @throws {CourseNotFoundError} When the school has no such course.
      * @throws {NotEnrolledError} When the student has no current enrollment in it.
      */
@@ -107,7 +113,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
       const course = await catalog.findCourseBySlug(slug);
       if (!course) throw new CourseNotFoundError();
       const enrollment = requireCurrent(await store.findEnrollment(userId, course.id));
-      return { ...course, progress: await store.listProgress(enrollment.id) };
+      return { ...course, progress: await store.listProgress(enrollment.id), enrolledAt: enrollment.enrolledAt };
     },
 
     /**
@@ -117,6 +123,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
      * @param lessonId The lesson.
      * @returns The URL and when it expires.
      * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
      * @throws {LessonMediaMissingError} When no file is attached.
      */
     async getLessonMedia(userId: string, lessonId: string) {
@@ -131,6 +138,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
      * @param lessonId The lesson.
      * @param input The video position, completion, or both.
      * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
      */
     async recordProgress(userId: string, lessonId: string, input: ProgressInput): Promise<void> {
       const enrollment = await requireLessonAccess(userId, lessonId);
@@ -169,6 +177,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
      * @param lessonId The quiz lesson.
      * @returns The quiz and the student's last attempt, or null before the first.
      * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
      * @throws {QuizNotFoundError} When the lesson has no quiz yet.
      */
     async getQuiz(userId: string, lessonId: string): Promise<StudentQuiz & { lastAttempt: QuizAttemptSummary | null }> {
@@ -185,6 +194,7 @@ export function createLearningService({ catalog, store, quizzes, media, clock }:
      * @param answers The options picked per question.
      * @returns The score, whether it passed, and which questions were right.
      * @throws {NotEnrolledError} When the student cannot open the lesson.
+     * @throws {LessonLockedError} When the drip lesson has not opened yet.
      * @throws {QuizNotFoundError} When the lesson has no quiz yet.
      */
     async submitQuiz(userId: string, lessonId: string, answers: QuizAnswers): Promise<QuizResult> {

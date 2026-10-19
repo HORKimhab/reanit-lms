@@ -37,8 +37,8 @@ beforeAll(async () => {
         id: randomUUID(),
         title: "Check",
         lessons: [
-          { id: TEXT_LESSON, title: "Read", type: "text", durationSeconds: 0 },
-          { id: QUIZ_LESSON, title: "Quiz", type: "quiz", durationSeconds: 0 },
+          { id: TEXT_LESSON, title: "Read", type: "text", durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
+          { id: QUIZ_LESSON, title: "Quiz", type: "quiz", durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
         ],
       },
     ],

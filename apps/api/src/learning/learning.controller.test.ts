@@ -1,5 +1,5 @@
 import { LessonMediaMissingError } from "@reanit/core/media";
-import { NotEnrolledError } from "@reanit/core/learning";
+import { LessonLockedError, NotEnrolledError } from "@reanit/core/learning";
 import { describe, expect, it } from "vitest";
 
 import { type FakeClients, useTestApp } from "../test/app";
@@ -17,7 +17,7 @@ const COURSE = {
     {
       id: "1c2b3a49-8f7e-4d6c-9b5a-4e3d2c1b0a11",
       title: "Start",
-      lessons: [{ id: LESSON_ID, title: "Welcome", type: "video", durationSeconds: 60, hasMedia: true }],
+      lessons: [{ id: LESSON_ID, title: "Welcome", type: "video", durationSeconds: 60, hasMedia: true, unlockAfterDays: 3, unlockAt: null }],
     },
   ],
   progress: [{ lessonId: LESSON_ID, positionSeconds: 30, isCompleted: false }],
@@ -37,11 +37,11 @@ const testApp = useTestApp(resolveTestSchool);
 describe("GET .../learn/:slug", () => {
   it("gives the signed-in student the course with their progress, in the subdomain's school", async () => {
     const headers = signInAs(testApp.clients);
-    testApp.clients.learning.getCourse.mockResolvedValue(COURSE);
+    testApp.clients.learning.getCourse.mockResolvedValue({ ...COURSE, enrolledAt: new Date("2026-10-01T09:00:00Z") });
 
     const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/learn/brand`, headers });
 
-    expect(response.json()).toEqual({ course: COURSE });
+    expect(response.json()).toEqual({ course: { ...COURSE, enrolledAt: "2026-10-01T09:00:00.000Z" } });
     expect(testApp.clients.learningFor).toHaveBeenCalledWith(TEST_SCHOOL.id);
     expect(testApp.clients.learning.getCourse).toHaveBeenCalledWith(TEST_USER.id, "brand");
   });
@@ -124,6 +124,15 @@ describe("quiz routes", () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual({ result });
     expect(testApp.clients.learning.submitQuiz).toHaveBeenCalledWith(TEST_USER.id, LESSON_ID, answers);
+  });
+
+  it("answers 403 lesson-locked for a drip lesson that has not opened", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.learning.getQuiz.mockRejectedValue(new LessonLockedError(new Date("2026-10-25T00:00:00Z")));
+
+    const response = await testApp.app.inject({ method: "GET", url: `${BASE_URL}/lessons/${LESSON_ID}/quiz`, headers });
+
+    expect(response.json()).toMatchObject({ status: 403, type: "urn:reanit:problem:lesson-locked" });
   });
 
   it("answers 403 to a student who is not enrolled", async () => {

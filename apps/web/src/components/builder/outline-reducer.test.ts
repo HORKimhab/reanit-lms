@@ -10,9 +10,9 @@ const OUTLINE: Outline = {
       id: "a",
       title: "Intro",
       lessons: [
-        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60 },
-        { id: "a2", title: "Setup", type: "text", durationSeconds: 0 },
-        { id: "a3", title: "Workbook", type: "pdf", durationSeconds: 0 },
+        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60, unlockAfterDays: null, unlockAt: null },
+        { id: "a2", title: "Setup", type: "text", durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
+        { id: "a3", title: "Workbook", type: "pdf", durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
       ],
     },
     { id: "b", title: "Basics", lessons: [] },
@@ -75,9 +75,9 @@ describe("outlineReducer", () => {
     expect(outlineReducer(OUTLINE, { type: "moveSection", activeId: "a", overId: "zzz" })).toEqual(OUTLINE);
   });
 
-  it("adds a text lesson with no running time at the end of the section", () => {
+  it("adds a text lesson with no running time, open at once, at the end of the section", () => {
     const next = outlineReducer(OUTLINE, { type: "addLesson", sectionId: "b", id: "b1", title: "New lesson" });
-    expect(next.sections[1]?.lessons).toEqual([{ id: "b1", title: "New lesson", type: "text", durationSeconds: 0 }]);
+    expect(next.sections[1]?.lessons).toEqual([{ id: "b1", title: "New lesson", type: "text", durationSeconds: 0, unlockAfterDays: null, unlockAt: null }]);
   });
 
   it("renames only the given lesson", () => {

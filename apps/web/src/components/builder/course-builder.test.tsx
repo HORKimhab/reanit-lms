@@ -17,8 +17,8 @@ const OUTLINE: Outline = {
       id: "a",
       title: "Intro",
       lessons: [
-        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60 },
-        { id: "a2", title: "Setup", type: "text", durationSeconds: 0 },
+        { id: "a1", title: "Welcome", type: "video", durationSeconds: 60, unlockAfterDays: null, unlockAt: null },
+        { id: "a2", title: "Setup", type: "text", durationSeconds: 0, unlockAfterDays: null, unlockAt: null },
       ],
     },
     { id: "b", title: "Basics", lessons: [] },

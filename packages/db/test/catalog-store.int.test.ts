@@ -28,7 +28,7 @@ async function openSchool(subdomain: string) {
  * @returns The lesson.
  */
 function lesson(title: string, id: string = randomUUID()) {
-  return { id, title, type: "video" as const, durationSeconds: 60 };
+  return { id, title, type: "video" as const, durationSeconds: 60, unlockAfterDays: null, unlockAt: null };
 }
 
 /**
