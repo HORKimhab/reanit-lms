@@ -80,4 +80,11 @@ test("a creator sells a course with a coupon and a student buys it and watches t
     await expect(student.getByText("In the next lesson.")).toBeVisible();
     await expect(student.getByText("Instructor")).toBeVisible();
   });
+
+  await test.step("the creator sees the sale and the completion funnel in analytics", async () => {
+    await page.goto("/dashboard/analytics");
+    await expect(page.getByRole("img", { name: "Revenue per day in USD" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Sales by course" })).toContainText("$39.20");
+    await expect(page.getByRole("listitem").filter({ hasText: /^Enrolled/ })).toContainText("1 100% of enrolled");
+  });
 });

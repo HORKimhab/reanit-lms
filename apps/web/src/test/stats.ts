@@ -1,5 +1,5 @@
-// Course stats as `GET /stats/courses` returns them, best sellers first, for dashboard tests.
-import type { CourseStats } from "@reanit/core/analytics";
+// Course stats and a sales report as the stats API returns them, for dashboard tests.
+import type { CourseStats, SalesReport } from "@reanit/core/analytics";
 
 /** One school's course stats: one course sold in both currencies, one in USD only, one never sold. */
 export const COURSE_STATS: CourseStats[] = [
@@ -31,3 +31,20 @@ export const COURSE_STATS: CourseStats[] = [
     revenue: [],
   },
 ];
+
+/** A three-day sales report: two USD sales on the first day, none on the second, one KHR sale on the third. */
+export const SALES_REPORT: SalesReport = {
+  range: { from: new Date("2026-10-01T00:00:00Z"), to: new Date("2026-10-03T00:00:00Z") },
+  daily: [
+    { day: new Date("2026-10-01T00:00:00Z"), sales: 2, revenue: [{ currency: "KHR", amount: 0 }, { currency: "USD", amount: 9800 }] },
+    { day: new Date("2026-10-02T00:00:00Z"), sales: 0, revenue: [{ currency: "KHR", amount: 0 }, { currency: "USD", amount: 0 }] },
+    { day: new Date("2026-10-03T00:00:00Z"), sales: 1, revenue: [{ currency: "KHR", amount: 2_000_000 }, { currency: "USD", amount: 0 }] },
+  ],
+  byCourse: [
+    { courseId: "8d7c6b5a-4f3e-4d2c-9b1a-0f9e8d7c6b5a", title: "Brand Design Basics", slug: "brand-design-basics", sales: 2, revenue: [{ currency: "USD", amount: 9800 }] },
+    { courseId: "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d", title: "Logo", slug: "logo", sales: 1, revenue: [{ currency: "KHR", amount: 2_000_000 }] },
+  ],
+  totals: { sales: 3, revenue: [{ currency: "KHR", amount: 2_000_000 }, { currency: "USD", amount: 9800 }] },
+  refunds: [{ currency: "USD", amount: 4900, orders: 1 }],
+  funnel: { enrolled: 4, started: 3, halfway: 2, completed: 1 },
+};

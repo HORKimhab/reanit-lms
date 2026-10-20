@@ -40,6 +40,7 @@
   },
   "DashboardNav": {
     "overview": "Overview",
+    "analytics": "Analytics",
     "courses": "Courses",
     "bundles": "Bundles",
     "students": "Students",
@@ -64,6 +65,41 @@
       "published": "Published"
     },
     "completions": "Completions"
+  },
+  "Analytics": {
+    "range": "Date range",
+    "presets": {
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "90": "Last 90 days"
+    },
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "invalidRange": "Pick a range of up to a year that ends after it starts.",
+    "revenue": "Revenue",
+    "sales": "Sales",
+    "refunds": "Refunds",
+    "refundOrders": "{count, plural, one {# order} other {# orders}}",
+    "noRefunds": "None",
+    "dailyTitle": "Revenue per day in {currency}",
+    "dailyEmpty": "No sales in this range.",
+    "showTable": "Show as a table",
+    "day": "Day",
+    "amount": "Revenue",
+    "orders": "Orders",
+    "tooltip": "{day} · {count, plural, one {# sale} other {# sales}}",
+    "byCourse": "Sales by course",
+    "course": "Course",
+    "funnelTitle": "How far new students got",
+    "funnelHint": "Students who enrolled in this range.",
+    "stages": {
+      "enrolled": "Enrolled",
+      "started": "Started a lesson",
+      "halfway": "Halfway through",
+      "completed": "Completed"
+    },
+    "ofEnrolled": "{percent} of enrolled"
   },
   "Builder": {
     "status": {
