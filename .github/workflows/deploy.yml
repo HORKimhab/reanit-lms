@@ -1,0 +1,94 @@
+# Builds the images, pushes them to DigitalOcean Container Registry and deploys them to one environment's
+# droplet, where deploy.sh migrates the database before starting the new release. Runbook: infra/deploy/README.md.
+# Staging deploys from CI after every green push to main; production is started by hand (and gated by
+# the "production" environment's reviewers in GitHub).
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        required: true
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        include:
+          - image: api
+            file: infra/docker/nest.Dockerfile
+            build-args: APP=api
+            tag: ${{ github.sha }}
+          - image: worker
+            file: infra/docker/nest.Dockerfile
+            build-args: APP=worker
+            tag: ${{ github.sha }}
+          - image: migrate
+            file: infra/docker/migrate.Dockerfile
+            tag: ${{ github.sha }}
+          # Per environment: the browser bundle inlines these NEXT_PUBLIC_* values.
+          - image: web
+            file: infra/docker/web.Dockerfile
+            build-args: |
+              NEXT_PUBLIC_DEPLOY_ENV=${{ inputs.environment }}
+              NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+              NEXT_PUBLIC_POSTHOG_KEY=${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+              NEXT_PUBLIC_POSTHOG_HOST=${{ vars.NEXT_PUBLIC_POSTHOG_HOST }}
+            tag: ${{ inputs.environment }}-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - run: doctl registry login --expiry-seconds 1800
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          file: ${{ matrix.file }}
+          build-args: ${{ matrix.build-args }}
+          tags: ${{ vars.REGISTRY }}/reanit-${{ matrix.image }}:${{ matrix.tag }}
+          push: true
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ inputs.environment }}
+          cache-to: type=gha,scope=${{ matrix.image }}-${{ inputs.environment }},mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      TARGET: deploy@${{ vars.DEPLOY_HOST }}
+      TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Deploy
+        run: |
+          scp infra/deploy/compose.yml infra/deploy/Caddyfile infra/deploy/deploy.sh "$TARGET:/opt/reanit/"
+          # A read-only registry login that expires soon after, so the droplet keeps no lasting token.
+          doctl registry docker-config --expiry-seconds 900 | ssh "$TARGET" 'mkdir -p /opt/reanit/.docker && cat > /opt/reanit/.docker/config.json'
+          # shellcheck disable=SC2029 # $TAG is meant to expand here, on the runner.
+          ssh "$TARGET" DOCKER_CONFIG=/opt/reanit/.docker /opt/reanit/deploy.sh "$TAG"

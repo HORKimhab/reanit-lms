@@ -65,7 +65,9 @@ services:
     profiles: [api]
     build:
       context: ..
-      dockerfile: apps/api/Dockerfile
+      dockerfile: infra/docker/nest.Dockerfile
+      args:
+        APP: api
     environment:
       DATABASE_URL: postgresql://reanit:reanit@postgres:5432/reanit
       REDIS_URL: redis://redis:6379
@@ -81,6 +83,11 @@ services:
       S3_FORCE_PATH_STYLE: "true"
     ports:
       - "${API_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy

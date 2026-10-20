@@ -67,7 +67,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] WEB-18 Error, empty and loading states; 404/500 pages; SEO meta + OG images for sales page
 - [x] TEST-01 Playwright E2E: sign-up → create school → build course → checkout → watch lesson. Done when green in CI.
 - [x] OPS-01 Observability: Sentry, OpenTelemetry, PostHog
-- [ ] OPS-02 Deploy: staging + prod, wildcard subdomain DNS/TLS, migrations in CI ⚠ hosting
+- [x] OPS-02 Deploy: staging + prod, wildcard subdomain DNS/TLS, migrations in CI ⚠ hosting
 - [ ] OPS-03 Production smoke: first real paid enrollment end to end. Done when M1 is live.
 
 ## M2 growth (backlog, refine before starting)

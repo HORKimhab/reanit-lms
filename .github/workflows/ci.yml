@@ -57,3 +57,13 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report/
           retention-days: 7
+
+  # Every green push to main goes to staging once the repository variable DEPLOY_STAGING is "true"
+  # (infra/deploy/README.md); production is deployed by hand from the Deploy workflow.
+  deploy-staging:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_STAGING == 'true'
+    needs: [check, e2e]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+    secrets: inherit

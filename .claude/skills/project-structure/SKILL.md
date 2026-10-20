@@ -16,7 +16,7 @@ packages/api-client @reanit/api-client: typed apps/api client from openapi.json 
 packages/ui     @reanit/ui: shared shadcn components
 packages/email  @reanit/email: React Email templates (en/km messages in src/messages), rendered to HTML + text
 packages/config @reanit/config: eslint/tsconfig/tailwind/vitest presets; tsup + vitest presets for the Nest apps
-infra/          docker-compose (Postgres, Redis, Mailpit)
+infra/          docker-compose.yml (local services), docker/ (app images), deploy/ (staging + prod droplets, runbook)
 ```
 
 Modules: auth · schools · catalog · commerce · learning · media · notifications · analytics
@@ -40,6 +40,6 @@ Imports flow `apps → core → db`. Packages never import from apps. Use a modu
 
 Deps: `pnpm --filter <pkg> add <dep>`. Internal deps use `workspace:*`. Shared versions go in `catalog:`.
 
-Undecided (README §8): ORM, hosting. Decided: video = S3-compatible storage behind `ObjectStorage`; payments = PayWay, Bakong KHQR and Stripe behind `PaymentGateway`. Keep these behind an interface in `core`, and ask the user before choosing one.
+Undecided (README §8): ORM. Decided: hosting = DigitalOcean droplets + Cloudflare (`infra/deploy/`); video = S3-compatible storage behind `ObjectStorage`; payments = PayWay, Bakong KHQR and Stripe behind `PaymentGateway`. Keep these behind an interface in `core`, and ask the user before choosing one.
 
 Adding a feature or migration? Read `checklist.md`. More detail: README §2 architecture, §4 data model, §9 pnpm.

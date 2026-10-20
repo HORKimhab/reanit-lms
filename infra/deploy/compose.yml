@@ -1,0 +1,59 @@
+# Staging and production stack on a DigitalOcean droplet, behind Cloudflare. Runbook: infra/deploy/README.md.
+# Lives in /opt/reanit next to `.env` (REGISTRY, DEPLOY_ENV, ROOT_DOMAIN, IMAGE_TAG), the per-app env files
+# (api.env, worker.env, web.env, migrate.env) and certs/ (Cloudflare Origin CA). deploy.sh pulls, migrates and starts it.
+# Postgres and Redis are DigitalOcean managed databases; files go to Cloudflare R2.
+name: reanit
+
+# Log rotation is set for the whole Docker daemon (cloud-init.yml).
+x-app: &app
+  restart: unless-stopped
+
+services:
+  # TLS for <ROOT_DOMAIN> and *.<ROOT_DOMAIN> with the Origin CA certificate; Cloudflare terminates the public TLS.
+  caddy:
+    <<: *app
+    image: caddy:2.10-alpine
+    environment:
+      ROOT_DOMAIN: ${ROOT_DOMAIN:?set ROOT_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/etc/caddy/certs:ro
+      - caddy-data:/data
+    depends_on:
+      web:
+        condition: service_started
+
+  web:
+    <<: *app
+    image: ${REGISTRY:?set REGISTRY in .env}/reanit-web:${DEPLOY_ENV:?set DEPLOY_ENV in .env}-${IMAGE_TAG:?run deploy.sh}
+    env_file: web.env
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    image: ${REGISTRY}/reanit-api:${IMAGE_TAG}
+    env_file: api.env
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    <<: *app
+    image: ${REGISTRY}/reanit-worker:${IMAGE_TAG}
+    env_file: worker.env
+
+  # Applies pending migrations, then exits: `docker compose run --rm migrate` (deploy.sh does this first).
+  migrate:
+    profiles: [migrate]
+    image: ${REGISTRY}/reanit-migrate:${IMAGE_TAG}
+    env_file: migrate.env
+
+volumes:
+  caddy-data:

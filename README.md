@@ -104,7 +104,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 | Email | Resend or AWS SES, with React Email templates | Transactional and marketing email |
 | Search | Postgres full-text search, moving to Meilisearch later | Course discovery |
 | Observability | Sentry, OpenTelemetry, PostHog | Errors, traces, product analytics |
-| Infra | Docker. Web on Vercel, workers on Fly/Railway/ECS, or everything on AWS with Terraform | Start simple without closing off a migration path |
+| Infra | Docker images on DigitalOcean droplets (staging + prod) behind Cloudflare; managed Postgres and Redis | Start simple; the same images can move to managed containers or AWS later |
 | CI/CD | GitHub Actions: lint, typecheck, test, preview deploys | |
 
 ---
@@ -181,7 +181,7 @@ reanit-lms/
 │  ├─ ui/           # Shared UI components (shadcn)
 │  ├─ email/        # React Email templates
 │  └─ config/       # Shared eslint, tsconfig and tailwind presets
-├─ infra/           # docker-compose (Postgres, Redis, Mailpit); Terraform later
+├─ infra/           # docker-compose for local services; docker/ images; deploy/ staging + prod (DigitalOcean + Cloudflare)
 └─ .github/workflows/
 ```
 
@@ -220,7 +220,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 | 1 | ✅ Backend framework | **Decided:** NestJS (`apps/api`) | Chosen to give mobile and third-party clients one API, and a structure (modules, DI, guards) that scales with the team. `apps/web` becomes an API client. Migration: TODO.md NEST-01 to NEST-10 |
 | 2 | ✅ Video provider | **Decided for now:** S3-compatible object storage (R2 in production, SeaweedFS locally) | Presigned uploads and signed MP4/PDF playback behind the `ObjectStorage` port in `@reanit/core/media`; no transcoding yet. Mux or Cloudflare Stream can replace it later behind the same port |
 | 3 | ✅ Payment providers | **Decided:** ABA PayWay (KHQR + cards), Bakong KHQR and Stripe, chosen by the student at checkout | One `PaymentGateway` port in `@reanit/core/commerce`; a method is offered when its credentials are set and it takes the course's currency. Enrollment comes only from the gateway's confirmation, once. Stripe: API-05; PayWay: API-20; Bakong: API-21 |
-| 4 | 🟡 Hosting | Vercel + Fly/Railway · AWS (ECS + RDS) | Start on managed hosting and move to AWS as cost and scale require |
+| 4 | ✅ Hosting | **Decided:** DigitalOcean droplets (Docker Compose, managed Postgres + Redis, DOCR) behind Cloudflare (DNS, wildcard TLS); files on R2 | One droplet each for staging and production; CI builds the images, migrates, then deploys. Runbook: [infra/deploy/README.md](infra/deploy/README.md) |
 | 5 | 🟡 ORM | Prisma · Drizzle | Prisma is the default; Drizzle gives finer control over RLS and SQL |
 | 6 | ✅ Package manager / runtime | **Decided:** pnpm + Node.js 24 LTS | Chosen over Bun for strict dependencies and maturity. See [pnpm usage](#pnpm-usage) |
 
@@ -244,7 +244,7 @@ curl localhost:4000/health
 - Mailpit's inbox (magic-link emails) is at http://localhost:8025.
 - Lesson videos and PDFs go to the local S3 store (SeaweedFS) on http://localhost:8333; `pnpm storage:setup` creates the `reanit-media` bucket and lets `APP_URL` upload to it.
 - The browser reaches the API through the web app: Next rewrites `/api/*` to `API_URL`, so there is one origin and one cookie.
-- To run the API as its production image instead of `pnpm dev`'s: `docker compose -f infra/docker-compose.yml --profile api up -d --build --wait` (multi-stage `apps/api/Dockerfile`, runs as `node`). Stop `pnpm dev`'s API first; both use port 4000.
+- To run the API as its production image instead of `pnpm dev`'s: `docker compose -f infra/docker-compose.yml --profile api up -d --build --wait` (multi-stage `infra/docker/nest.Dockerfile`, runs as `node`). Stop `pnpm dev`'s API first; both use port 4000.
 - Schools are served on subdomains of `ROOT_DOMAIN`, e.g. http://angkor.localhost:3000.
 - If something else already uses port 5432, start Postgres on another port (`POSTGRES_PORT=5433 docker compose …`) and change `5432` in `packages/db/.env` and `apps/api/.env` to match.
 - Tests start their own Postgres with Testcontainers, so Docker must be running for `pnpm test`.

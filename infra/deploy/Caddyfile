@@ -1,0 +1,17 @@
+# Origin server for one environment. Cloudflare proxies <ROOT_DOMAIN> and *.<ROOT_DOMAIN> here (SSL mode
+# "Full (strict)"), and the droplet's firewall admits 80/443 from Cloudflare only (infra/deploy/README.md).
+{
+	# Certificates come from Cloudflare's Origin CA, never from ACME.
+	auto_https disable_certs
+}
+
+{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+	encode zstd gzip
+
+	reverse_proxy web:3000 {
+		# Only Cloudflare reaches this server, so its visitor address replaces the chain; with the web app's
+		# own hop, the API's TRUST_PROXY_HOPS=2 then reads the browser's address for rate limits.
+		header_up X-Forwarded-For {header.CF-Connecting-IP}
+	}
+}

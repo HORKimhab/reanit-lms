@@ -1,0 +1,23 @@
+#cloud-config
+# User data for a new staging or production droplet (Ubuntu 24.04): Docker, a `deploy` user for GitHub
+# Actions, and /opt/reanit for the stack. Replace the key below with the public half of DEPLOY_SSH_KEY.
+users:
+  - name: deploy
+    groups: [docker]
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAA... github-actions-deploy
+
+ssh_pwauth: false
+disable_root: true
+
+write_files:
+  # Rotates every container's logs.
+  - path: /etc/docker/daemon.json
+    content: |
+      { "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "5" } }
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - install -d -o deploy -g deploy -m 750 /opt/reanit /opt/reanit/certs
+  - systemctl enable --now docker
