@@ -16,9 +16,8 @@ import request from "supertest";
 import { afterAll, beforeAll, inject } from "vitest";
 
 import { AppModule } from "../app.module";
-import { ENV, MAILER } from "@reanit/nest";
+import { ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
-import { OBJECT_STORAGE } from "../storage/storage.module";
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
@@ -126,6 +125,15 @@ function createMemoryStorage(): MemoryStorage {
      */
     async exists(key) {
       return uploaded.has(key);
+    },
+    /**
+     * Marks a file the server stored as there.
+     *
+     * @param object The file.
+     * @param object.key Its key.
+     */
+    async put({ key }) {
+      uploaded.add(key);
     },
   };
 }

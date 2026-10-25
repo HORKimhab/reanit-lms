@@ -266,6 +266,12 @@
     "includes": "{count, plural, other {វគ្គសិក្សា # ក្នុងកញ្ចប់តែមួយ}}",
     "coursesTitle": "វគ្គសិក្សាក្នុងកញ្ចប់នេះ"
   },
+  "CertificatePage": {
+    "verified": "វិញ្ញាបនបត្រត្រូវបានផ្ទៀងផ្ទាត់",
+    "presentedTo": "វិញ្ញាបនបត្រនេះបញ្ជាក់ថា",
+    "completed": "បានបញ្ចប់វគ្គសិក្សា",
+    "issued": "ចេញដោយ {school} នៅថ្ងៃទី <time>{date}</time>"
+  },
   "MyCourses": {
     "title": "វគ្គសិក្សារបស់ខ្ញុំ",
     "inProgress": "កំពុងរៀន",

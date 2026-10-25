@@ -266,6 +266,12 @@
     "includes": "{count, plural, one {# course} other {# courses}} in one bundle",
     "coursesTitle": "Courses in this bundle"
   },
+  "CertificatePage": {
+    "verified": "Verified certificate",
+    "presentedTo": "This certifies that",
+    "completed": "has completed the course",
+    "issued": "Issued by {school} on <time>{date}</time>"
+  },
   "MyCourses": {
     "title": "My courses",
     "inProgress": "In progress",

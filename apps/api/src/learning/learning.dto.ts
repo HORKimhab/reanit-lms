@@ -1,4 +1,5 @@
 import {
+  certificateIdSchema,
   commentInboxQuerySchema,
   commentSchema,
   moderationSchema,
@@ -141,3 +142,13 @@ export function toCommentResponse(comment: LessonComment): CommentResponse["comm
 export function toThreadResponse<Thread extends CommentThread>(thread: Thread) {
   return { ...thread, ...toCommentResponse(thread), replies: thread.replies.map(toCommentResponse) };
 }
+
+/** Path of a certificate's public verify page on a school site. */
+export class CertificateParams extends createZodDto(z.object({ subdomain: subdomainSchema, certificateId: certificateIdSchema })) {}
+
+/** A certificate as its verify page shows it: who earned which course at which school, and when. */
+export class CertificateResponse extends createZodDto(
+  z.object({
+    certificate: z.object({ id: z.uuid(), studentName: z.string(), courseTitle: z.string(), schoolName: z.string(), issuedAt: z.iso.datetime() }),
+  }),
+) {}

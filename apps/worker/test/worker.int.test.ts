@@ -2,10 +2,13 @@ import { getSharedConfigToken } from "@nestjs/bullmq";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { MailMessage } from "@reanit/core/auth";
 import type { EventHandlers } from "@reanit/core/events";
+import type { ObjectStorage } from "@reanit/core/media";
 import {
   createCatalogStore,
+  createCertificateStore,
   createCommerceStore,
   createDbClient,
+  createLearningStore,
   createPaymentConfirmationStore,
   createSchoolStore,
 } from "@reanit/db";
@@ -13,7 +16,7 @@ import {
 import type {} from "@reanit/db/testing/postgres";
 // Types `inject("redisUrl")`.
 import type {} from "@reanit/nest/testing/redis";
-import { DB_CLIENT, ENV, MAILER } from "@reanit/nest";
+import { DB_CLIENT, ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 import { Queue } from "bullmq";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 
@@ -34,19 +37,36 @@ const WORKER_ENV = parseWorkerEnv({
   APP_URL: "https://reanit.test",
   SMTP_URL: "smtp://localhost:1025",
   MAIL_FROM: "Reanit <no-reply@reanit.test>",
+  S3_BUCKET: "reanit-media",
+  S3_ACCESS_KEY_ID: "test-key",
+  S3_SECRET_ACCESS_KEY: "test-secret",
   LOG_LEVEL: "silent",
 });
 let schoolId: string;
 let worker: TestingModule | undefined;
 
 /**
- * Boots the worker on the test Postgres and Redis, recording email instead of sending it.
+ * Boots the worker on the test Postgres and Redis, recording email and stored files instead of sending them.
  *
  * @param handlers What to run for each event type; the worker's own when left out.
- * @returns The running worker and the emails it sent.
+ * @returns The running worker, the emails it sent and the files it stored.
  */
 async function bootWorker(handlers?: EventHandlers) {
   const sent: MailMessage[] = [];
+  const stored = new Map<string, { contentType: string; body: Uint8Array }>();
+  const storage: Pick<ObjectStorage, "put"> = {
+    /**
+     * Records a file instead of uploading it.
+     *
+     * @param object The file.
+     * @param object.key Its key.
+     * @param object.contentType Its content type.
+     * @param object.body Its bytes.
+     */
+    async put({ key, contentType, body }) {
+      stored.set(key, { contentType, body });
+    },
+  };
   const mailer = {
     /**
      * Records a message instead of sending it.
@@ -62,12 +82,14 @@ async function bootWorker(handlers?: EventHandlers) {
     .useValue(WORKER_ENV)
     .overrideProvider(MAILER)
     .useValue(mailer)
+    .overrideProvider(OBJECT_STORAGE)
+    .useValue(storage)
     .overrideProvider(EVENT_JOB_OPTIONS)
     .useValue(FAST_RETRIES);
   if (handlers) builder = builder.overrideProvider(EVENT_HANDLERS).useValue(handlers);
   worker = await builder.compile();
   await worker.init();
-  return { app: worker, sent };
+  return { app: worker, sent, stored };
 }
 
 /**
@@ -156,6 +178,29 @@ describe("worker", () => {
       { to: "worker-buyer@example.com", subject: "សូមស្វាគមន៍មកកាន់ Brand" },
     ]);
     expect(sent[1]?.html).toContain('href="https://reanit.test/km/s/worker-school/learn/brand"');
+  });
+
+  it("issues a completed course's certificate and stores its PDF, with a verify link in the student's language", async () => {
+    const { stored } = await bootWorker();
+    const courseId = (await createCatalogStore(db, schoolId).createCourse({ title: "Certified", slug: "certified" })).id;
+    const student = await db.user.create({ data: { email: "worker-graduate@example.com", name: "Dara" } });
+    const enrollment = await db.enrollment.create({ data: { schoolId, userId: student.id, courseId, source: "manual" } });
+
+    await createLearningStore(db, schoolId).completeCourse({ id: enrollment.id, courseId }, new Date("2026-10-20T03:00:00Z"));
+
+    const certificate = await vi.waitFor(
+      async () => {
+        const issued = await db.certificate.findUnique({ where: { enrollmentId: enrollment.id } });
+        if (!issued?.pdfKey) throw new Error("No PDF yet");
+        return issued;
+      },
+      { timeout: EVENT_TIMEOUT_MS },
+    );
+    expect(certificate).toMatchObject({ studentName: "Dara", courseTitle: "Certified", issuedAt: new Date("2026-10-20T03:00:00Z") });
+    expect(certificate.pdfKey).toBe(`schools/${schoolId}/certificates/${certificate.id}.pdf`);
+    const pdf = Buffer.from(stored.get(certificate.pdfKey ?? "")?.body ?? []).toString("latin1");
+    expect(pdf).toContain(`/URI (https://reanit.test/s/worker-school/certificates/${certificate.id})`);
+    expect(await createCertificateStore(db, schoolId).findCertificate(certificate.id)).toMatchObject({ studentName: "Dara", schoolName: "Worker" });
   });
 
   it("closes the database pool on shutdown", async () => {

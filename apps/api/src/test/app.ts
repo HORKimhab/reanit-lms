@@ -7,7 +7,7 @@ import type { AuditLog } from "@reanit/core/audit";
 import type { AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
-import type { CommentModeration, LearningService } from "@reanit/core/learning";
+import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { SchoolService, StudentService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
@@ -27,7 +27,7 @@ import type { Env } from "../config/env";
 import { createAdapter } from "../context/request-id";
 import { DB_CLIENT } from "@reanit/nest";
 import { loggerOptions } from "@reanit/nest";
-import { COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
+import { CERTIFICATES_FOR_SCHOOL, COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
@@ -87,6 +87,9 @@ export type FakeClients = {
   /** Stands in for every school's comment moderation; `moderationFor` records which school was asked for. */
   moderation: Record<keyof CommentModeration, Mock>;
   moderationFor: Mock<(schoolId: string) => CommentModeration>;
+  /** Stands in for every school's certificate lookup; `certificatesFor` records which school was asked for. */
+  certificates: Record<keyof CertificateService, Mock>;
+  certificatesFor: Mock<(schoolId: string) => CertificateService>;
   /** Stands in for every school's stats service; `analyticsFor` records which school was asked for. */
   analytics: Record<keyof AnalyticsService, Mock>;
   analyticsFor: Mock<(schoolId: string) => AnalyticsService>;
@@ -159,6 +162,7 @@ const LEARNING_METHODS = [
   "deleteComment",
 ] as const satisfies readonly (keyof LearningService)[];
 const MODERATION_METHODS = ["listInbox", "listLessonComments", "reply", "setHidden"] as const satisfies readonly (keyof CommentModeration)[];
+const CERTIFICATE_METHODS = ["verifyCertificate"] as const satisfies readonly (keyof CertificateService)[];
 const ANALYTICS_METHODS = ["getCourseStats", "getSalesReport"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
 
@@ -175,7 +179,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, moderation, stats and audit services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, moderation, certificate, stats and audit services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -185,6 +189,7 @@ export function createFakeClients(): FakeClients {
   const commerce = fakeService(COMMERCE_METHODS);
   const learning = fakeService(LEARNING_METHODS);
   const moderation = fakeService(MODERATION_METHODS);
+  const certificates = fakeService(CERTIFICATE_METHODS);
   const analytics = fakeService(ANALYTICS_METHODS);
   const students = fakeService(STUDENT_METHODS);
   const audit = fakeService(AUDIT_METHODS);
@@ -206,6 +211,8 @@ export function createFakeClients(): FakeClients {
     learningFor: vi.fn(() => learning as unknown as LearningService),
     moderation,
     moderationFor: vi.fn(() => moderation as unknown as CommentModeration),
+    certificates,
+    certificatesFor: vi.fn(() => certificates as unknown as CertificateService),
     analytics,
     analyticsFor: vi.fn(() => analytics as unknown as AnalyticsService),
     audit,
@@ -251,6 +258,8 @@ export async function createTestApp(
     .useValue(clients.learningFor)
     .overrideProvider(COMMENT_MODERATION_FOR_SCHOOL)
     .useValue(clients.moderationFor)
+    .overrideProvider(CERTIFICATES_FOR_SCHOOL)
+    .useValue(clients.certificatesFor)
     .overrideProvider(ANALYTICS_FOR_SCHOOL)
     .useValue(clients.analyticsFor)
     .overrideProvider(AUDIT_FOR_SCHOOL)

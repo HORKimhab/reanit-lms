@@ -29,5 +29,12 @@
     "heading": "Welcome to {course}",
     "body": "You now have {course} from {school}. Start whenever you're ready: your progress is saved as you go.",
     "button": "Start learning"
+  },
+  "Certificate": {
+    "title": "Certificate of Completion",
+    "presentedTo": "This certifies that",
+    "completed": "has completed the course",
+    "issued": "Issued by {school} on {date}",
+    "verify": "Verify this certificate at"
   }
 }

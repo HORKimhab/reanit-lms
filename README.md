@@ -125,7 +125,7 @@ User ─┬─< Membership >─ School ──< Domain
       ├──< Enrollment      (user, course, source, expires_at)
       ├──< LessonProgress  (enrollment, lesson, completed_at, video_position)
       ├──< QuizAttempt
-      ├──< Certificate
+      ├──< Certificate     (one per completed enrollment: name + title as issued, pdf_key; its id is the verify code)
       └──< Comment         (lesson, parent_id)
 ```
 
@@ -176,10 +176,10 @@ reanit-lms/
 ├─ packages/
 │  ├─ db/           # Prisma schema, migrations, tenant-scoped client
 │  ├─ core/         # Framework-free domain logic (commerce, learning, schools)
-│  ├─ nest/         # Nest modules apps/api and apps/worker share: env, database, logging
+│  ├─ nest/         # Nest modules apps/api and apps/worker share: env, database, logging, mail, object storage
 │  ├─ api-client/   # Typed client for apps/api, generated from the committed openapi.json
 │  ├─ ui/           # Shared UI components (shadcn)
-│  ├─ email/        # React Email templates
+│  ├─ email/        # React Email templates, and the certificate PDF's wording (en/km)
 │  └─ config/       # Shared eslint, tsconfig and tailwind presets
 ├─ infra/           # docker-compose for local services; docker/ images; deploy/ staging + prod (DigitalOcean + Cloudflare)
 └─ .github/workflows/

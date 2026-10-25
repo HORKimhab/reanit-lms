@@ -1,3 +1,10 @@
+export {
+  certificateIdSchema,
+  createCertificateIssuer,
+  createCertificateService,
+  type CertificateIssuer,
+  type CertificateService,
+} from "./certificates";
 export { createCommentModeration, type CommentModeration } from "./comment-moderation";
 export {
   COMMENT_INBOX_FILTERS,
@@ -16,8 +23,28 @@ export {
   type LessonComment,
 } from "./comments";
 export { lessonUnlocksAt, lockedUntil, type LessonUnlock } from "./drip";
-export { CommentNotFoundError, LessonLockedError, NotCommentAuthorError, NotEnrolledError, QuizNotFoundError } from "./errors";
-export type { CommentStore, Enrollment, LearningStore, LessonProgress, ProgressUpdate, QuizAttemptSummary, QuizStore } from "./ports";
+export {
+  CertificateNotFoundError,
+  CommentNotFoundError,
+  CompletionNotFoundError,
+  LessonLockedError,
+  NotCommentAuthorError,
+  NotEnrolledError,
+  QuizNotFoundError,
+} from "./errors";
+export type {
+  Certificate,
+  CertificateDocument,
+  CertificateRenderer,
+  CertificateStore,
+  CommentStore,
+  Enrollment,
+  LearningStore,
+  LessonProgress,
+  ProgressUpdate,
+  QuizAttemptSummary,
+  QuizStore,
+} from "./ports";
 export {
   DEFAULT_PASS_PERCENT,
   gradeQuiz,

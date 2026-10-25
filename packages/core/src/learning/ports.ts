@@ -1,4 +1,5 @@
 import type { LessonType } from "../catalog";
+import type { EmailLocale } from "../notifications";
 import type { CommentThread, InboxThread, LessonComment } from "./comments";
 import type { LessonUnlock } from "./drip";
 import type { Quiz, QuizAnswers, QuizResult } from "./quizzes";
@@ -77,4 +78,61 @@ export interface CommentStore {
   setHidden(commentId: string, isHidden: boolean): Promise<boolean>;
   /** Threads newest first, all or only those without a staff reply, hidden ones included. */
   listInbox(query: { isUnansweredOnly: boolean; limit: number; offset: number }): Promise<{ threads: InboxThread[]; total: number }>;
+}
+
+/** A completed enrollment, as its certificate is issued from. */
+export interface CourseCompletion {
+  student: { name: string | null; email: string };
+  courseTitle: string;
+  completedAt: Date;
+  school: { name: string; subdomain: string };
+  /** The language the student bought the course in; English when they were enrolled without an order. */
+  locale: EmailLocale;
+}
+
+/** A certificate as its holder's name and course title were when it was issued, before its PDF is stored. */
+export interface IssuedCertificate {
+  id: string;
+  studentName: string;
+  courseTitle: string;
+  issuedAt: Date;
+  /** Storage key of its PDF; null until the PDF is stored. */
+  pdfKey: string | null;
+}
+
+/** A certificate as its public verify page shows it. */
+export interface Certificate {
+  id: string;
+  studentName: string;
+  courseTitle: string;
+  schoolName: string;
+  issuedAt: Date;
+}
+
+/** One school's course certificates. `@reanit/db` implements it with `createCertificateStore`. */
+export interface CertificateStore {
+  /** Null when the school has no enrollment with that id, or it is not completed. */
+  findCompletion(enrollmentId: string): Promise<CourseCompletion | null>;
+  /** Creates the enrollment's certificate, or returns the one it already has, unchanged. */
+  issue(certificate: { enrollmentId: string; studentName: string; courseTitle: string; issuedAt: Date }): Promise<IssuedCertificate>;
+  setPdfKey(certificateId: string, pdfKey: string): Promise<void>;
+  /** Null when the school has no certificate with that id. */
+  findCertificate(certificateId: string): Promise<Certificate | null>;
+}
+
+/** What a certificate PDF shows. */
+export interface CertificateDocument {
+  studentName: string;
+  courseTitle: string;
+  schoolName: string;
+  issuedAt: Date;
+  /** The language of its labels and date. */
+  locale: EmailLocale;
+  /** Public page that confirms the certificate is real. */
+  verifyUrl: string;
+}
+
+/** Draws certificate PDFs. The worker implements it with PDFKit; tests use a fake. */
+export interface CertificateRenderer {
+  render(document: CertificateDocument): Promise<Uint8Array>;
 }

@@ -27,9 +27,10 @@ export class FakeLessonMediaStore implements LessonMediaStore {
   }
 }
 
-/** Fake storage: presigned URLs spell out what was signed; `uploaded` lists keys that exist. */
+/** Fake storage: presigned URLs spell out what was signed; `uploaded` lists keys that exist, `stored` what the server put. */
 export class FakeObjectStorage implements ObjectStorage {
   readonly uploaded = new Set<string>();
+  readonly stored = new Map<string, { contentType: string; body: Uint8Array }>();
 
   /**
    * Fakes a presigned upload.
@@ -67,5 +68,18 @@ export class FakeObjectStorage implements ObjectStorage {
    */
   async exists(key: string) {
     return this.uploaded.has(key);
+  }
+
+  /**
+   * Keeps a file the server stored.
+   *
+   * @param object The file.
+   * @param object.key Its key.
+   * @param object.contentType Its content type.
+   * @param object.body Its bytes.
+   */
+  async put({ key, contentType, body }: { key: string; contentType: string; body: Uint8Array }) {
+    this.uploaded.add(key);
+    this.stored.set(key, { contentType, body });
   }
 }

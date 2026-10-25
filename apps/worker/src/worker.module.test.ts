@@ -9,14 +9,18 @@ const ENVIRONMENT = {
   APP_URL: "http://localhost:3000",
   SMTP_URL: "smtp://localhost:1025",
   MAIL_FROM: "Reanit <no-reply@reanit.localhost>",
+  S3_ENDPOINT: "http://localhost:8333",
+  S3_BUCKET: "reanit-media",
+  S3_ACCESS_KEY_ID: "reanit",
+  S3_SECRET_ACCESS_KEY: "reanit-secret",
 };
 
 describe("parseWorkerEnv", () => {
-  it("applies the default log level", () => {
-    expect(parseWorkerEnv(ENVIRONMENT)).toEqual({ ...ENVIRONMENT, LOG_LEVEL: "info" });
+  it("applies the default log level and storage settings", () => {
+    expect(parseWorkerEnv(ENVIRONMENT)).toEqual({ ...ENVIRONMENT, LOG_LEVEL: "info", S3_REGION: "auto", S3_FORCE_PATH_STYLE: false });
   });
 
-  it.each(["DATABASE_URL", "REDIS_URL", "APP_URL", "SMTP_URL", "MAIL_FROM"])("throws a ZodError when %s is missing", (name) => {
+  it.each(["DATABASE_URL", "REDIS_URL", "APP_URL", "SMTP_URL", "MAIL_FROM", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"])("throws a ZodError when %s is missing", (name) => {
     expect(() => parseWorkerEnv({ ...ENVIRONMENT, [name]: undefined })).toThrow(ZodError);
   });
 });

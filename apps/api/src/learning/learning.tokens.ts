@@ -1,4 +1,4 @@
-import type { CommentModeration, LearningService } from "@reanit/core/learning";
+import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 
 /** Injection token for `LearningForSchool`. */
 export const LEARNING_FOR_SCHOOL = Symbol("LEARNING_FOR_SCHOOL");
@@ -11,3 +11,9 @@ export const COMMENT_MODERATION_FOR_SCHOOL = Symbol("COMMENT_MODERATION_FOR_SCHO
 
 /** Builds one school's staff side of lesson comments on the tenant client. */
 export type CommentModerationForSchool = (schoolId: string) => CommentModeration;
+
+/** Injection token for `CertificatesForSchool`. */
+export const CERTIFICATES_FOR_SCHOOL = Symbol("CERTIFICATES_FOR_SCHOOL");
+
+/** Builds one school's certificate lookup on the tenant client. */
+export type CertificatesForSchool = (schoolId: string) => CertificateService;

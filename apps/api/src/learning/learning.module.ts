@@ -1,16 +1,24 @@
 import { Module } from "@nestjs/common";
-import { createCommentModeration, createLearningService } from "@reanit/core/learning";
-import { createCatalogStore, createCommentStore, createLearningStore, createQuizStore, type DbClient } from "@reanit/db";
+import { createCertificateService, createCommentModeration, createLearningService } from "@reanit/core/learning";
+import { createCatalogStore, createCertificateStore, createCommentStore, createLearningStore, createQuizStore, type DbClient } from "@reanit/db";
 import { DB_CLIENT } from "@reanit/nest";
 
 import { systemClock } from "../context/clock";
 import { MediaModule } from "../media/media.module";
 import { MEDIA_FOR_SCHOOL, type MediaForSchool } from "../media/media.tokens";
 import { SchoolsModule } from "../schools/schools.module";
+import { CertificatesController } from "./certificates.controller";
 import { CommentsController } from "./comments.controller";
 import { LearningController } from "./learning.controller";
 import { QuizzesController } from "./quizzes.controller";
-import { COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SCHOOL, type CommentModerationForSchool, type LearningForSchool } from "./learning.tokens";
+import {
+  CERTIFICATES_FOR_SCHOOL,
+  COMMENT_MODERATION_FOR_SCHOOL,
+  LEARNING_FOR_SCHOOL,
+  type CertificatesForSchool,
+  type CommentModerationForSchool,
+  type LearningForSchool,
+} from "./learning.tokens";
 
 /**
  * Wires per-school learning services to Postgres (tenant client) and the school's lesson files.
@@ -41,13 +49,24 @@ function provideCommentModerationForSchool(db: DbClient): CommentModerationForSc
   return (schoolId) => createCommentModeration({ store: createCommentStore(db, schoolId), clock: systemClock });
 }
 
-/** The student player (course access, lesson files, progress, quizzes, comments), the quiz builder and comment moderation. */
+/**
+ * Wires per-school certificate lookups to Postgres (tenant client).
+ *
+ * @param db The shared database client.
+ * @returns A factory of certificate lookups limited to one school.
+ */
+function provideCertificatesForSchool(db: DbClient): CertificatesForSchool {
+  return (schoolId) => createCertificateService(createCertificateStore(db, schoolId));
+}
+
+/** The student player (course access, lesson files, progress, quizzes, comments), the quiz builder, comment moderation and certificate checks. */
 @Module({
   imports: [SchoolsModule, MediaModule],
-  controllers: [LearningController, QuizzesController, CommentsController],
+  controllers: [LearningController, QuizzesController, CommentsController, CertificatesController],
   providers: [
     { provide: LEARNING_FOR_SCHOOL, inject: [DB_CLIENT, MEDIA_FOR_SCHOOL], useFactory: provideLearningForSchool },
     { provide: COMMENT_MODERATION_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideCommentModerationForSchool },
+    { provide: CERTIFICATES_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideCertificatesForSchool },
   ],
 })
 export class LearningModule {}

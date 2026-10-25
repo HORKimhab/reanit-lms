@@ -1,7 +1,7 @@
-import { NotFound, S3Client } from "@aws-sdk/client-s3";
+import { NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 
-import { createS3Storage } from "./s3-storage";
+import { createS3Storage } from "./storage";
 
 const ENV = {
   S3_ENDPOINT: "http://storage:8333",
@@ -55,5 +55,22 @@ describe("createS3Storage", () => {
     vi.spyOn(S3Client.prototype, "send").mockRejectedValueOnce(new Error("access denied") as never);
 
     await expect(createS3Storage(ENV).exists(KEY)).rejects.toThrow("access denied");
+  });
+
+  it("stores a file the server made in the bucket", async () => {
+    const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValueOnce({} as never);
+    const body = new Uint8Array([37, 80, 68, 70]);
+
+    await createS3Storage(ENV).put({ key: "schools/s1/certificates/c1.pdf", contentType: "application/pdf", body });
+
+    const command = send.mock.calls[0]?.[0];
+    expect(command).toBeInstanceOf(PutObjectCommand);
+    expect((command as PutObjectCommand).input).toEqual({ Bucket: "reanit-media", Key: "schools/s1/certificates/c1.pdf", ContentType: "application/pdf", Body: body });
+  });
+
+  it("rethrows when storage refuses a file", async () => {
+    vi.spyOn(S3Client.prototype, "send").mockRejectedValueOnce(new Error("quota exceeded") as never);
+
+    await expect(createS3Storage(ENV).put({ key: "k", contentType: "application/pdf", body: new Uint8Array() })).rejects.toThrow("quota exceeded");
   });
 });

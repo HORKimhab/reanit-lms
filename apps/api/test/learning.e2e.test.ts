@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 
+import { createCertificateStore, type DbClient } from "@reanit/db";
+import { DB_CLIENT } from "@reanit/nest";
+import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { buyCourse, createVideoCourse, openSchool, signUp, uniqueName, useE2eApp } from "../src/test/e2e";
@@ -63,6 +66,25 @@ describe("learning", () => {
     await student.get(`/schools/by-subdomain/${beta.school.subdomain}/lessons/${videoLesson}/media`).expect(403);
     await student.get(`/schools/by-subdomain/${beta.school.subdomain}/learn/${course.slug}`).expect(404);
     expect((await beta.agent.get("/stats/courses").expect(200)).body.courses).toEqual([]);
+  });
+});
+
+describe("certificates", () => {
+  it("shows a certificate on the site of the school that issued it, to anyone, and on no other school's", async () => {
+    const { agent: student } = await signUp(e2e().app, uniqueName("graduate"));
+    await buyCourse(e2e(), student, alpha.school.subdomain, course.slug);
+    const db = e2e().app.get<DbClient>(DB_CLIENT);
+    const enrollment = await db.enrollment.findFirstOrThrow({ where: { courseId: course.id }, orderBy: { createdAt: "desc" } });
+    // The worker issues certificates (WRK-03); here the school issues one directly.
+    const issuedAt = new Date("2026-10-20T03:00:00Z");
+    const { id } = await createCertificateStore(db, alpha.school.id).issue({ enrollmentId: enrollment.id, studentName: "Dara", courseTitle: "Played Course", issuedAt });
+    const beta = await openSchool(e2e().app, uniqueName("cert-beta"));
+
+    const verified = await request(e2e().app.getHttpServer()).get(`${base}/certificates/${id}`).expect(200);
+
+    expect(verified.body.certificate).toEqual({ id, studentName: "Dara", courseTitle: "Played Course", schoolName: alpha.school.name, issuedAt: issuedAt.toISOString() });
+    await beta.agent.get(`/schools/by-subdomain/${beta.school.subdomain}/certificates/${id}`).expect(404);
+    await student.get(`${base}/certificates/${randomUUID()}`).expect(404);
   });
 });
 

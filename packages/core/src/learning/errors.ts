@@ -31,3 +31,13 @@ export class CommentNotFoundError extends Error {
 export class NotCommentAuthorError extends Error {
   override readonly name = "NotCommentAuthorError";
 }
+
+/** The school has no enrollment with that id, or it is not completed, so it earns no certificate. */
+export class CompletionNotFoundError extends Error {
+  override readonly name = "CompletionNotFoundError";
+}
+
+/** The school has no certificate with that id. */
+export class CertificateNotFoundError extends Error {
+  override readonly name = "CertificateNotFoundError";
+}

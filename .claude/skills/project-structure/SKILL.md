@@ -10,11 +10,11 @@ apps/web        Next.js: school sites, dashboard, player (calls apps/api)
 apps/api        NestJS on Fastify: REST API, one Nest module per domain module
 apps/worker     Nest standalone app (no HTTP) with @nestjs/bullmq: email, webhooks, video, certificates, stats
 packages/db     @reanit/db: Prisma schema, migrations, RLS, tenant client
-packages/nest   @reanit/nest: Nest modules both apps share (env, database, logging)
+packages/nest   @reanit/nest: Nest modules both apps share (env, database, logging, mail, object storage)
 packages/core   @reanit/core: pure domain logic, one folder per module
 packages/api-client @reanit/api-client: typed apps/api client from openapi.json (`pnpm openapi` regenerates)
 packages/ui     @reanit/ui: shared shadcn components
-packages/email  @reanit/email: React Email templates (en/km messages in src/messages), rendered to HTML + text
+packages/email  @reanit/email: React Email templates (en/km messages in src/messages), rendered to HTML + text; also the certificate PDF's wording
 packages/config @reanit/config: eslint/tsconfig/tailwind/vitest presets; tsup + vitest presets for the Nest apps
 infra/          docker-compose.yml (local services), docker/ (app images), deploy/ (staging + prod droplets, runbook)
 ```
@@ -28,7 +28,7 @@ Modules: auth · schools · catalog · commerce · learning · media · notifica
 | Business rule | `packages/core/<module>/`, no Next/Nest/Prisma/BullMQ imports |
 | Table / column / RLS | `packages/db` |
 | Page / server action | `apps/web`; data comes from `apps/api` through `getApi()` in `@/server/api` (importing `@reanit/db` is a lint error) |
-| API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config\|context\|logging\|http\|storage>/`. Request bodies: `class X extends createZodDto(coreSchema) {}`. A new core error gets its status in `apps/api/src/http/problem.ts`. Every route needs a session unless marked `@Public()`; read the user with `@CurrentUser()`. Staff-only routes add `@Roles("owner", …)` (import `SchoolsModule`) and read `@CurrentSchool()`. Request state goes through `ClsService<RequestContext>`, never REQUEST-scoped providers. An error caught on purpose that still needs a human goes to `reportError()` from `@reanit/nest` (Sentry); unexpected errors are reported by the problem filter already. Routes open to abuse (sign-in, payments) add `@RateLimit("<preset>")` with a preset in `apps/api/src/rate-limit/rate-limit.ts`. Staff routes that change something add `@Audited("<action>", target)` (action in `AUDIT_ACTIONS`, `@reanit/core/audit`) |
+| API endpoint, guard, Nest module | `apps/api/src/<module>/` (controller + module); shared infrastructure in `apps/api/src/<db\|redis\|config\|context\|logging\|http\|storage>/`; `OBJECT_STORAGE`, `ENV`, `DB_CLIENT` and `MAILER` come from `@reanit/nest`. Request bodies: `class X extends createZodDto(coreSchema) {}`. A new core error gets its status in `apps/api/src/http/problem.ts`. Every route needs a session unless marked `@Public()`; read the user with `@CurrentUser()`. Staff-only routes add `@Roles("owner", …)` (import `SchoolsModule`) and read `@CurrentSchool()`. Request state goes through `ClsService<RequestContext>`, never REQUEST-scoped providers. An error caught on purpose that still needs a human goes to `reportError()` from `@reanit/nest` (Sentry); unexpected errors are reported by the problem filter already. Routes open to abuse (sign-in, payments) add `@RateLimit("<preset>")` with a preset in `apps/api/src/rate-limit/rate-limit.ts`. Staff routes that change something add `@Audited("<action>", target)` (action in `AUDIT_ACTIONS`, `@reanit/core/audit`) |
 | Email, webhook, async work | `apps/worker`, triggered by an outbox event: add the event to `@reanit/core/events`, write it with `appendEvent(tx, …)` in the transaction of the change (`packages/db`), and register its handler in `HANDLERS` in `apps/worker/src/events/events.module.ts`. The relay queues it with retries; a job that fails every attempt lands in the `events-dead-letter` queue |
 | Shared component | `packages/ui`. Single-use components stay in `apps/web`. |
 | Script | `scripts/`, run with `pnpm tsx` |

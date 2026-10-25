@@ -24,7 +24,14 @@ import {
   MediaTooLargeError,
   UnsupportedMediaError,
 } from "@reanit/core/media";
-import { CommentNotFoundError, LessonLockedError, NotCommentAuthorError, NotEnrolledError, QuizNotFoundError } from "@reanit/core/learning";
+import {
+  CertificateNotFoundError,
+  CommentNotFoundError,
+  LessonLockedError,
+  NotCommentAuthorError,
+  NotEnrolledError,
+  QuizNotFoundError,
+} from "@reanit/core/learning";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
@@ -81,6 +88,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: CourseNotFoundError, status: HttpStatus.NOT_FOUND, code: "course-not-found", detail: "The course does not exist." },
   { error: QuizNotFoundError, status: HttpStatus.NOT_FOUND, code: "quiz-not-found", detail: "The lesson has no quiz." },
   { error: CommentNotFoundError, status: HttpStatus.NOT_FOUND, code: "comment-not-found", detail: "The comment does not exist." },
+  { error: CertificateNotFoundError, status: HttpStatus.NOT_FOUND, code: "certificate-not-found", detail: "No certificate has this verification code." },
   { error: NotCommentAuthorError, status: HttpStatus.FORBIDDEN, code: "not-comment-author", detail: "Only its author can delete this comment." },
   { error: LessonLockedError, status: HttpStatus.FORBIDDEN, code: "lesson-locked", detail: "This lesson has not opened yet." },
   { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },

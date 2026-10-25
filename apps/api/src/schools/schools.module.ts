@@ -4,10 +4,9 @@ import { Module } from "@nestjs/common";
 import type { ObjectStorage } from "@reanit/core/media";
 import { createSchoolService, createStudentService } from "@reanit/core/schools";
 import { createSchoolStore, createStudentStore, type DbClient } from "@reanit/db";
-import { DB_CLIENT } from "@reanit/nest";
+import { DB_CLIENT, OBJECT_STORAGE } from "@reanit/nest";
 
 import { systemClock } from "../context/clock";
-import { OBJECT_STORAGE, StorageModule } from "../storage/storage.module";
 import { RolesGuard } from "./roles.guard";
 import { SchoolsController } from "./schools.controller";
 import { SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL, type StudentsForSchool } from "./schools.tokens";
@@ -36,7 +35,6 @@ function provideStudentsForSchool(db: DbClient): StudentsForSchool {
 
 /** School routes and settings, the students list, and `RolesGuard` for any module whose routes use `@Roles(...)`. */
 @Module({
-  imports: [StorageModule],
   controllers: [SchoolsController, StudentsController],
   providers: [
     { provide: SCHOOL_SERVICE, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideSchoolService },

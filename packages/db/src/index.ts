@@ -1,5 +1,6 @@
 export { createAuditStore } from "./audit-store";
 export { createAuthStore } from "./auth-store";
+export { createCertificateStore } from "./certificate-store";
 export { createCatalogStore } from "./catalog-store";
 export { createCommentStore } from "./comment-store";
 export { createCommerceStore, createPaymentConfirmationStore } from "./commerce-store";

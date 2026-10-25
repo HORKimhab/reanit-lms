@@ -3,11 +3,10 @@ import { randomUUID } from "node:crypto";
 import { Module } from "@nestjs/common";
 import { createMediaService, type ObjectStorage } from "@reanit/core/media";
 import { createLessonMediaStore, type DbClient } from "@reanit/db";
-import { DB_CLIENT } from "@reanit/nest";
+import { DB_CLIENT, OBJECT_STORAGE } from "@reanit/nest";
 
 import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
-import { OBJECT_STORAGE, StorageModule } from "../storage/storage.module";
 import { MediaController } from "./media.controller";
 import { MEDIA_FOR_SCHOOL, type MediaForSchool } from "./media.tokens";
 
@@ -25,7 +24,7 @@ function provideMediaForSchool(db: DbClient, storage: ObjectStorage): MediaForSc
 
 /** Lesson file uploads and previews for staff; other modules sign lesson files through `MEDIA_FOR_SCHOOL`. */
 @Module({
-  imports: [SchoolsModule, StorageModule],
+  imports: [SchoolsModule],
   controllers: [MediaController],
   exports: [MEDIA_FOR_SCHOOL],
   providers: [{ provide: MEDIA_FOR_SCHOOL, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideMediaForSchool }],

@@ -1,6 +1,7 @@
+import { s3Client } from "@reanit/nest";
+
 import { parseEnv } from "./config/env";
 import { setUpBucket } from "./storage/bucket-setup";
-import { s3Client } from "./storage/s3-storage";
 
 /**
  * `pnpm storage:setup`: creates the media bucket if needed and allows the web app's origin to

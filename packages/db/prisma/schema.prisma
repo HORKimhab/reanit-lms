@@ -128,6 +128,7 @@ model School {
   quizzes          Quiz[]
   quizAttempts     QuizAttempt[]
   lessonComments   LessonComment[]
+  certificates     Certificate[]
 
   @@map("schools")
 }
@@ -369,6 +370,7 @@ model Enrollment {
   order        Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
   progress     LessonProgress[]
   quizAttempts QuizAttempt[]
+  certificate  Certificate?
 
   @@unique([userId, courseId])
   @@index([schoolId])
@@ -529,4 +531,26 @@ model LessonComment {
   @@index([lessonId, createdAt])
   @@index([parentId])
   @@map("lesson_comments")
+}
+
+/// A completed enrollment's certificate (WRK-03): the student's name and the course title as they were
+/// at completion, so renaming either later never changes an issued certificate. Its id is the public verify code.
+model Certificate {
+  id           String   @id @default(uuid()) @db.Uuid
+  schoolId     String   @map("school_id") @db.Uuid
+  /// One certificate per enrollment; issuing again returns this row.
+  enrollmentId String   @unique @map("enrollment_id") @db.Uuid
+  studentName  String   @map("student_name")
+  courseTitle  String   @map("course_title")
+  /// When the course was completed.
+  issuedAt     DateTime @map("issued_at")
+  /// Object-storage key of the PDF; null until the worker has stored it.
+  pdfKey       String?  @map("pdf_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@map("certificates")
 }

@@ -1,21 +1,33 @@
 import { BullModule, type BullRootModuleOptions } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
-import { baseEnvSchema, DbModule, ENV, EnvModule, LoggingModule, MailModule, mailEnvSchema, TelemetryModule } from "@reanit/nest";
+import {
+  baseEnvSchema,
+  DbModule,
+  ENV,
+  EnvModule,
+  LoggingModule,
+  MailModule,
+  mailEnvSchema,
+  storageEnvSchema,
+  StorageModule,
+  TelemetryModule,
+} from "@reanit/nest";
 import { z } from "zod";
 
 import { EventsModule } from "./events/events.module";
 
 const workerEnvSchema = baseEnvSchema.extend({
-  /** Public origin of the web app, for links in emails. */
+  /** Public origin of the web app, for links in emails and certificates. */
   APP_URL: z.url(),
   ...mailEnvSchema.shape,
+  ...storageEnvSchema.shape,
 });
 
 /** The worker's validated environment. */
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 
 /**
- * Validates the worker's environment: the shared variables, plus what sending email needs.
+ * Validates the worker's environment: the shared variables, plus what sending email and storing certificates need.
  *
  * @param source Variables to read.
  * @returns The validated variables with defaults applied.
@@ -36,7 +48,7 @@ export function bullOptions(env: WorkerEnv): BullRootModuleOptions {
   return { connection: { url: env.REDIS_URL, maxRetriesPerRequest: null } };
 }
 
-/** Root of the background worker: shared env, logs, telemetry flush, database and mail, BullMQ, and the job modules. */
+/** Root of the background worker: shared env, logs, telemetry flush, database, mail and storage, BullMQ, and the job modules. */
 @Module({
   imports: [
     EnvModule.forRoot(parseWorkerEnv),
@@ -44,6 +56,7 @@ export function bullOptions(env: WorkerEnv): BullRootModuleOptions {
     TelemetryModule,
     DbModule,
     MailModule,
+    StorageModule,
     BullModule.forRootAsync({ inject: [ENV], useFactory: bullOptions }),
     EventsModule,
   ],
