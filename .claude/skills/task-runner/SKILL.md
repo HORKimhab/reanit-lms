@@ -1,19 +1,20 @@
 ---
 name: task-runner
-description: Build TODO.md tasks by ID to the quality.md rules (patterns, no duplicate/dead code, full JSDoc, tests), refactor, verify and commit. Use when the prompt is "init <ID>[, <ID> to <ID>]", "init <ID> onward [max N] [until P%]" or "next task".
+description: Build TODO.md tasks by ID to the quality.md rules (patterns, no duplicate/dead code, full JSDoc, tests), refactor, verify and commit. Use when the prompt is "init <ID>[, <ID> to <ID>]", "init <ID> onward [max N] [until P%]" or "next task". Skips `(Future)` tasks unless named by ID.
 ---
 
 **Modes**
 - `init REPO-01, WEB-01 to WEB-02`: build the listed tasks, then make **one** commit.
 - `init WEB-03 onward [max N] [until P%]`: start at WEB-03 and go through TODO.md in order, making **one commit per task**. P defaults to 95.
-- `next task`: build the first unticked `- [ ]` task in TODO.md.
+- `next task`: build the first unticked `- [ ]` task in TODO.md that is not tagged `(Future)`.
+- `(Future)` tasks are deferred: `next task` and onward runs skip them; `init <ID>` with that ID still builds one.
 
 **Before starting**
 - Run `git status`. If there are uncommitted changes, a task was cut off earlier: ask the user whether to continue it or discard it.
 - Onward mode: write P to `.claude/run.lock`. The usage-guard hook stops Claude mid-task once session usage reaches P.
 
 **Before each onward task, stop if any of these is true:**
-`.claude/STOP` exists (delete it) · `.claude/usage.json` is under 10 min old and `five_hour` ≥ P−5 · `max N` tasks done · the next task is ⚠ · no `- [ ]` tasks are left.
+`.claude/STOP` exists (delete it) · `.claude/usage.json` is under 10 min old and `five_hour` ≥ P−5 · `max N` tasks done · the next task is ⚠ · no untagged `- [ ]` tasks are left.
 
 **Steps per task**
 1. **Resolve the IDs.** Expand `X-01 to X-03` into X-01, X-02, X-03, kept in TODO.md order. For each `Needs <ID>` that is still `- [ ]`, add that ID first. Skip IDs that are already `- [x]` and say so.

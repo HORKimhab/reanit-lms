@@ -1,6 +1,6 @@
 # TODO: M1 creator to first paid student
 
-Rules: when done, tick it `[x]` in place, never delete or move it · the next task is the first `[ ]` · never reuse an ID · put the ID in the commit message · ⚠ = open decision, ask first.
+Rules: when done, tick it `[x]` in place, never delete or move it · the next task is the first `[ ]` · never reuse an ID · put the ID in the commit message · ⚠ = open decision, ask first · `(Future)` after the ID = deferred, skipped by `next task` and onward runs (remove the tag to resume).
 
 UI: Teachable-style (white, one brand color per school) + dark mode, ⌘K palette, builder autosave, mobile-first player, branding live preview, KHQR checkout.
 i18n: next-intl, `en`/`km`, Kantumruy Pro, locale-aware dates/numbers/currency (USD/KHR). Course content is not translated.
@@ -68,7 +68,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] TEST-01 Playwright E2E: sign-up → create school → build course → checkout → watch lesson. Done when green in CI.
 - [x] OPS-01 Observability: Sentry, OpenTelemetry, PostHog
 - [x] OPS-02 Deploy: staging + prod, wildcard subdomain DNS/TLS, migrations in CI ⚠ hosting
-- [ ] OPS-03 Production smoke: first real paid enrollment end to end. Done when M1 is live.
+- [ ] OPS-03 (Future) Production smoke: first real paid enrollment end to end. Done when M1 is live. Manual check, run after going live.
 
 ## M2 growth (backlog, refine before starting)
 - [x] API-12 Coupons: percent/fixed, expiry, usage limit, applied at checkout

@@ -292,13 +292,14 @@ Work is tracked in [TODO.md](TODO.md). Each task has an ID such as `REPO-01`, `W
 | `init WEB-03 onward` | Builds tasks in TODO order, starting at WEB-03, until it stops | One commit per task: `feat: init WEB-03`, … |
 | `init WEB-03 onward max 5` | Same, but stops after 5 tasks | One commit per task |
 | `init WEB-03 onward until 80%` | Same, but stops at 80% session usage instead of 95% | One commit per task |
-| `next task` | Builds the first unticked `- [ ]` task in TODO.md | `feat: init <ID>` |
+| `next task` | Builds the first unticked `- [ ]` task in TODO.md, skipping `(Future)` tasks | `feat: init <ID>` |
 
 Add `:sparkles:` to the prompt to get `feat: :sparkles: init …`.
 
 **Behaviour**
 - Open dependencies (`Needs <ID>`) are built first and named in the commit.
 - Tasks marked ⚠ stop the run and ask for a decision.
+- Tasks tagged `(Future)` after the ID are deferred: `next task` and onward runs skip them, and `init <ID>` still builds one. Remove the tag to put it back in line.
 - Every task follows [`quality.md`](.claude/skills/task-runner/quality.md): reuse before writing, design patterns that fit the layer, no duplicate or dead code, full JSDoc on every function, and tests for every behaviour it adds.
 - Tests cover each task's behaviour, not every file: logic, hooks and interactive components always get tests, while a thin `page.tsx`/`layout.tsx` gets none (only its own `notFound()`/`redirect()` branches do) and user flows get E2E. Unit and component tests sit next to the source (`<name>.test.ts(x)`), integration tests go in `packages/db/test/`, E2E tests in `apps/web/e2e/`, and shared helpers in each package's `src/test/`. Claude runs the touched package's tests while building and checks that every new test fails when its behaviour breaks.
 - After building, Claude refactors the task's own diff against those rules. It fixes problems rather than just listing them.
