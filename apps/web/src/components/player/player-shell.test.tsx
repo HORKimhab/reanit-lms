@@ -31,4 +31,23 @@ describe("PlayerShell", () => {
     expect(await screen.findAllByRole("link", { name: /Sketching/ })).toHaveLength(2);
     expect(screen.getByText("Course content · 33% complete")).toBeInTheDocument();
   });
+
+  it("offers the certificate once every lesson is completed, and not before", async () => {
+    const completed = PLAYER_LESSONS.map((lesson) => ({ ...lesson, isCompleted: true }));
+    const { rerender } = renderWithIntl(
+      <PlayerShell school={SITE_SCHOOL.slug} title="Brand Design Basics" lessons={PLAYER_LESSONS} base={PLAYER_BASE}>
+        {null}
+      </PlayerShell>,
+    );
+    await screen.findByText("Brand Design Basics");
+    expect(screen.queryByRole("link", { name: "Certificate" })).not.toBeInTheDocument();
+
+    rerender(
+      <PlayerShell school={SITE_SCHOOL.slug} title="Brand Design Basics" lessons={completed} base={PLAYER_BASE}>
+        {null}
+      </PlayerShell>,
+    );
+
+    expect(await screen.findByRole("link", { name: "Certificate" })).toHaveAttribute("href", `${PLAYER_BASE}/certificate`);
+  });
 });

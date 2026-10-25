@@ -1,9 +1,8 @@
 import type { Course, CourseWithOutline } from "@reanit/core/catalog";
-import type { School } from "@reanit/core/schools";
+import { DEFAULT_BRAND_COLOR, type School } from "@reanit/core/schools";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
-import { DEFAULT_BRAND } from "@/components/shells/brand";
 import type { MockSchool } from "@/mocks/schools";
 
 import { getApi, unexpectedResponse } from "../api";
@@ -25,7 +24,7 @@ export function toBrandedSchool(school: School): MockSchool {
     slug: school.subdomain,
     name: school.name,
     tagline: "",
-    brand: school.brandColor ?? DEFAULT_BRAND,
+    brand: school.brandColor ?? DEFAULT_BRAND_COLOR,
     ...(school.logoUrl && { logoUrl: school.logoUrl }),
   };
 }

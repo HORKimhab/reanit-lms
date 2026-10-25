@@ -120,6 +120,7 @@ User ─┬─< Membership >─ School ──< Domain
       │                   │       ├──< Coupon
       │                   │       └──< Quiz ──< Question
       │                   ├──< Bundle >──< Course
+      │                   ├──o CertificateTemplate  (who signs its certificates)
       │                   └──< Order ──< OrderItem
       │
       ├──< Enrollment      (user, course, source, expires_at)

@@ -8,7 +8,7 @@ import { RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 import { STAFF_SCHOOL } from "@/test/staff";
 
-import { saveSchoolSettings, startLogoUpload, type SettingsState } from "./actions";
+import { saveCertificateTemplate, saveSchoolSettings, startLogoUpload, type SettingsState } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 // Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
@@ -94,5 +94,22 @@ describe("startLogoUpload", () => {
     onApi(UPLOAD_ROUTE, problem(status));
 
     expect(await startLogoUpload({ contentType: "image/gif", sizeBytes: 2048 })).toEqual({ status: "rejected" });
+  });
+});
+
+describe("saveCertificateTemplate", () => {
+  const TEMPLATE_ROUTE = "PUT /certificates/template";
+
+  it("saves the trimmed signer, with a blank title as null", async () => {
+    onApi(TEMPLATE_ROUTE, Response.json({ template: { signerName: "Dara Kim", signerTitle: null } }));
+
+    expect(await saveCertificateTemplate({ status: "idle" }, form({ signerName: " Dara Kim ", signerTitle: "  " }))).toEqual({ status: "saved" });
+    expect(await requestTo(TEMPLATE_ROUTE)?.json()).toEqual({ signerName: "Dara Kim", signerTitle: null });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("rejects a signer name over the limit without calling the API", async () => {
+    expect(await saveCertificateTemplate({ status: "idle" }, form({ signerName: "x".repeat(81), signerTitle: "" }))).toEqual({ status: "invalid" });
+    expect(requestTo(TEMPLATE_ROUTE)).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { LOGO_RULES, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
+import { DEFAULT_BRAND_COLOR, LOGO_RULES, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
 import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
@@ -8,7 +8,6 @@ import type * as React from "react";
 
 import type { LogoUploadStart, SettingsField, SettingsState } from "@/app/[locale]/dashboard/settings/actions";
 import { Field, INPUT_CLASS } from "@/components/form/field";
-import { DEFAULT_BRAND } from "@/components/shells/brand";
 
 import { BrandPreview } from "./brand-preview";
 
@@ -47,7 +46,7 @@ function isAllowedLogo({ type, size }: { type: string; size: number }) {
 export function SettingsForm({ school, actions }: { school: School; actions: SettingsActions }) {
   const t = useTranslations("Settings");
   const [name, setName] = useState(school.name);
-  const [brand, setBrand] = useState(school.brandColor ?? DEFAULT_BRAND);
+  const [brand, setBrand] = useState(school.brandColor ?? DEFAULT_BRAND_COLOR);
   const [logoUrl, setLogoUrl] = useState(school.logoUrl ?? undefined);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isLogoRejected, setIsLogoRejected] = useState(false);

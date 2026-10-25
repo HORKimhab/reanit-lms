@@ -109,26 +109,27 @@ model School {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  memberships      Membership[]
-  courses          Course[]
-  sections         Section[]
-  lessons          Lesson[]
-  prices           Price[]
-  orders           Order[]
-  orderItems       OrderItem[]
-  enrollments      Enrollment[]
-  lessonProgress   LessonProgress[]
-  dailySales       DailySales[]
-  dailyCompletions DailyCompletions[]
-  outboxEvents     OutboxEvent[]
-  auditEvents      AuditEvent[]
-  coupons          Coupon[]
-  bundles          Bundle[]
-  bundleCourses    BundleCourse[]
-  quizzes          Quiz[]
-  quizAttempts     QuizAttempt[]
-  lessonComments   LessonComment[]
-  certificates     Certificate[]
+  memberships         Membership[]
+  courses             Course[]
+  sections            Section[]
+  lessons             Lesson[]
+  prices              Price[]
+  orders              Order[]
+  orderItems          OrderItem[]
+  enrollments         Enrollment[]
+  lessonProgress      LessonProgress[]
+  dailySales          DailySales[]
+  dailyCompletions    DailyCompletions[]
+  outboxEvents        OutboxEvent[]
+  auditEvents         AuditEvent[]
+  coupons             Coupon[]
+  bundles             Bundle[]
+  bundleCourses       BundleCourse[]
+  quizzes             Quiz[]
+  quizAttempts        QuizAttempt[]
+  lessonComments      LessonComment[]
+  certificates        Certificate[]
+  certificateTemplate CertificateTemplate?
 
   @@map("schools")
 }
@@ -553,4 +554,16 @@ model Certificate {
 
   @@index([schoolId])
   @@map("certificates")
+}
+
+/// Who signs a school's certificates (WEB-22); one row per school once staff save it. Certificates issued after a change print it.
+model CertificateTemplate {
+  schoolId    String   @id @map("school_id") @db.Uuid
+  signerName  String?  @map("signer_name")
+  signerTitle String?  @map("signer_title")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("certificate_templates")
 }

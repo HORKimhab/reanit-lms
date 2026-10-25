@@ -85,6 +85,22 @@ describe("certificates", () => {
     expect(verified.body.certificate).toEqual({ id, studentName: "Dara", courseTitle: "Played Course", schoolName: alpha.school.name, issuedAt: issuedAt.toISOString() });
     await beta.agent.get(`/schools/by-subdomain/${beta.school.subdomain}/certificates/${id}`).expect(404);
     await student.get(`${base}/certificates/${randomUUID()}`).expect(404);
+
+    await student.get(`${base}/learn/${course.slug}/certificate`).expect(404);
+    await createCertificateStore(db, alpha.school.id).setPdfKey(id, `schools/${alpha.school.id}/certificates/${id}.pdf`);
+    const download = await student.get(`${base}/learn/${course.slug}/certificate`).expect(200);
+    expect(download.body.url).toBe(`https://storage.test/schools/${alpha.school.id}/certificates/${id}.pdf?signed`);
+    await alpha.agent.get(`${base}/learn/${course.slug}/certificate`).expect(404);
+  });
+
+  it("keeps each school's certificate template for its own staff", async () => {
+    const template = { signerName: "Dara Kim", signerTitle: "Founder" };
+    const beta = await openSchool(e2e().app, uniqueName("template-beta"));
+
+    await alpha.agent.put("/certificates/template").send(template).expect(200);
+
+    expect((await alpha.agent.get("/certificates/template").expect(200)).body.template).toEqual(template);
+    expect((await beta.agent.get("/certificates/template").expect(200)).body.template).toEqual({ signerName: null, signerTitle: null });
   });
 });
 

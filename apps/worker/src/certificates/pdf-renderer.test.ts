@@ -10,6 +10,8 @@ const DOCUMENT: CertificateDocument = {
   issuedAt: new Date("2026-10-19T08:00:00Z"),
   locale: "km",
   verifyUrl: "https://reanit.com/km/s/angkor/certificates/6a1d3c2b-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+  accentColor: "#0f766e",
+  signer: { signerName: "ដារ៉ា គីម", signerTitle: "Founder" },
 };
 
 /**

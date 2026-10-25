@@ -78,7 +78,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-14 Quizzes: questions, attempts, pass mark
 - [x] WEB-21 Quiz builder + quiz in player. Needs API-14.
 - [x] WRK-03 Certificates: PDF on CourseCompleted, public verify URL
-- [ ] WEB-22 Certificate template settings + student download. Needs WRK-03.
+- [x] WEB-22 Certificate template settings + student download. Needs WRK-03.
 - [x] API-15 Drip content: unlock by days after enrollment or by date
 - [x] WEB-23 Drip settings in builder + locked lessons in player. Needs API-15.
 - [ ] API-16 Custom domains: DNS ownership verification, TLS

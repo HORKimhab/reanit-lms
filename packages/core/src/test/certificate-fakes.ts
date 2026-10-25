@@ -1,5 +1,13 @@
 // In-memory fakes of the certificate ports, for unit tests of issuing and verifying certificates.
-import type { Certificate, CertificateDocument, CertificateRenderer, CertificateStore, CourseCompletion, IssuedCertificate } from "../learning/ports";
+import type {
+  Certificate,
+  CertificateDocument,
+  CertificateRenderer,
+  CertificateStore,
+  CertificateTemplate,
+  CourseCompletion,
+  IssuedCertificate,
+} from "../learning/ports";
 
 /** In-memory `CertificateStore` for one school, whose certificates tests can inspect. */
 export class FakeCertificateStore implements CertificateStore {
@@ -7,8 +15,11 @@ export class FakeCertificateStore implements CertificateStore {
   readonly completions = new Map<string, CourseCompletion>();
   /** Issued certificates by enrollment id. */
   readonly certificates = new Map<string, IssuedCertificate>();
+  /** Enrollment ids by `<user id>:<course slug>`, for students' downloads. */
+  readonly enrollments = new Map<string, string>();
   /** The school's name, as verified certificates show it. */
   schoolName = "Angkor Academy";
+  template: CertificateTemplate = { signerName: null, signerTitle: null };
 
   /**
    * Finds a completed enrollment.
@@ -61,6 +72,36 @@ export class FakeCertificateStore implements CertificateStore {
     if (!certificate) return null;
     const { id, studentName, courseTitle, issuedAt } = certificate;
     return { id, studentName, courseTitle, schoolName: this.schoolName, issuedAt };
+  }
+
+  /**
+   * Finds the PDF of a student's certificate for a course.
+   *
+   * @param userId The student.
+   * @param courseSlug The course.
+   * @returns The PDF's key, or null.
+   */
+  async findPdfKey(userId: string, courseSlug: string) {
+    const enrollmentId = this.enrollments.get(`${userId}:${courseSlug}`);
+    return (enrollmentId && this.certificates.get(enrollmentId)?.pdfKey) || null;
+  }
+
+  /**
+   * Reads the school's template.
+   *
+   * @returns The template.
+   */
+  async findTemplate() {
+    return this.template;
+  }
+
+  /**
+   * Replaces the school's template.
+   *
+   * @param template The new template.
+   */
+  async saveTemplate(template: CertificateTemplate) {
+    this.template = template;
   }
 }
 

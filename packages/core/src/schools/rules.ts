@@ -47,6 +47,9 @@ export const createSchoolSchema = z.object({
 /** Parsed create-school input. */
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
 
+/** Brand color of a school whose owner has not picked one: its site and its certificates use it. */
+export const DEFAULT_BRAND_COLOR = "#008b52";
+
 /** A brand color as the settings form sends it: `#rrggbb`, stored lower-cased. */
 const BRAND_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
 const MIB = 1024 * 1024;

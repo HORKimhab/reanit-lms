@@ -1,6 +1,6 @@
 import { summarizeProgress, type PlayerLesson } from "@reanit/core/learning";
 import { Progress } from "@reanit/ui/components/progress";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, Award, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type * as React from "react";
 
@@ -9,9 +9,12 @@ import { Link } from "@/i18n/navigation";
 
 import { LessonList } from "./lesson-list";
 
+/** Progress of a course whose every lesson is completed, which earns its certificate. */
+const COMPLETE_PERCENT = 100;
+
 /**
- * Full-screen player shell: top bar with progress, lesson content, and the course outline
- * (sidebar on desktop, collapsible on mobile).
+ * Full-screen player shell: top bar with progress (and the certificate once the course is complete),
+ * lesson content, and the course outline (sidebar on desktop, collapsible on mobile).
  *
  * @param props - Component props.
  * @param props.school - The school's subdomain.
@@ -51,6 +54,17 @@ export function PlayerShell({
         </Link>
         <span className="truncate font-medium">{title}</span>
         <div className="ml-auto flex items-center gap-3">
+          {percent === COMPLETE_PERCENT ? (
+            // Not prefetched: opening it signs a short-lived download link.
+            <Link
+              href={`${base}/certificate`}
+              prefetch={false}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-accent"
+            >
+              <Award aria-hidden className="size-4" />
+              {t("certificate")}
+            </Link>
+          ) : null}
           <div className="hidden w-40 flex-col gap-1 sm:flex">
             <Progress value={percent} aria-label={t("progressLabel")} />
             <span className="text-xs text-muted-foreground">{progressText}</span>

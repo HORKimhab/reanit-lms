@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = [
   "comment.reply",
   "comment.moderate",
   "school.settings.update",
+  "certificate.template.update",
 ] as const;
 
 /** A recorded staff action. */

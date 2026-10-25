@@ -1,12 +1,14 @@
 import { Module } from "@nestjs/common";
 import { createCertificateService, createCommentModeration, createLearningService } from "@reanit/core/learning";
+import type { ObjectStorage } from "@reanit/core/media";
 import { createCatalogStore, createCertificateStore, createCommentStore, createLearningStore, createQuizStore, type DbClient } from "@reanit/db";
-import { DB_CLIENT } from "@reanit/nest";
+import { DB_CLIENT, OBJECT_STORAGE } from "@reanit/nest";
 
 import { systemClock } from "../context/clock";
 import { MediaModule } from "../media/media.module";
 import { MEDIA_FOR_SCHOOL, type MediaForSchool } from "../media/media.tokens";
 import { SchoolsModule } from "../schools/schools.module";
+import { CertificateTemplateController } from "./certificate-template.controller";
 import { CertificatesController } from "./certificates.controller";
 import { CommentsController } from "./comments.controller";
 import { LearningController } from "./learning.controller";
@@ -50,23 +52,24 @@ function provideCommentModerationForSchool(db: DbClient): CommentModerationForSc
 }
 
 /**
- * Wires per-school certificate lookups to Postgres (tenant client).
+ * Wires per-school certificates to Postgres (tenant client) and object storage, which holds their PDFs.
  *
  * @param db The shared database client.
- * @returns A factory of certificate lookups limited to one school.
+ * @param storage Signs students' downloads.
+ * @returns A factory of certificate services limited to one school.
  */
-function provideCertificatesForSchool(db: DbClient): CertificatesForSchool {
-  return (schoolId) => createCertificateService(createCertificateStore(db, schoolId));
+function provideCertificatesForSchool(db: DbClient, storage: ObjectStorage): CertificatesForSchool {
+  return (schoolId) => createCertificateService({ store: createCertificateStore(db, schoolId), storage, clock: systemClock });
 }
 
-/** The student player (course access, lesson files, progress, quizzes, comments), the quiz builder, comment moderation and certificate checks. */
+/** The student player (course access, lesson files, progress, quizzes, comments, certificates), the quiz builder, comment moderation, certificate checks and templates. */
 @Module({
   imports: [SchoolsModule, MediaModule],
-  controllers: [LearningController, QuizzesController, CommentsController, CertificatesController],
+  controllers: [LearningController, QuizzesController, CommentsController, CertificatesController, CertificateTemplateController],
   providers: [
     { provide: LEARNING_FOR_SCHOOL, inject: [DB_CLIENT, MEDIA_FOR_SCHOOL], useFactory: provideLearningForSchool },
     { provide: COMMENT_MODERATION_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideCommentModerationForSchool },
-    { provide: CERTIFICATES_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideCertificatesForSchool },
+    { provide: CERTIFICATES_FOR_SCHOOL, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideCertificatesForSchool },
   ],
 })
 export class LearningModule {}

@@ -1,5 +1,6 @@
 "use server";
 
+import { certificateTemplateSchema } from "@reanit/core/learning";
 import { schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
 import { revalidatePath } from "next/cache";
 
@@ -20,6 +21,9 @@ const FIELD_OF: Record<keyof SchoolSettingsInput, SettingsField> = { name: "name
 
 /** API answers to a logo upload request that mean the image is not acceptable: wrong type (415) or too big (413). */
 const LOGO_REFUSALS = new Set([415, 413]);
+
+/** The settings page, refreshed after a certificate template save so the form shows what was saved. */
+const SETTINGS_PATH = "/dashboard/settings";
 
 /** API answers to a settings save that blame the logo: not this school's key (400) or not uploaded yet (409). */
 const LOGO_PROBLEMS = new Set(["urn:reanit:problem:invalid-media-key", "urn:reanit:problem:media-not-uploaded"]);
@@ -69,4 +73,24 @@ export async function saveSchoolSettings(_previous: SettingsState, formData: For
   // The school's name, color and logo show in every layout, so refresh them all.
   revalidatePath("/", "layout");
   return { status: "saved", invalidFields: [] };
+}
+
+/** Result of the last certificate template save, shown by its form. */
+export type CertificateTemplateState = { status: "idle" | "saved" | "invalid" };
+
+/**
+ * Saves who signs the school's certificates; blank fields leave the signature off.
+ *
+ * @param _previous - The form's last state; unused, but `useActionState` passes it first.
+ * @param formData - The submitted form; untrusted until parsed.
+ * @returns `saved`, or `invalid` when a field is too long.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function saveCertificateTemplate(_previous: CertificateTemplateState, formData: FormData): Promise<CertificateTemplateState> {
+  const parsed = certificateTemplateSchema.safeParse({ signerName: formData.get("signerName"), signerTitle: formData.get("signerTitle") });
+  if (!parsed.success) return { status: "invalid" };
+  const { response } = await (await getApi()).PUT("/certificates/template", { body: parsed.data });
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+  return { status: "saved" };
 }

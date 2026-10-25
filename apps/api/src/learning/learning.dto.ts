@@ -1,5 +1,6 @@
 import {
   certificateIdSchema,
+  certificateTemplateSchema,
   commentInboxQuerySchema,
   commentSchema,
   moderationSchema,
@@ -151,4 +152,12 @@ export class CertificateResponse extends createZodDto(
   z.object({
     certificate: z.object({ id: z.uuid(), studentName: z.string(), courseTitle: z.string(), schoolName: z.string(), issuedAt: z.iso.datetime() }),
   }),
+) {}
+
+/** `PUT /certificates/template` body: who signs the school's certificates; blank fields print no signature. */
+export class CertificateTemplateBody extends createZodDto(certificateTemplateSchema) {}
+
+/** Who signs the school's certificates. */
+export class CertificateTemplateResponse extends createZodDto(
+  z.object({ template: z.object({ signerName: z.string().nullable(), signerTitle: z.string().nullable() }) }),
 ) {}

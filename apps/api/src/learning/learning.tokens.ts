@@ -15,5 +15,5 @@ export type CommentModerationForSchool = (schoolId: string) => CommentModeration
 /** Injection token for `CertificatesForSchool`. */
 export const CERTIFICATES_FOR_SCHOOL = Symbol("CERTIFICATES_FOR_SCHOOL");
 
-/** Builds one school's certificate lookup on the tenant client. */
+/** Builds one school's certificate service on the tenant client. */
 export type CertificatesForSchool = (schoolId: string) => CertificateService;

@@ -60,7 +60,7 @@ describe("certificate store", () => {
       student: { name: null, email: "certificates-student@example.com" },
       courseTitle: "Certified",
       completedAt: COMPLETED_AT,
-      school: { name: "certificates-alpha", subdomain: "certificates-alpha" },
+      school: { name: "certificates-alpha", subdomain: "certificates-alpha", brandColor: null },
       locale: "en",
     });
   });
@@ -114,5 +114,30 @@ describe("certificate store", () => {
     await createCertificateStore(db, betaId).setPdfKey(id, "schools/beta/certificates/stolen.pdf");
 
     expect((await issueCertificate(certified.enrollmentId)).pdfKey).toBeNull();
+  });
+
+  it("finds a student's certificate PDF by course once it is stored, never another student's or school's", async () => {
+    const certified = await completeTestCourse("certificates-download@example.com");
+    const { id } = await issueCertificate(certified.enrollmentId);
+    const store = createCertificateStore(db, alphaId);
+    expect(await store.findPdfKey(certified.studentId, "certified")).toBeNull();
+
+    await store.setPdfKey(id, `schools/${alphaId}/certificates/${id}.pdf`);
+
+    expect(await store.findPdfKey(certified.studentId, "certified")).toBe(`schools/${alphaId}/certificates/${id}.pdf`);
+    expect(await store.findPdfKey(certified.studentId, "other-course")).toBeNull();
+    expect(await store.findPdfKey(randomUUID(), "certified")).toBeNull();
+    expect(await createCertificateStore(db, betaId).findPdfKey(certified.studentId, "certified")).toBeNull();
+  });
+
+  it("keeps a blank template until staff save one, and each school's apart", async () => {
+    const alpha = createCertificateStore(db, alphaId);
+    expect(await alpha.findTemplate()).toEqual({ signerName: null, signerTitle: null });
+
+    await alpha.saveTemplate({ signerName: "Dara Kim", signerTitle: "Founder" });
+    await alpha.saveTemplate({ signerName: "Dara Kim", signerTitle: null });
+
+    expect(await alpha.findTemplate()).toEqual({ signerName: "Dara Kim", signerTitle: null });
+    expect(await createCertificateStore(db, betaId).findTemplate()).toEqual({ signerName: null, signerTitle: null });
   });
 });

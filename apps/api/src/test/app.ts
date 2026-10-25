@@ -87,7 +87,7 @@ export type FakeClients = {
   /** Stands in for every school's comment moderation; `moderationFor` records which school was asked for. */
   moderation: Record<keyof CommentModeration, Mock>;
   moderationFor: Mock<(schoolId: string) => CommentModeration>;
-  /** Stands in for every school's certificate lookup; `certificatesFor` records which school was asked for. */
+  /** Stands in for every school's certificate service; `certificatesFor` records which school was asked for. */
   certificates: Record<keyof CertificateService, Mock>;
   certificatesFor: Mock<(schoolId: string) => CertificateService>;
   /** Stands in for every school's stats service; `analyticsFor` records which school was asked for. */
@@ -162,7 +162,7 @@ const LEARNING_METHODS = [
   "deleteComment",
 ] as const satisfies readonly (keyof LearningService)[];
 const MODERATION_METHODS = ["listInbox", "listLessonComments", "reply", "setHidden"] as const satisfies readonly (keyof CommentModeration)[];
-const CERTIFICATE_METHODS = ["verifyCertificate"] as const satisfies readonly (keyof CertificateService)[];
+const CERTIFICATE_METHODS = ["verifyCertificate", "getDownloadUrl", "getTemplate", "saveTemplate"] as const satisfies readonly (keyof CertificateService)[];
 const ANALYTICS_METHODS = ["getCourseStats", "getSalesReport"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
 

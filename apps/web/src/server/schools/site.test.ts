@@ -1,10 +1,9 @@
 // @vitest-environment node
+import { DEFAULT_BRAND_COLOR } from "@reanit/core/schools";
 import { describe, expect, it, vi } from "vitest";
 
 import { onApi, problem } from "@/test/api";
 import { NotFoundError } from "@/test/navigation";
-
-import { DEFAULT_BRAND } from "@/components/shells/brand";
 
 import { getSiteCourse, getSiteSchool, listSiteCourses } from "./site";
 
@@ -21,7 +20,7 @@ describe("getSiteSchool", () => {
       slug: "angkor",
       name: "Angkor Academy",
       tagline: "",
-      brand: DEFAULT_BRAND,
+      brand: DEFAULT_BRAND_COLOR,
       ownerName: "Dara Sok",
     });
   });

@@ -3,7 +3,7 @@ import { SchoolNotFoundError } from "@reanit/core/schools";
 import { describe, expect, it } from "vitest";
 
 import { type FakeClients, useTestApp } from "../test/app";
-import { TEST_SCHOOL } from "../test/session";
+import { signInAs, TEST_SCHOOL, TEST_USER } from "../test/session";
 
 const CERTIFICATE_ID = "6a1d3c2b-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const URL = `/schools/by-subdomain/${TEST_SCHOOL.subdomain}/certificates/${CERTIFICATE_ID}`;
@@ -62,5 +62,37 @@ describe("certificate verification", () => {
 
     expect(response.statusCode).toBe(404);
     expect(testApp.clients.certificatesFor).not.toHaveBeenCalled();
+  });
+});
+
+describe("certificate download", () => {
+  const DOWNLOAD_URL = `/schools/by-subdomain/${TEST_SCHOOL.subdomain}/learn/brand/certificate`;
+
+  it("signs a link to the signed-in student's certificate for the course", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.certificates.getDownloadUrl.mockResolvedValue({ url: "https://storage.test/cert.pdf?signed", expiresAt: new Date("2026-10-25T08:05:00Z") });
+
+    const response = await testApp.app.inject({ method: "GET", url: DOWNLOAD_URL, headers });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ url: "https://storage.test/cert.pdf?signed", expiresAt: "2026-10-25T08:05:00.000Z" });
+    expect(testApp.clients.certificatesFor).toHaveBeenCalledWith(TEST_SCHOOL.id);
+    expect(testApp.clients.certificates.getDownloadUrl).toHaveBeenCalledWith(TEST_USER.id, "brand");
+  });
+
+  it("answers 404 while the student has no certificate PDF for the course", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.certificates.getDownloadUrl.mockRejectedValue(new CertificateNotFoundError());
+
+    const response = await testApp.app.inject({ method: "GET", url: DOWNLOAD_URL, headers });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it("answers 401 to signed-out visitors", async () => {
+    const response = await testApp.app.inject({ method: "GET", url: DOWNLOAD_URL });
+
+    expect(response.statusCode).toBe(401);
+    expect(testApp.clients.certificates.getDownloadUrl).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ export { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from ".
 export type { MembershipRole, School, SchoolChanges, SchoolRecord, SchoolStore, StudentStore, StudentSummary } from "./ports";
 export {
   createSchoolSchema,
+  DEFAULT_BRAND_COLOR,
   LOGO_RULES,
   SCHOOL_NAME_MAX_LENGTH,
   schoolSettingsSchema,

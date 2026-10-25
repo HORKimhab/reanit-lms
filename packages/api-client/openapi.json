@@ -2121,6 +2121,99 @@
         ]
       }
     },
+    "/schools/by-subdomain/{subdomain}/learn/{slug}/certificate": {
+      "get": {
+        "operationId": "CertificatesController_download",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Certificates"
+        ]
+      }
+    },
+    "/certificates/template": {
+      "get": {
+        "operationId": "CertificateTemplateController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CertificateTemplate"
+        ]
+      },
+      "put": {
+        "operationId": "CertificateTemplateController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificateTemplateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CertificateTemplate"
+        ]
+      }
+    },
     "/stats/courses": {
       "get": {
         "operationId": "StatsController_courses",
@@ -4856,6 +4949,50 @@
           "certificate"
         ]
       },
+      "CertificateTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "object",
+            "properties": {
+              "signerName": {
+                "nullable": true,
+                "type": "string"
+              },
+              "signerTitle": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "signerName",
+              "signerTitle"
+            ]
+          }
+        },
+        "required": [
+          "template"
+        ]
+      },
+      "CertificateTemplateBody": {
+        "type": "object",
+        "properties": {
+          "signerName": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 80
+          },
+          "signerTitle": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "signerName",
+          "signerTitle"
+        ]
+      },
       "CourseStatsResponse": {
         "type": "object",
         "properties": {
@@ -5211,7 +5348,8 @@
                     "lesson.quiz.save",
                     "comment.reply",
                     "comment.moderate",
-                    "school.settings.update"
+                    "school.settings.update",
+                    "certificate.template.update"
                   ]
                 },
                 "targetId": {

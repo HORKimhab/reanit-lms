@@ -13,7 +13,10 @@ const MARGIN = 36;
 const FRAME_WIDTH = 2;
 const INK = "#1f2937";
 const MUTED = "#6b7280";
-const ACCENT = "#2563eb";
+/** Width of the line the signer signs on, in points. */
+const SIGNATURE_LINE_WIDTH = 180;
+/** Top of the signature block, in points from the top: below the issue date, above the verify link. */
+const SIGNATURE_TOP = 400;
 /** Font sizes, in points. */
 const SIZE = { title: 34, name: 30, course: 22, body: 14, footer: 10 } as const;
 /** Space above a line, in points: before a new part of the text, between a label and its value, and before none. */
@@ -61,8 +64,25 @@ function centred(
 }
 
 /**
- * Draws a certificate on one A4 landscape page: the title, the student's name, the course, the school and
- * date, and a clickable verify link, in the student's language.
+ * Draws the school's signature block: a line to sign on, the signer's name and their title, centred.
+ *
+ * @param pdf The document.
+ * @param signer Who signs; nothing is drawn when both fields are blank.
+ * @param signer.signerName Their name.
+ * @param signer.signerTitle Their title.
+ */
+function signature(pdf: PDFKit.PDFDocument, { signerName, signerTitle }: CertificateDocument["signer"]) {
+  if (!signerName && !signerTitle) return;
+  const lineStart = (PAGE.width - SIGNATURE_LINE_WIDTH) / 2;
+  pdf.lineWidth(1).strokeColor(MUTED).moveTo(lineStart, SIGNATURE_TOP).lineTo(lineStart + SIGNATURE_LINE_WIDTH, SIGNATURE_TOP).stroke();
+  pdf.y = SIGNATURE_TOP;
+  if (signerName) centred(pdf, signerName, { font: BOLD, size: SIZE.body, color: INK, gap: GAP.value });
+  if (signerTitle) centred(pdf, signerTitle, { font: REGULAR, size: SIZE.footer, color: MUTED, gap: GAP.none });
+}
+
+/**
+ * Draws a certificate on one A4 landscape page in the school's color: the title, the student's name, the
+ * course, the school and date, the signature block, and a clickable verify link, in the student's language.
  *
  * @param document What the certificate says.
  * @returns The PDF's bytes.
@@ -78,22 +98,24 @@ async function renderCertificate(document: CertificateDocument): Promise<Uint8Ar
   pdf.registerFont(REGULAR, regularFont);
   pdf.registerFont(BOLD, boldFont);
 
+  const accent = document.accentColor;
   pdf
     .lineWidth(FRAME_WIDTH)
-    .strokeColor(ACCENT)
+    .strokeColor(accent)
     .rect(MARGIN, MARGIN, PAGE.width - MARGIN * 2, PAGE.height - MARGIN * 2)
     .stroke();
   pdf.y = MARGIN * 3;
-  centred(pdf, text.title, { font: BOLD, size: SIZE.title, color: ACCENT, gap: GAP.none });
+  centred(pdf, text.title, { font: BOLD, size: SIZE.title, color: accent, gap: GAP.none });
   centred(pdf, text.presentedTo, { font: REGULAR, size: SIZE.body, color: MUTED, gap: GAP.section });
   centred(pdf, document.studentName, { font: BOLD, size: SIZE.name, color: INK, gap: GAP.value });
   centred(pdf, text.completed, { font: REGULAR, size: SIZE.body, color: MUTED, gap: GAP.label });
   centred(pdf, document.courseTitle, { font: BOLD, size: SIZE.course, color: INK, gap: GAP.value });
   centred(pdf, text.issued, { font: REGULAR, size: SIZE.body, color: INK, gap: GAP.section });
+  signature(pdf, document.signer);
 
   pdf.y = PAGE.height - MARGIN * 3;
   centred(pdf, text.verify, { font: REGULAR, size: SIZE.footer, color: MUTED, gap: GAP.none });
-  centred(pdf, document.verifyUrl, { font: REGULAR, size: SIZE.footer, color: ACCENT, gap: GAP.none, link: document.verifyUrl });
+  centred(pdf, document.verifyUrl, { font: REGULAR, size: SIZE.footer, color: accent, gap: GAP.none, link: document.verifyUrl });
   return finish(pdf);
 }
 

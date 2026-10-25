@@ -8,6 +8,12 @@ type CertificateLocale = "en" | "km";
 /** Language of a student enrolled without an order. */
 const DEFAULT_LOCALE: CertificateLocale = "en";
 
+/** A template's columns. */
+const TEMPLATE_FIELDS = { signerName: true, signerTitle: true } satisfies Prisma.CertificateTemplateSelect;
+
+/** The template of a school whose staff never saved one. */
+const BLANK_TEMPLATE = { signerName: null, signerTitle: null };
+
 /** An issued certificate's columns, as the worker reads them back. */
 const ISSUED_FIELDS = { id: true, studentName: true, courseTitle: true, issuedAt: true, pdfKey: true } satisfies Prisma.CertificateSelect;
 
@@ -27,7 +33,7 @@ export function createCertificateStore(db: DbClient, schoolId: string) {
 
   return {
     /**
-     * Loads a completed enrollment with its student, course and school, in the language the student bought it in.
+     * Loads a completed enrollment with its student, course and school (with its brand color), in the language the student bought it in.
      *
      * @param enrollmentId The enrollment.
      * @returns The completion, or null when the school has no such enrollment or it is not completed.
@@ -39,7 +45,7 @@ export function createCertificateStore(db: DbClient, schoolId: string) {
           completedAt: true,
           user: { select: { name: true, email: true } },
           course: { select: { title: true } },
-          school: { select: { name: true, subdomain: true } },
+          school: { select: { name: true, subdomain: true, brandColor: true } },
           order: { select: { locale: true } },
         },
       });
@@ -96,6 +102,41 @@ export function createCertificateStore(db: DbClient, schoolId: string) {
       if (!certificate) return null;
       const { school, ...details } = certificate;
       return { ...details, schoolName: school.name };
+    },
+
+    /**
+     * Finds the PDF of a student's certificate for a course.
+     *
+     * @param userId The student.
+     * @param courseSlug The course's slug.
+     * @returns The PDF's storage key, or null when the student has no certificate for it yet or its PDF is not stored.
+     */
+    async findPdfKey(userId: string, courseSlug: string) {
+      const certificate = await tenant.certificate.findFirst({
+        where: { enrollment: { userId, course: { slug: courseSlug } } },
+        select: { pdfKey: true },
+      });
+      return certificate?.pdfKey ?? null;
+    },
+
+    /**
+     * Reads who signs the school's certificates.
+     *
+     * @returns The template; blank when staff never saved one.
+     */
+    async findTemplate() {
+      return (await tenant.certificateTemplate.findFirst({ select: TEMPLATE_FIELDS })) ?? BLANK_TEMPLATE;
+    },
+
+    /**
+     * Saves who signs the school's certificates.
+     *
+     * @param template The template.
+     * @param template.signerName Who signs; null for no signature block.
+     * @param template.signerTitle Their title; null to leave it off.
+     */
+    async saveTemplate(template: { signerName: string | null; signerTitle: string | null }) {
+      await tenant.certificateTemplate.upsert({ where: { schoolId }, create: { schoolId, ...template }, update: template });
     },
   };
 }

@@ -85,7 +85,8 @@ export interface CourseCompletion {
   student: { name: string | null; email: string };
   courseTitle: string;
   completedAt: Date;
-  school: { name: string; subdomain: string };
+  /** The school, with the `#rrggbb` brand color its certificates are drawn in (null for the default). */
+  school: { name: string; subdomain: string; brandColor: string | null };
   /** The language the student bought the course in; English when they were enrolled without an order. */
   locale: EmailLocale;
 }
@@ -109,6 +110,12 @@ export interface Certificate {
   issuedAt: Date;
 }
 
+/** Who signs a school's certificates; null fields are left off the PDF. */
+export interface CertificateTemplate {
+  signerName: string | null;
+  signerTitle: string | null;
+}
+
 /** One school's course certificates. `@reanit/db` implements it with `createCertificateStore`. */
 export interface CertificateStore {
   /** Null when the school has no enrollment with that id, or it is not completed. */
@@ -118,6 +125,11 @@ export interface CertificateStore {
   setPdfKey(certificateId: string, pdfKey: string): Promise<void>;
   /** Null when the school has no certificate with that id. */
   findCertificate(certificateId: string): Promise<Certificate | null>;
+  /** Storage key of the student's certificate PDF for the course; null when there is none yet. */
+  findPdfKey(userId: string, courseSlug: string): Promise<string | null>;
+  /** The school's template; blank when staff never saved one. */
+  findTemplate(): Promise<CertificateTemplate>;
+  saveTemplate(template: CertificateTemplate): Promise<void>;
 }
 
 /** What a certificate PDF shows. */
@@ -130,6 +142,9 @@ export interface CertificateDocument {
   locale: EmailLocale;
   /** Public page that confirms the certificate is real. */
   verifyUrl: string;
+  /** The school's `#rrggbb` brand color, or the platform default. */
+  accentColor: string;
+  signer: CertificateTemplate;
 }
 
 /** Draws certificate PDFs. The worker implements it with PDFKit; tests use a fake. */

@@ -201,6 +201,17 @@
     "previewCourse": "Your course title",
     "staffOnly": "Only the school's owner and admins can change its settings."
   },
+  "CertificateTemplate": {
+    "title": "Certificates",
+    "intro": "Students get a certificate when they complete a course, drawn in your brand color. Add who signs it; leave both fields blank for no signature.",
+    "signerName": "Signed by",
+    "signerTitle": "Signer's title",
+    "signerTitleHint": "For example: Founder, Lead instructor.",
+    "save": "Save certificate",
+    "saving": "Saving…",
+    "saved": "Certificate saved. Certificates issued from now on use it.",
+    "tooLong": "Keep each line to {max} characters or fewer."
+  },
   "Coupons": {
     "newTitle": "New coupon",
     "code": "Code",
@@ -303,7 +314,10 @@
     "emptyCourseText": "This course has no lessons yet. Your access is saved, so come back once the instructor adds them.",
     "opensOn": "Opens {date}",
     "lockedTitle": "This lesson opens on {date}.",
-    "lockedText": "It is released on a schedule. Come back then to continue."
+    "lockedText": "It is released on a schedule. Come back then to continue.",
+    "certificate": "Certificate",
+    "certificatePendingTitle": "Your certificate is on its way",
+    "certificatePendingText": "We're preparing your certificate. Check back in a minute."
   },
   "Quiz": {
     "edit": "Edit quiz for {title}",

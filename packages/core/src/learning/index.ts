@@ -1,7 +1,9 @@
 export {
   certificateIdSchema,
+  certificateTemplateSchema,
   createCertificateIssuer,
   createCertificateService,
+  SIGNER_MAX_LENGTH,
   type CertificateIssuer,
   type CertificateService,
 } from "./certificates";
@@ -37,6 +39,7 @@ export type {
   CertificateDocument,
   CertificateRenderer,
   CertificateStore,
+  CertificateTemplate,
   CommentStore,
   Enrollment,
   LearningStore,
