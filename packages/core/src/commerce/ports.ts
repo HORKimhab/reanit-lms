@@ -1,6 +1,6 @@
 import type { CourseStatus } from "../catalog";
 import type { EmailLocale } from "../notifications/rules";
-import type { CouponInput, Currency, PaymentMethod, PriceInput, UpdateBundleInput } from "./rules";
+import type { CouponInput, Currency, ORDER_STATUSES, PaymentMethod, PriceInput, UpdateBundleInput } from "./rules";
 
 /** A course's current price. */
 export interface Price {
@@ -56,7 +56,7 @@ export interface Discount {
 }
 
 /** Where an order is. */
-export type OrderStatus = "pending" | "paid" | "failed" | "refunded";
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 /** An order as its buyer sees it. */
 export interface OrderSummary {
@@ -167,4 +167,47 @@ export interface PaymentGateway {
    * refund API (KHQR, PayWay) leave it out, and staff refund by hand.
    */
   refund?(providerRef: string): Promise<void>;
+}
+
+/** An order with what it sold and to whom, as order history and receipts show it. */
+export interface OrderDetail {
+  id: string;
+  status: OrderStatus;
+  method: PaymentMethod;
+  /** What the order charged, in integer minor units. */
+  total: { amount: number; currency: Currency };
+  /** Each course with its share of the total. */
+  items: { courseId: string; title: string; amount: number; currency: Currency }[];
+  /** The bundle bought, or null for a single course. */
+  bundleTitle: string | null;
+  /** The coupon used, or null. */
+  couponCode: string | null;
+  buyer: { id: string; name: string | null; email: string };
+  createdAt: Date;
+  paidAt: Date | null;
+  refundedAt: Date | null;
+  /** Staff paid the student back themselves (KHQR, PayWay). */
+  isRefundedByHand: boolean;
+}
+
+/** Which of a school's orders to list; every field narrows the list. */
+export interface OrderFilter {
+  /** Only this buyer's orders. */
+  userId?: string;
+  status?: OrderStatus;
+  /** Orders that sold this course, alone or in a bundle. */
+  courseId?: string;
+  currency?: Currency;
+  /** Orders placed at or after this moment. */
+  placedFrom?: Date;
+  /** Orders placed before this moment. */
+  placedBefore?: Date;
+}
+
+/** One school's orders, for order history. `@reanit/db` implements it with `createOrderHistoryStore`. */
+export interface OrderHistoryStore {
+  /** One window of the orders matching the filter, newest first, with how many match. */
+  listOrders(filter: OrderFilter, window: { limit: number; offset: number }): Promise<{ orders: OrderDetail[]; total: number }>;
+  /** The order, or null when the school has no such order. */
+  findOrder(orderId: string): Promise<OrderDetail | null>;
 }

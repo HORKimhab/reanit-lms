@@ -4,16 +4,21 @@ import {
   couponSchema,
   createBundleSchema,
   CURRENCIES,
+  myOrdersQuerySchema,
   offerQuerySchema,
+  ORDER_STATUSES,
+  orderListQuerySchema,
   PAYMENT_METHODS,
   priceSchema,
   refundSchema,
   updateBundleSchema,
+  type OrderDetail,
 } from "@reanit/core/commerce";
 import { subdomainSchema } from "@reanit/core/schools";
 import { z } from "zod";
 
 import { courseSchema } from "../catalog/catalog.dto";
+import { pageResponseSchema } from "../http/page-response";
 import { createZodDto } from "../http/zod-dto";
 
 /** A course's or bundle's slug in a path. */
@@ -127,7 +132,7 @@ export class OrderResponse extends createZodDto(
   z.object({
     order: z.object({
       id: z.uuid(),
-      status: z.enum(["pending", "paid", "failed", "refunded"]),
+      status: z.enum(ORDER_STATUSES),
       courseId: z.uuid(),
       amount: z.number().int(),
       currency: z.enum(CURRENCIES),
@@ -135,3 +140,48 @@ export class OrderResponse extends createZodDto(
     }),
   }),
 ) {}
+
+/** `GET /schools/by-subdomain/:subdomain/orders` query: a page of the student's own orders. */
+export class MyOrdersQuery extends createZodDto(myOrdersQuerySchema) {}
+
+/** `GET /orders` query: filters by status, course, currency and days placed, and a page. */
+export class OrderListQuery extends createZodDto(orderListQuerySchema) {}
+
+const money = z.object({ amount: z.number().int(), currency: z.enum(CURRENCIES) });
+
+/** An order with its courses and buyer, as order history and receipts show it. */
+const orderDetailSchema = z.object({
+  id: z.uuid(),
+  status: z.enum(ORDER_STATUSES),
+  method: z.enum(PAYMENT_METHODS),
+  total: money,
+  items: z.array(money.extend({ courseId: z.uuid(), title: z.string() })),
+  bundleTitle: z.string().nullable(),
+  couponCode: z.string().nullable(),
+  buyer: z.object({ id: z.uuid(), name: z.string().nullable(), email: z.string() }),
+  createdAt: z.iso.datetime(),
+  paidAt: z.iso.datetime().nullable(),
+  refundedAt: z.iso.datetime().nullable(),
+  isRefundedByHand: z.boolean(),
+});
+
+/** One page of orders, newest first. */
+export class OrdersResponse extends createZodDto(pageResponseSchema("orders", orderDetailSchema)) {}
+
+/** One order with its courses and buyer. */
+export class OrderDetailResponse extends createZodDto(z.object({ order: orderDetailSchema })) {}
+
+/**
+ * Shapes an order for a response, with its times as ISO strings.
+ *
+ * @param order The order.
+ * @returns The order as the API sends it.
+ */
+export function toOrderDetailResponse(order: OrderDetail): OrderDetailResponse["order"] {
+  return {
+    ...order,
+    createdAt: order.createdAt.toISOString(),
+    paidAt: order.paidAt?.toISOString() ?? null,
+    refundedAt: order.refundedAt?.toISOString() ?? null,
+  };
+}

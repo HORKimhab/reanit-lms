@@ -1,4 +1,4 @@
-import type { CommerceService } from "@reanit/core/commerce";
+import type { CommerceService, OrderHistory } from "@reanit/core/commerce";
 
 /** Injection token for the configured `PaymentGateway`s, in the order checkout offers them. */
 export const PAYMENT_GATEWAYS = Symbol("PAYMENT_GATEWAYS");
@@ -23,3 +23,9 @@ export const PAYMENT_CONFIRMATION = Symbol("PAYMENT_CONFIRMATION");
 
 /** Builds one school's commerce service on the tenant client. */
 export type CommerceForSchool = (schoolId: string) => CommerceService;
+
+/** Injection token for `OrderHistoryForSchool`. */
+export const ORDER_HISTORY_FOR_SCHOOL = Symbol("ORDER_HISTORY_FOR_SCHOOL");
+
+/** Builds one school's order history on the tenant client. */
+export type OrderHistoryForSchool = (schoolId: string) => OrderHistory;

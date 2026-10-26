@@ -13,11 +13,24 @@ export {
   UnknownPaymentError,
 } from "./errors";
 export { moneyFormat, toMinorUnits } from "./money";
+export {
+  createOrderHistory,
+  myOrdersQuerySchema,
+  orderListQuerySchema,
+  ORDERS_PAGE_SIZE,
+  type MyOrdersQuery,
+  type OrderHistory,
+  type OrderListQuery,
+  type OrderPage,
+} from "./orders";
 export type {
   Bundle,
   CommerceStore,
   Coupon,
   Discount,
+  OrderDetail,
+  OrderFilter,
+  OrderHistoryStore,
   OrderLine,
   OrderStatus,
   OrderSummary,
@@ -39,6 +52,7 @@ export {
   MAX_BUNDLE_COURSES,
   MAX_PERCENT_OFF,
   offerQuerySchema,
+  ORDER_STATUSES,
   PAYMENT_METHODS,
   priceSchema,
   refundSchema,

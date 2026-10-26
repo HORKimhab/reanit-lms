@@ -10,6 +10,9 @@ export const CURRENCIES = ["USD", "KHR"] as const;
 /** Ways a student can pay; each has a gateway in apps/api. */
 export const PAYMENT_METHODS = ["stripe", "aba_payway", "bakong_khqr"] as const;
 
+/** Where an order can be: waiting for payment, paid, never paid, or paid and given back. */
+export const ORDER_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
+
 /** Highest price accepted, in minor units: guards against a typo with extra zeros. */
 const MAX_AMOUNT = 100_000_000;
 

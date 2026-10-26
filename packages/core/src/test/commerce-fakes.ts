@@ -5,6 +5,9 @@ import type {
   Coupon,
   CouponInput,
   Currency,
+  OrderDetail,
+  OrderFilter,
+  OrderHistoryStore,
   OrderLine,
   OrderSummary,
   PaymentCheck,
@@ -437,5 +440,36 @@ export class RefundingFakeGateway extends FakeGateway {
   async refund(providerRef: string) {
     if (this.failure) throw this.failure;
     this.refunded.push(providerRef);
+  }
+}
+
+/** `OrderHistoryStore` that answers with `orders` and records the last filter and window it was asked for. */
+export class FakeOrderHistoryStore implements OrderHistoryStore {
+  orders: OrderDetail[] = [];
+  total = 0;
+  lastQuery: { filter: OrderFilter; window: { limit: number; offset: number } } | null = null;
+
+  /**
+   * Records the query and returns the programmed page.
+   *
+   * @param filter Which orders.
+   * @param window The limit and offset.
+   * @param window.limit Most orders returned.
+   * @param window.offset Orders skipped.
+   * @returns `orders` and `total`.
+   */
+  async listOrders(filter: OrderFilter, window: { limit: number; offset: number }) {
+    this.lastQuery = { filter, window };
+    return { orders: this.orders, total: this.total };
+  }
+
+  /**
+   * Finds a programmed order.
+   *
+   * @param orderId The order.
+   * @returns The order, or null.
+   */
+  async findOrder(orderId: string) {
+    return this.orders.find(({ id }) => id === orderId) ?? null;
   }
 }

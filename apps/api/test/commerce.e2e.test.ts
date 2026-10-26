@@ -121,6 +121,28 @@ describe("checkout", () => {
     expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("paid");
   });
 
+  it("lists a buyer's own orders, and the school's orders with filters for its staff", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const { agent: buyer, email } = await signUp(e2e().app, uniqueName("buyer-history"));
+    const { agent: other } = await signUp(e2e().app, uniqueName("buyer-other"));
+    const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe" }).expect(201)).body;
+    await paidWebhook(orderId).expect(200);
+
+    const mine = (await buyer.get(`${base}/orders`).expect(200)).body;
+    expect(mine).toMatchObject({ total: 1, page: 1, orders: [{ id: orderId, status: "paid", total: { amount: 4900, currency: "USD" }, buyer: { email } }] });
+    expect(mine.orders[0].items).toEqual([{ courseId: course.id, title: "Paid Course", amount: 4900, currency: "USD" }]);
+    expect((await other.get(`${base}/orders`).expect(200)).body.total).toBe(0);
+
+    const paid = (await alpha.agent.get(`/orders?status=paid&courseId=${course.id}&currency=USD`).expect(200)).body;
+    expect(paid.orders.map(({ id }: { id: string }) => id)).toContain(orderId);
+    expect((await alpha.agent.get("/orders?status=failed").expect(200)).body.orders.map(({ id }: { id: string }) => id)).not.toContain(orderId);
+    expect((await alpha.agent.get(`/orders/${orderId}`).expect(200)).body.order).toMatchObject({ id: orderId, buyer: { email }, refundedAt: null });
+
+    const rival = await openSchool(e2e().app, uniqueName("shop-history-rival"));
+    await rival.agent.get(`/orders/${orderId}`).expect(404);
+    expect((await rival.agent.get("/orders").expect(200)).body.total).toBe(0);
+  });
+
   it("refuses a method that is not configured", async () => {
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-khqr"));
 

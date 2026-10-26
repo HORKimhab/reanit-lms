@@ -6,7 +6,7 @@ import type { AnalyticsService } from "@reanit/core/analytics";
 import type { AuditLog } from "@reanit/core/audit";
 import type { AccountService, AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
-import type { CommerceService } from "@reanit/core/commerce";
+import type { CommerceService, OrderHistory } from "@reanit/core/commerce";
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { NotificationPreferenceService } from "@reanit/core/notifications";
@@ -20,7 +20,7 @@ import { AppModule } from "../app.module";
 import { AUDIT_FOR_SCHOOL } from "../audit/audit.tokens";
 import { ACCOUNT_SERVICE, AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
-import { COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION } from "../commerce/commerce.tokens";
+import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, PAYMENT_CONFIRMATION } from "../commerce/commerce.tokens";
 import { setupApp } from "../app.setup";
 import { ENV } from "@reanit/nest";
 
@@ -85,6 +85,9 @@ export type FakeClients = {
   /** Stands in for every school's commerce service; `commerceFor` records which school was asked for. */
   commerce: Record<keyof CommerceService, Mock>;
   commerceFor: Mock<(schoolId: string) => CommerceService>;
+  /** Stands in for every school's order history; `historyFor` records which school was asked for. */
+  history: Record<keyof OrderHistory, Mock>;
+  historyFor: Mock<(schoolId: string) => OrderHistory>;
   /** Stands in for the payment confirmation that enrolls. */
   confirmation: { confirm: Mock };
   /** Stands in for every school's learning service; `learningFor` records which school was asked for. */
@@ -167,6 +170,7 @@ const COMMERCE_METHODS = [
   "getOrder",
   "refundOrder",
 ] as const satisfies readonly (keyof CommerceService)[];
+const HISTORY_METHODS = ["listMyOrders", "listOrders", "getOrder"] as const satisfies readonly (keyof OrderHistory)[];
 const LEARNING_METHODS = [
   "getCourse",
   "getLessonMedia",
@@ -198,7 +202,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, account, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats, audit and email settings services.
+ * @returns A fake Prisma client, Redis connection, and auth, account, school, domain, students, catalog, media, commerce, order history, learning, moderation, certificate, stats, audit and email settings services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -206,6 +210,7 @@ export function createFakeClients(): FakeClients {
   const catalog = fakeService(CATALOG_METHODS);
   const media = fakeService(MEDIA_METHODS);
   const commerce = fakeService(COMMERCE_METHODS);
+  const history = fakeService(HISTORY_METHODS);
   const learning = fakeService(LEARNING_METHODS);
   const moderation = fakeService(MODERATION_METHODS);
   const certificates = fakeService(CERTIFICATE_METHODS);
@@ -227,6 +232,8 @@ export function createFakeClients(): FakeClients {
     mediaFor: vi.fn(() => media as unknown as MediaService),
     commerce,
     commerceFor: vi.fn(() => commerce as unknown as CommerceService),
+    history,
+    historyFor: vi.fn(() => history as unknown as OrderHistory),
     confirmation: { confirm: vi.fn() },
     learning,
     learningFor: vi.fn(() => learning as unknown as LearningService),
@@ -278,6 +285,8 @@ export async function createTestApp(
     .useValue(clients.mediaFor)
     .overrideProvider(COMMERCE_FOR_SCHOOL)
     .useValue(clients.commerceFor)
+    .overrideProvider(ORDER_HISTORY_FOR_SCHOOL)
+    .useValue(clients.historyFor)
     .overrideProvider(PAYMENT_CONFIRMATION)
     .useValue(clients.confirmation)
     .overrideProvider(LEARNING_FOR_SCHOOL)

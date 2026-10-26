@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
-import { createCommerceService, createPaymentConfirmation, type PaymentConfirmation, type PaymentGateway } from "@reanit/core/commerce";
-import { createCommerceStore, createPaymentConfirmationStore, type DbClient } from "@reanit/db";
+import { createCommerceService, createOrderHistory, createPaymentConfirmation, type PaymentConfirmation, type PaymentGateway } from "@reanit/core/commerce";
+import { createCommerceStore, createOrderHistoryStore, createPaymentConfirmationStore, type DbClient } from "@reanit/db";
 import { DB_CLIENT, ENV } from "@reanit/nest";
 import Stripe from "stripe";
 
@@ -12,11 +12,23 @@ import { CheckoutController } from "./checkout.controller";
 import { CouponsController } from "./coupons.controller";
 import { createBakongGateway } from "./bakong-gateway";
 import { createFakeGateway } from "./fake-gateway";
-import { BAKONG, CARD, COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYMENT_GATEWAYS, PAYWAY, STRIPE, type CommerceForSchool } from "./commerce.tokens";
+import {
+  BAKONG,
+  CARD,
+  COMMERCE_FOR_SCHOOL,
+  ORDER_HISTORY_FOR_SCHOOL,
+  PAYMENT_CONFIRMATION,
+  PAYMENT_GATEWAYS,
+  PAYWAY,
+  STRIPE,
+  type CommerceForSchool,
+  type OrderHistoryForSchool,
+} from "./commerce.tokens";
 import { createPayWayGateway } from "./payway-gateway";
 import { PayWayWebhookController } from "./payway-webhook.controller";
+import { OrdersController } from "./orders.controller";
 import { PriceController } from "./price.controller";
-import { RefundsController } from "./refunds.controller";
+import { PurchasesController } from "./purchases.controller";
 import { createStripeGateway } from "./stripe-gateway";
 import { StripeWebhookController } from "./stripe-webhook.controller";
 
@@ -100,6 +112,16 @@ function provideCommerceForSchool(db: DbClient, gateways: PaymentGateway[], conf
 }
 
 /**
+ * Wires per-school order history to Postgres through the tenant client.
+ *
+ * @param db The shared database client.
+ * @returns A factory of order histories limited to one school.
+ */
+function provideOrderHistoryForSchool(db: DbClient): OrderHistoryForSchool {
+  return (schoolId) => createOrderHistory(createOrderHistoryStore(db, schoolId));
+}
+
+/**
  * Wires the confirmation use case that enrolls from confirmed payments.
  *
  * @param db The shared database client.
@@ -109,10 +131,10 @@ function provideConfirmation(db: DbClient) {
   return createPaymentConfirmation(createPaymentConfirmationStore(db));
 }
 
-/** Prices, coupons, bundles, checkout with the configured gateways, refunds, and the webhooks that enroll on payment. */
+/** Prices, coupons, bundles, checkout with the configured gateways, order history, refunds, and the webhooks that enroll on payment. */
 @Module({
   imports: [SchoolsModule],
-  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, RefundsController, StripeWebhookController, PayWayWebhookController],
+  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, PurchasesController, OrdersController, StripeWebhookController, PayWayWebhookController],
   providers: [
     { provide: STRIPE, inject: [ENV], useFactory: provideStripe },
     { provide: PAYWAY, inject: [ENV], useFactory: providePayWay },
@@ -121,6 +143,7 @@ function provideConfirmation(db: DbClient) {
     { provide: PAYMENT_GATEWAYS, inject: [PAYWAY, BAKONG, CARD], useFactory: provideGateways },
     { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: provideCommerceForSchool },
     { provide: PAYMENT_CONFIRMATION, inject: [DB_CLIENT], useFactory: provideConfirmation },
+    { provide: ORDER_HISTORY_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideOrderHistoryForSchool },
   ],
 })
 export class CommerceModule {}

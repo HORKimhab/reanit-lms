@@ -10,6 +10,7 @@ export { createDomainStore } from "./domain-store";
 export { createLearningStore } from "./learning-store";
 export { createLessonMediaStore } from "./lesson-media-store";
 export { createNotificationPreferenceStore } from "./notification-preference-store";
+export { createOrderHistoryStore } from "./order-history-store";
 export { createOutboxStore } from "./outbox";
 export { createQuizStore } from "./quiz-store";
 export { createReceiptStore } from "./receipt-store";
