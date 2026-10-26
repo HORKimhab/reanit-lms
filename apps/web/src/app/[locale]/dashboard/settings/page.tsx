@@ -5,14 +5,19 @@ import { CertificateTemplateForm } from "@/components/settings/certificate-templ
 import { CustomDomainSection } from "@/components/settings/custom-domain-section";
 import { NotificationPreferencesForm } from "@/components/settings/notification-preferences-form";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { TeamSection } from "@/components/settings/team-section";
 import { getCertificateTemplate } from "@/server/learning/certificates";
 import { getNotificationPreferences } from "@/server/notifications/preferences";
 import { getCustomDomainSettings } from "@/server/schools/domain-settings";
 import { canManageSchool, getStaffSchool } from "@/server/schools/staff";
+import { getTeam } from "@/server/schools/team";
 
 import {
   addCustomDomain,
+  changeTeamRole,
+  inviteTeamMember,
   removeCustomDomain,
+  removeTeamMember,
   saveCertificateTemplate,
   saveNotificationPreferences,
   saveSchoolSettings,
@@ -21,10 +26,10 @@ import {
 } from "./actions";
 
 /**
- * School settings: name, brand color and logo with a live preview, who signs certificates, and the
- * custom domain, which instructors see why they cannot edit; then every staff member's own email settings.
+ * School settings: name, brand color and logo with a live preview, who signs certificates, the
+ * custom domain and the team, which instructors see why they cannot edit; then every staff member's own email settings.
  *
- * @returns The page heading, the settings forms (or a notice for instructors) and the email settings.
+ * @returns The page heading, the settings forms and team (or a notice for instructors) and the email settings.
  */
 export default async function DashboardSettings() {
   const [t, nav, { school, role }] = await Promise.all([getTranslations("Settings"), getTranslations("DashboardNav"), getStaffSchool()]);
@@ -39,6 +44,7 @@ export default async function DashboardSettings() {
             settings={await getCustomDomainSettings()}
             actions={{ add: addCustomDomain, verify: verifyCustomDomain, remove: removeCustomDomain }}
           />
+          <TeamSection team={await getTeam()} now={new Date()} actions={{ invite: inviteTeamMember, changeRole: changeTeamRole, remove: removeTeamMember }} />
         </>
       ) : (
         <p className="text-sm text-muted-foreground">{t("staffOnly")}</p>

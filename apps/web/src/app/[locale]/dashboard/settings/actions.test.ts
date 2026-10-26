@@ -6,11 +6,15 @@ import { onApi, problem, requestTo } from "@/test/api";
 import { formData as form } from "@/test/form";
 import { RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
+import { setTestLocale } from "@/test/intl-server";
 import { STAFF_SCHOOL } from "@/test/staff";
 
 import {
   addCustomDomain,
+  changeTeamRole,
+  inviteTeamMember,
   removeCustomDomain,
+  removeTeamMember,
   saveCertificateTemplate,
   saveNotificationPreferences,
   saveSchoolSettings,
@@ -21,6 +25,7 @@ import {
 } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
+vi.mock("next-intl/server", () => import("@/test/intl-server"));
 // Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -211,5 +216,59 @@ describe("saveNotificationPreferences", () => {
   it("refuses a language emails are not written in without calling the API", async () => {
     expect(await saveNotificationPreferences(IDLE_PREFERENCES, form({ newSale: "on", locale: "fr" }))).toEqual({ status: "invalid" });
     expect(requestTo(SAVE)).toBeUndefined();
+  });
+});
+
+describe("inviteTeamMember", () => {
+  const IDLE_INVITE = { status: "idle" } as const;
+
+  it("invites the email as the role, written in the inviter's language, and refreshes the page", async () => {
+    setTestLocale("km");
+    onApi("POST /team/invites", Response.json({ invite: {} }, { status: 201 }));
+
+    expect(await inviteTeamMember(IDLE_INVITE, form({ email: "Chenda@Example.com", role: "admin" }))).toEqual({ status: "sent" });
+    expect(await requestTo("POST /team/invites")?.json()).toEqual({ email: "chenda@example.com", role: "admin", locale: "km" });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("refuses a malformed email without asking the API", async () => {
+    expect(await inviteTeamMember(IDLE_INVITE, form({ email: "nope", role: "admin" }))).toEqual({ status: "invalid" });
+    expect(requestTo("POST /team/invites")).toBeUndefined();
+  });
+
+  it("says when the email already belongs to the team", async () => {
+    onApi("POST /team/invites", problem(409, "urn:reanit:problem:already-team-member"));
+
+    expect(await inviteTeamMember(IDLE_INVITE, form({ email: "vibol@example.com", role: "instructor" }))).toEqual({ status: "member" });
+  });
+});
+
+describe("changeTeamRole", () => {
+  it("saves the member's new role and refreshes the page", async () => {
+    const id = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a61";
+    onApi(`PATCH /team/members/${id}`, Response.json({ member: {} }));
+
+    await changeTeamRole(id, form({ role: "admin" }));
+
+    expect(await requestTo(`PATCH /team/members/${id}`)?.json()).toEqual({ role: "admin" });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+});
+
+describe("removeTeamMember", () => {
+  const ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a61";
+
+  it.each([204, 404])("removes the member, counting one already gone (%i) as removed", async (status) => {
+    onApi(`DELETE /team/members/${ID}`, status === 204 ? new Response(null, { status }) : problem(status));
+
+    await removeTeamMember(ID);
+
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("throws when the API refuses, e.g. for the owner", async () => {
+    onApi(`DELETE /team/members/${ID}`, problem(409, "urn:reanit:problem:owner-locked"));
+
+    await expect(removeTeamMember(ID)).rejects.toThrow("API answered 409");
   });
 });

@@ -1,10 +1,10 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { onApi } from "@/test/api";
+import { onApi, requestTo } from "@/test/api";
 import { renderWithIntl } from "@/test/render";
 import { signIn } from "@/test/session";
-import { STAFF_SCHOOL } from "@/test/staff";
+import { STAFF_SCHOOL, TEAM_JSON } from "@/test/staff";
 
 import DashboardSettings from "./page";
 
@@ -14,11 +14,12 @@ vi.mock("next-intl/server", () => import("@/test/intl-server"));
 // The page only composes the settings forms, which have their own tests; its role branch is tested here.
 const PREFERENCES = { newSale: true, newComment: true, courseCompleted: true, locale: "en" };
 describe("DashboardSettings", () => {
-  it.each(["owner", "admin"])("shows the settings, certificate and custom domain forms to an %s", async (role) => {
+  it.each(["owner", "admin"])("shows the settings, certificate, custom domain and team forms to an %s", async (role) => {
     signIn();
     onApi("GET /schools/current", Response.json({ school: STAFF_SCHOOL, role }));
     onApi("GET /certificates/template", Response.json({ template: { signerName: "Dara Kim", signerTitle: null } }));
     onApi("GET /schools/current/domain", Response.json({ isAvailable: true, domain: null }));
+    onApi("GET /team", Response.json(TEAM_JSON));
     onApi("GET /notifications/preferences", Response.json({ preferences: PREFERENCES }));
 
     renderWithIntl(await DashboardSettings());
@@ -27,6 +28,7 @@ describe("DashboardSettings", () => {
     expect(screen.getByRole("textbox", { name: "Signed by" })).toHaveValue("Dara Kim");
     expect(screen.getByRole("textbox", { name: "Domain" })).toHaveValue("");
     expect(screen.getByRole("checkbox", { name: /A sale is made/ })).toBeChecked();
+    expect(screen.getByRole("region", { name: "Team" })).toHaveTextContent("vibol@example.com");
   });
 
   it("tells an instructor they cannot change the school's settings, and offers only the emails they can get", async () => {
@@ -38,6 +40,7 @@ describe("DashboardSettings", () => {
 
     expect(await screen.findByText("Only the school's owner and admins can change its settings.")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "School name" })).not.toBeInTheDocument();
+    expect(requestTo("GET /team")).toBeUndefined();
     expect(screen.queryByRole("textbox", { name: "Signed by" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Domain" })).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /A student comments/ })).toBeChecked();

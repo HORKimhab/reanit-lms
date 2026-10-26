@@ -641,6 +641,57 @@
     "refunding": "Refunding…",
     "cancel": "Cancel"
   },
+  "Team": {
+    "title": "Team",
+    "intro": "Invite admins and instructors to help run the school. Admins can manage everything but can't remove the owner; instructors build courses and answer students.",
+    "membersCaption": "Team members",
+    "member": "Member",
+    "role": "Role",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "instructor": "Instructor"
+    },
+    "roleOf": "Role of {name}",
+    "changeRole": "Change role",
+    "remove": "Remove from team",
+    "removeWarning": "{name} will lose access to the dashboard. Courses they bought stay theirs.",
+    "confirmRemove": "Remove",
+    "removing": "Removing…",
+    "cancel": "Cancel",
+    "invitesCaption": "Invites waiting for an answer",
+    "email": "Email",
+    "expires": "Link expires",
+    "expired": "Expired",
+    "inviteTitle": "Invite someone",
+    "send": "Send invite",
+    "sending": "Sending…",
+    "sent": "Invite sent. The link works for 7 days.",
+    "errors": {
+      "invalid": "Enter a valid email address.",
+      "member": "This person is already on the team."
+    }
+  },
+  "Invite": {
+    "title": "Join {school}",
+    "body": "You're invited as {role}. The invite was sent to {email}.",
+    "roles": {
+      "admin": "an admin",
+      "instructor": "an instructor"
+    },
+    "logIn": "Log in to accept",
+    "signUp": "Create an account",
+    "accept": "Accept invite",
+    "accepting": "Joining…",
+    "errors": {
+      "mismatch": "This invite was sent to another email. Sign in with that email to accept it.",
+      "mismatchSignedIn": "This invite is for {email}, but you're signed in as {current}. Log out, then sign in with {email} to accept it.",
+      "expired": "This invite has expired. Ask the school for a new one.",
+      "used": "This invite was already used or replaced by a newer one."
+    },
+    "expiredTitle": "This invite has expired",
+    "expiredText": "Invite links work for 7 days. Ask the school to send you a new one."
+  },
   "Order": {
     "title": "Your order",
     "pending": "Waiting for your payment…",

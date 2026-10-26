@@ -2,8 +2,9 @@
 
 import { certificateTemplateSchema } from "@reanit/core/learning";
 import { NOTIFICATION_KINDS, notificationPreferencesSchema } from "@reanit/core/notifications";
-import { customDomainSchema, schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
+import { changeRoleSchema, customDomainSchema, inviteSchema, schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
 import { revalidatePath } from "next/cache";
+import { getLocale } from "next-intl/server";
 
 import { getApi } from "@/server/api";
 import { checkStaffResponse } from "@/server/schools/staff";
@@ -183,4 +184,54 @@ export async function saveNotificationPreferences(_previous: NotificationPrefere
   checkStaffResponse(response);
   revalidatePath(SETTINGS_PATH);
   return { status: "saved" };
+}
+
+/** Result of the last invite, shown by the invite form: sent, a malformed email, or someone already on the team. */
+export type TeamInviteState = { status: "idle" | "sent" | "invalid" | "member" };
+
+/** Problem type of an email that already belongs to the team. */
+const ALREADY_MEMBER = "urn:reanit:problem:already-team-member";
+
+/**
+ * Invites someone to the team by email, written in the inviter's language, and refreshes the invites.
+ *
+ * @param _previous - The form's last state; unused, but `useActionState` passes it first.
+ * @param formData - The submitted form: `email` and `role`; untrusted until parsed.
+ * @returns `sent`, `invalid` for a malformed email or role, or `member` for someone already on the team.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function inviteTeamMember(_previous: TeamInviteState, formData: FormData): Promise<TeamInviteState> {
+  const parsed = inviteSchema.safeParse({ email: formData.get("email"), role: formData.get("role"), locale: await getLocale() });
+  if (!parsed.success) return { status: "invalid" };
+  const { error, response } = await (await getApi()).POST("/team/invites", { body: parsed.data });
+  if ((error as { type?: string } | undefined)?.type === ALREADY_MEMBER) return { status: "member" };
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+  return { status: "sent" };
+}
+
+/**
+ * Gives a team member another role and refreshes the team. Bind the member: `changeTeamRole.bind(null, member.id)`.
+ *
+ * @param userId - The member.
+ * @param formData - The submitted form: `role`; untrusted until parsed.
+ * @throws {Error} Next's redirect signal, or an unexpected-response error, e.g. for a role that is not admin or instructor.
+ */
+export async function changeTeamRole(userId: string, formData: FormData): Promise<void> {
+  const body = changeRoleSchema.parse({ role: formData.get("role") });
+  const { response } = await (await getApi()).PATCH("/team/members/{id}", { params: { path: { id: userId } }, body });
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+}
+
+/**
+ * Removes a member from the team and refreshes it. A member already gone counts as removed.
+ *
+ * @param userId - The member.
+ * @throws {Error} Next's redirect signal, or an unexpected-response error.
+ */
+export async function removeTeamMember(userId: string): Promise<void> {
+  const { response } = await (await getApi()).DELETE("/team/members/{id}", { params: { path: { id: userId } } });
+  if (response.status !== 404) checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
 }
