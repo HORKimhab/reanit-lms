@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import { CourseBuilder } from "@/components/builder/course-builder";
 import { CourseSettingsForm } from "@/components/builder/course-settings-form";
-import { DeleteCourseButton } from "@/components/builder/delete-course-button";
+import { ConfirmButton } from "@/components/form/confirm-button";
 import { Link } from "@/i18n/navigation";
 import { getStaffCourse } from "@/server/catalog/courses";
 
@@ -60,7 +60,16 @@ export default async function CourseBuilderPage({ params }: PageProps<"/[locale]
           quizBase={`/dashboard/courses/${course.slug}/quizzes`}
         />
       </section>
-      <DeleteCourseButton action={deleteCourse.bind(null, course.id)} />
+      <ConfirmButton
+        action={deleteCourse.bind(null, course.id)}
+        labels={{
+          trigger: form("delete"),
+          warning: form("deleteWarning"),
+          confirm: form("confirmDelete"),
+          pending: form("deleting"),
+          cancel: form("cancel"),
+        }}
+      />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
 import type { DnsLookup, DomainCertificates, DomainRecord, DomainStore } from "./ports";
 
 /** Longest hostname DNS allows. */
-const HOSTNAME_MAX_LENGTH = 253;
+export const DOMAIN_HOSTNAME_MAX_LENGTH = 253;
 
 /**
  * Two or more DNS labels ending in a top-level domain of letters (or its punycode form), so IP
@@ -32,7 +32,7 @@ export const domainHostnameSchema = z
   .trim()
   .toLowerCase()
   .transform((hostname) => hostname.replace(/\.$/, ""))
-  .pipe(z.string().max(HOSTNAME_MAX_LENGTH).regex(HOSTNAME_PATTERN));
+  .pipe(z.string().max(DOMAIN_HOSTNAME_MAX_LENGTH).regex(HOSTNAME_PATTERN));
 
 /** Add-domain form input. */
 export const customDomainSchema = z.object({ hostname: domainHostnameSchema });

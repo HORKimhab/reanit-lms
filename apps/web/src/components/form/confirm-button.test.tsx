@@ -4,23 +4,31 @@ import { describe, expect, it, vi } from "vitest";
 
 import { renderWithIntl } from "@/test/render";
 
-import { DeleteCourseButton } from "./delete-course-button";
+import { ConfirmButton, type ConfirmLabels } from "./confirm-button";
+
+const LABELS: ConfirmLabels = {
+  trigger: "Delete course",
+  warning: "This deletes the course. It cannot be undone.",
+  confirm: "Delete for good",
+  pending: "Deleting…",
+  cancel: "Cancel",
+};
 
 /**
- * Renders the button with a delete spy.
+ * Renders the button with an action spy.
  *
  * @returns The user-event instance and the spy.
  */
 async function setup() {
   const user = userEvent.setup();
   const action = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-  renderWithIntl(<DeleteCourseButton action={action} />);
+  renderWithIntl(<ConfirmButton action={action} labels={LABELS} />);
   await screen.findByRole("button", { name: "Delete course" });
   return { user, action };
 }
 
-describe("DeleteCourseButton", () => {
-  it("asks for confirmation before deleting", async () => {
+describe("ConfirmButton", () => {
+  it("asks for confirmation before running the action", async () => {
     const { user, action } = await setup();
 
     await user.click(screen.getByRole("button", { name: "Delete course" }));
@@ -29,7 +37,7 @@ describe("DeleteCourseButton", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("deletes once confirmed", async () => {
+  it("runs the action once confirmed", async () => {
     const { user, action } = await setup();
 
     await user.click(screen.getByRole("button", { name: "Delete course" }));
@@ -38,7 +46,7 @@ describe("DeleteCourseButton", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it("goes back without deleting when cancelled", async () => {
+  it("goes back without running the action when cancelled", async () => {
     const { user, action } = await setup();
 
     await user.click(screen.getByRole("button", { name: "Delete course" }));

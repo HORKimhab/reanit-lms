@@ -8,7 +8,16 @@ import { RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 import { STAFF_SCHOOL } from "@/test/staff";
 
-import { saveCertificateTemplate, saveSchoolSettings, startLogoUpload, type SettingsState } from "./actions";
+import {
+  addCustomDomain,
+  removeCustomDomain,
+  saveCertificateTemplate,
+  saveSchoolSettings,
+  startLogoUpload,
+  verifyCustomDomain,
+  type CustomDomainState,
+  type SettingsState,
+} from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 // Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
@@ -111,5 +120,77 @@ describe("saveCertificateTemplate", () => {
   it("rejects a signer name over the limit without calling the API", async () => {
     expect(await saveCertificateTemplate({ status: "idle" }, form({ signerName: "x".repeat(81), signerTitle: "" }))).toEqual({ status: "invalid" });
     expect(requestTo(TEMPLATE_ROUTE)).toBeUndefined();
+  });
+});
+
+describe("addCustomDomain", () => {
+  const ADD = "POST /schools/current/domain";
+  const IDLE_DOMAIN: CustomDomainState = { status: "idle" };
+
+  it("adds the parsed domain and refreshes the settings page", async () => {
+    onApi(ADD, Response.json({ domain: {} }, { status: 201 }));
+
+    expect(await addCustomDomain(IDLE_DOMAIN, form({ hostname: " Learn.Angkor.com " }))).toEqual({ status: "idle" });
+    expect(await requestTo(ADD)?.json()).toEqual({ hostname: "learn.angkor.com" });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("refuses a URL without calling the API", async () => {
+    expect(await addCustomDomain(IDLE_DOMAIN, form({ hostname: "https://learn.angkor.com/" }))).toEqual({ status: "invalid" });
+    expect(requestTo(ADD)).toBeUndefined();
+  });
+
+  it.each([
+    [400, "domain-not-allowed", "notAllowed"],
+    [409, "domain-taken", "taken"],
+    [409, "school-has-domain", "hasDomain"],
+    [503, "custom-domains-unavailable", "unavailable"],
+  ])("answers %i %s with %s", async (status, code, expected) => {
+    onApi(ADD, problem(status, `urn:reanit:problem:${code}`));
+
+    expect(await addCustomDomain(IDLE_DOMAIN, form({ hostname: "learn.angkor.com" }))).toEqual({ status: expected });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("sends a user who runs no school to onboarding", async () => {
+    onApi(ADD, problem(403, "urn:reanit:problem:not-school-staff"));
+
+    await expect(addCustomDomain(IDLE_DOMAIN, form({ hostname: "learn.angkor.com" }))).rejects.toThrow(RedirectError);
+  });
+});
+
+describe("verifyCustomDomain", () => {
+  const VERIFY = "POST /schools/current/domain/verify";
+
+  it("checks the domain and refreshes the settings page", async () => {
+    onApi(VERIFY, Response.json({ domain: {} }));
+
+    expect(await verifyCustomDomain()).toEqual({ status: "idle" });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("says the TXT record is not there yet", async () => {
+    onApi(VERIFY, problem(409, "urn:reanit:problem:domain-not-verified"));
+
+    expect(await verifyCustomDomain()).toEqual({ status: "notVerified" });
+  });
+});
+
+describe("removeCustomDomain", () => {
+  const REMOVE = "DELETE /schools/current/domain";
+
+  it.each([204, 404])("refreshes the settings page when the API answers %i", async (status) => {
+    onApi(REMOVE, new Response(null, { status }));
+
+    await removeCustomDomain();
+
+    expect(requestTo(REMOVE)).toBeDefined();
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("sends a signed-out visitor to log in", async () => {
+    onApi(REMOVE, problem(401));
+
+    await expect(removeCustomDomain()).rejects.toThrow(RedirectError);
   });
 });

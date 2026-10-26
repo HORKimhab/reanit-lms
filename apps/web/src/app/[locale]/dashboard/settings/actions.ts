@@ -1,7 +1,7 @@
 "use server";
 
 import { certificateTemplateSchema } from "@reanit/core/learning";
-import { schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
+import { customDomainSchema, schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
 import { revalidatePath } from "next/cache";
 
 import { getApi } from "@/server/api";
@@ -93,4 +93,69 @@ export async function saveCertificateTemplate(_previous: CertificateTemplateStat
   checkStaffResponse(response);
   revalidatePath(SETTINGS_PATH);
   return { status: "saved" };
+}
+
+/** Result of the last custom domain step, shown by its section; anything but `idle` is why it failed. */
+export type CustomDomainState = { status: "idle" | "invalid" | "notAllowed" | "taken" | "hasDomain" | "notVerified" | "unavailable" };
+
+/** API problems a custom domain step can answer with, and what the section shows for each. */
+const DOMAIN_PROBLEMS: Record<string, CustomDomainState["status"]> = {
+  "urn:reanit:problem:domain-not-allowed": "notAllowed",
+  "urn:reanit:problem:domain-taken": "taken",
+  "urn:reanit:problem:school-has-domain": "hasDomain",
+  "urn:reanit:problem:domain-not-verified": "notVerified",
+  "urn:reanit:problem:custom-domains-unavailable": "unavailable",
+};
+
+/**
+ * Turns the API's answer to a custom domain step into the section's state, refreshing the page when it worked.
+ *
+ * @param error The problem the API answered with, if any.
+ * @param response The API's response.
+ * @returns `idle` when the step worked, or why it failed.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+function domainStepResult(error: unknown, response: Response): CustomDomainState {
+  const problem = DOMAIN_PROBLEMS[(error as { type?: string } | undefined)?.type ?? ""];
+  if (problem) return { status: problem };
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+  return { status: "idle" };
+}
+
+/**
+ * Starts setting up a custom domain; the refreshed page then lists the DNS records to add.
+ *
+ * @param _previous - The section's last state; unused, but `useActionState` passes it first.
+ * @param formData - The submitted form; untrusted until parsed.
+ * @returns `idle` once added, or why the domain was refused.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function addCustomDomain(_previous: CustomDomainState, formData: FormData): Promise<CustomDomainState> {
+  const parsed = customDomainSchema.safeParse({ hostname: formData.get("hostname") });
+  if (!parsed.success) return { status: "invalid" };
+  const { error, response } = await (await getApi()).POST("/schools/current/domain", { body: parsed.data });
+  return domainStepResult(error, response);
+}
+
+/**
+ * Checks the custom domain's DNS records, so a verified domain gets its certificate.
+ *
+ * @returns `idle` once verified (or further along), or `notVerified` while the TXT record is missing.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function verifyCustomDomain(): Promise<CustomDomainState> {
+  const { error, response } = await (await getApi()).POST("/schools/current/domain/verify");
+  return domainStepResult(error, response);
+}
+
+/**
+ * Removes the custom domain; the school site stays on its subdomain. A domain already gone counts as removed.
+ *
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function removeCustomDomain(): Promise<void> {
+  const { response } = await (await getApi()).DELETE("/schools/current/domain");
+  if (response.status !== 404) checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
 }

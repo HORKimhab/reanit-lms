@@ -1,6 +1,7 @@
 export {
   createDomainService,
   customDomainSchema,
+  DOMAIN_HOSTNAME_MAX_LENGTH,
   domainHostnameSchema,
   type CustomDomain,
   type CustomDomainInput,

@@ -11,17 +11,19 @@ import DashboardSettings from "./page";
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
 
-// The page only composes SettingsForm and CertificateTemplateForm, which have their own tests; its role branch is tested here.
+// The page only composes SettingsForm, CertificateTemplateForm and CustomDomainSection, which have their own tests; its role branch is tested here.
 describe("DashboardSettings", () => {
-  it.each(["owner", "admin"])("shows the settings and certificate forms to an %s", async (role) => {
+  it.each(["owner", "admin"])("shows the settings, certificate and custom domain forms to an %s", async (role) => {
     signIn();
     onApi("GET /schools/current", Response.json({ school: STAFF_SCHOOL, role }));
     onApi("GET /certificates/template", Response.json({ template: { signerName: "Dara Kim", signerTitle: null } }));
+    onApi("GET /schools/current/domain", Response.json({ isAvailable: true, domain: null }));
 
     renderWithIntl(await DashboardSettings());
 
     expect(await screen.findByRole("textbox", { name: "School name" })).toHaveValue("Angkor Academy");
     expect(screen.getByRole("textbox", { name: "Signed by" })).toHaveValue("Dara Kim");
+    expect(screen.getByRole("textbox", { name: "Domain" })).toHaveValue("");
   });
 
   it("tells an instructor they cannot change the settings", async () => {
@@ -33,5 +35,6 @@ describe("DashboardSettings", () => {
     expect(await screen.findByText("Only the school's owner and admins can change its settings.")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "School name" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Signed by" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Domain" })).not.toBeInTheDocument();
   });
 });

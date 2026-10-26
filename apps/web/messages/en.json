@@ -212,6 +212,39 @@
     "saved": "Certificate saved. Certificates issued from now on use it.",
     "tooLong": "Keep each line to {max} characters or fewer."
   },
+  "CustomDomain": {
+    "title": "Custom domain",
+    "intro": "Serve your school site on a domain you own, such as learn.yourschool.com. Your subdomain keeps working.",
+    "hostname": "Domain",
+    "hostnameHint": "Use a subdomain such as learn.yourschool.com: every DNS provider can point it here.",
+    "add": "Add domain",
+    "adding": "Adding…",
+    "status": {
+      "awaiting_dns": "Waiting for your DNS records. Add both records below at your DNS provider, then check them.",
+      "issuing_certificate": "Verified. A secure certificate is being issued, which usually takes a few minutes; check again soon.",
+      "active": "Live. Students can visit your school on this domain.",
+      "certificate_failed": "The secure certificate could not be issued. Make sure the CNAME record below is in place, then remove the domain and add it again."
+    },
+    "recordsCaption": "DNS records to add at your DNS provider",
+    "recordType": "Type",
+    "recordName": "Name",
+    "recordValue": "Value",
+    "check": "Check DNS records",
+    "checking": "Checking…",
+    "remove": "Remove domain",
+    "removeWarning": "Your school site stops answering on this domain. It stays on your subdomain.",
+    "confirmRemove": "Remove for good",
+    "removing": "Removing…",
+    "cancel": "Cancel",
+    "errors": {
+      "invalid": "Enter a domain such as learn.yourschool.com, without https:// or a path.",
+      "notAllowed": "This domain belongs to the platform. Use a domain you own.",
+      "taken": "Another school already uses this domain.",
+      "hasDomain": "Your school already has a custom domain. Reload the page to see it.",
+      "notVerified": "The TXT record was not found yet. DNS changes can take up to an hour to show; check again later.",
+      "unavailable": "Custom domains are not available on this platform yet."
+    }
+  },
   "Coupons": {
     "newTitle": "New coupon",
     "code": "Code",
