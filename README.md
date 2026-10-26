@@ -146,6 +146,7 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
 
 **Reliability**
 - Payment and enrollment operations use idempotency keys.
+- Pending orders past their gateway's payment window (KHQR 15 minutes, Stripe and PayWay 24 hours, plus an hour) are failed by a worker sweep; a gateway that still confirms one later enrolls the student.
 - Events are published through the outbox pattern, with retries and a dead-letter queue for failed jobs. Each handler of an event runs as its own job, so one failing never repeats another (a staff email never resends a receipt).
 
 **Observability**

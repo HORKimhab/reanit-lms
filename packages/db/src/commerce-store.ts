@@ -279,6 +279,15 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     },
 
     /**
+     * Marks a pending order failed, when its gateway says the payment will not complete.
+     *
+     * @param orderId The order.
+     */
+    async failOrder(orderId: string) {
+      await tenant.order.updateMany({ where: { id: orderId, status: "pending" }, data: { status: "failed" } });
+    },
+
+    /**
      * Finds any buyer's order in the school, for staff.
      *
      * @param orderId The order.
@@ -463,7 +472,8 @@ export function createPaymentConfirmationStore(db: DbClient) {
   return {
     /**
      * Marks an order paid, enrolls its buyer, counts the sale in the daily stats and records `OrderPaid`
-     * in the outbox, once. Concurrent confirmations of the same order are safe: only the one that moves it out of `pending` enrolls.
+     * in the outbox, once. Concurrent confirmations of the same order are safe: only the one that moves it out of
+     * `pending` (or `failed`, for an order that expired before the gateway confirmed it) enrolls.
      *
      * @param method The gateway that confirmed the payment.
      * @param providerRef The gateway's reference.
@@ -477,8 +487,9 @@ export function createPaymentConfirmationStore(db: DbClient) {
       if (!order || order.paymentMethod !== method) return null;
       return inSchoolTransaction(db, order.schoolId, async (tx) => {
         const paidAt = new Date();
+        // A failed order is one the expiry sweep gave up on; the gateway took the money all the same.
         const { count } = await tx.order.updateMany({
-          where: { id: order.id, status: "pending" },
+          where: { id: order.id, status: { in: ["pending", "failed"] } },
           data: { status: "paid", paidAt },
         });
         if (count === 0) return { orderId: order.id, isNewlyPaid: false };

@@ -16,6 +16,22 @@ export const PAYMENT_METHODS = ["stripe", "aba_payway", "bakong_khqr"] as const;
  */
 export const GATEWAY_REFUND_METHODS: readonly PaymentMethod[] = ["stripe"];
 
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+
+/**
+ * How long each gateway lets a student pay an order: a KHQR code lives 15 minutes, a Stripe Checkout
+ * Session 24 hours, and an abandoned PayWay purchase is given as long.
+ */
+export const PAYMENT_WINDOWS_MS: Record<PaymentMethod, number> = {
+  stripe: 24 * HOUR_MS,
+  aba_payway: 24 * HOUR_MS,
+  bakong_khqr: 15 * MINUTE_MS,
+};
+
+/** Extra time past a payment window before a pending order counts as failed, for clocks and slow gateways. */
+export const ORDER_EXPIRY_GRACE_MS = HOUR_MS;
+
 /** Where an order can be: waiting for payment, paid, never paid, or paid and given back. */
 export const ORDER_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 

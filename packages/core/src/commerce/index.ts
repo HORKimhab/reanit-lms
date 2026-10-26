@@ -12,6 +12,7 @@ export {
   UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
+export { createOrderExpiry, type OrderExpiry } from "./expiry";
 export { moneyFormat, toMinorUnits } from "./money";
 export {
   createOrderHistory,
@@ -31,6 +32,7 @@ export type {
   Discount,
   OrderDetail,
   OrderFilter,
+  OrderExpiryStore,
   OrderHistoryStore,
   OrderLine,
   OrderStatus,
@@ -54,8 +56,10 @@ export {
   MAX_BUNDLE_COURSES,
   MAX_PERCENT_OFF,
   offerQuerySchema,
+  ORDER_EXPIRY_GRACE_MS,
   ORDER_STATUSES,
   PAYMENT_METHODS,
+  PAYMENT_WINDOWS_MS,
   priceSchema,
   refundSchema,
   updateBundleSchema,

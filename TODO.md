@@ -91,7 +91,7 @@ Decided (README §8): API-01 to API-03 move from `apps/web` server code to NestJ
 - [x] API-19 GDPR: student data export and account deletion
 - [x] API-22 Refunds: staff refund a paid order through its gateway, order → `refunded`, enrollment revoked, daily sales reversed, `OrderRefunded` event, audited
 - [x] WEB-28 Refund button on the order detail + refunded state for the student. Needs API-22, WEB-29.
-- [ ] WRK-05 Order expiry: pending orders past their gateway's window are marked `failed` (KHQR expiry, abandoned card/PayWay sessions); gateway `failed` checks mark them too
+- [x] WRK-05 Order expiry: pending orders past their gateway's window are marked `failed` (KHQR expiry, abandoned card/PayWay sessions); gateway `failed` checks mark them too
 - [x] API-23 Order history: student's own orders and receipts; staff list of the school's orders with filters (status, course, date, currency)
 - [x] WEB-29 Student "Purchases" page + dashboard orders list and order detail. Needs API-23.
 - [ ] API-24 Team: invite admins/instructors by email, accept invite, change role, remove member; owner can't be removed; audited

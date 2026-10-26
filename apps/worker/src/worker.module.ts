@@ -15,6 +15,7 @@ import {
 import { z } from "zod";
 
 import { EventsModule } from "./events/events.module";
+import { OrdersModule } from "./orders/orders.module";
 
 const workerEnvSchema = baseEnvSchema.extend({
   /** Public origin of the web app, for links in emails and certificates. */
@@ -48,7 +49,7 @@ export function bullOptions(env: WorkerEnv): BullRootModuleOptions {
   return { connection: { url: env.REDIS_URL, maxRetriesPerRequest: null } };
 }
 
-/** Root of the background worker: shared env, logs, telemetry flush, database, mail and storage, BullMQ, and the job modules. */
+/** Root of the background worker: shared env, logs, telemetry flush, database, mail and storage, BullMQ, the job modules and order upkeep. */
 @Module({
   imports: [
     EnvModule.forRoot(parseWorkerEnv),
@@ -59,6 +60,7 @@ export function bullOptions(env: WorkerEnv): BullRootModuleOptions {
     StorageModule,
     BullModule.forRootAsync({ inject: [ENV], useFactory: bullOptions }),
     EventsModule,
+    OrdersModule,
   ],
 })
 export class WorkerModule {}

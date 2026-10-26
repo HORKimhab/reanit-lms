@@ -315,4 +315,20 @@ describe("bundles", () => {
     expect(await createCommerceStore(db, betaId).findSchoolOrder(id)).toBeNull();
     expect((await createCommerceStore(db, alphaId).findSchoolOrder(id))?.status).toBe("pending");
   });
+
+  it("fails a pending order once, and still pays and enrolls it when the gateway confirms it later", async () => {
+    const lateBuyer = (await db.user.create({ data: { email: "commerce-late@example.com" } })).id;
+    const { id, providerRef } = await pendingOrder(lateBuyer);
+    const store = createCommerceStore(db, alphaId);
+
+    await store.failOrder(id);
+    expect((await store.findSchoolOrder(id))?.status).toBe("failed");
+
+    expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
+    expect((await store.findSchoolOrder(id))?.status).toBe("paid");
+    expect(await db.enrollment.count({ where: { userId: lateBuyer } })).toBe(1);
+
+    await store.failOrder(id);
+    expect((await store.findSchoolOrder(id))?.status).toBe("paid");
+  });
 });

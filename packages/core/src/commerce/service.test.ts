@@ -296,6 +296,15 @@ describe("getOrder with a gateway that can be asked", () => {
     expect(store.enrollments).toEqual(new Set(["user-1:c2"]));
   });
 
+  it("fails an order the gateway says will not be paid", async () => {
+    const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
+    khqr.checkResult = "failed";
+
+    expect((await commerce.getOrder(orderId, "user-1")).status).toBe("failed");
+    expect(store.orders[0]?.status).toBe("failed");
+    expect(store.enrollments.size).toBe(0);
+  });
+
   it("leaves a still-pending order pending and enrolls nobody", async () => {
     const { orderId } = await commerce.checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
 

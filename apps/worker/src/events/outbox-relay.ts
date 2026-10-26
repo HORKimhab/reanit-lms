@@ -1,8 +1,9 @@
 import { InjectQueue } from "@nestjs/bullmq";
-import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { EventHandlers, OutboxStore } from "@reanit/core/events";
 import type { JobsOptions, Queue } from "bullmq";
 
+import { PeriodicTask } from "../shared/periodic-task";
 import { toEventJobs } from "./event-job";
 import { EVENT_HANDLERS, EVENT_JOB_OPTIONS, EVENTS_QUEUE, OUTBOX_STORE } from "./events.tokens";
 
@@ -14,14 +15,10 @@ export const RELAY_BATCH_SIZE = 100;
 /**
  * Moves domain events from the outbox to the events queue. Each event becomes one job per handler of
  * its type, whose id names the event and the handler, so an event queued twice (a crash between
- * queueing and marking it published) runs each handler once. Its timer also keeps the worker process alive until shutdown.
+ * queueing and marking it published) runs each handler once. It runs every `RELAY_INTERVAL_MS`.
  */
 @Injectable()
-export class OutboxRelay implements OnApplicationBootstrap, OnApplicationShutdown {
-  private readonly logger = new Logger(OutboxRelay.name);
-  private timer: NodeJS.Timeout | undefined;
-  private running: Promise<void> | undefined;
-
+export class OutboxRelay extends PeriodicTask {
   /**
    * Receives the outbox, the queue, the handlers each event fans out to, and the retry options.
    *
@@ -35,17 +32,17 @@ export class OutboxRelay implements OnApplicationBootstrap, OnApplicationShutdow
     @InjectQueue(EVENTS_QUEUE) private readonly queue: Queue,
     @Inject(EVENT_HANDLERS) private readonly handlers: EventHandlers,
     @Inject(EVENT_JOB_OPTIONS) private readonly jobOptions: JobsOptions,
-  ) {}
-
-  /** Starts relaying once the worker has booted. */
-  onApplicationBootstrap() {
-    this.timer = setInterval(() => this.tick(), RELAY_INTERVAL_MS);
+  ) {
+    super(RELAY_INTERVAL_MS, "Outbox relay failed");
   }
 
-  /** Stops relaying and waits for the run in progress, so its transaction ends before the database closes. */
-  async onApplicationShutdown() {
-    clearInterval(this.timer);
-    await this.running;
+  /**
+   * Relays every pending event.
+   *
+   * @returns How many events were queued.
+   */
+  protected runOnce() {
+    return this.relayPending();
   }
 
   /**
@@ -64,16 +61,5 @@ export class OutboxRelay implements OnApplicationBootstrap, OnApplicationShutdow
       total += count;
       if (count < RELAY_BATCH_SIZE) return total;
     }
-  }
-
-  /** Starts a relay run unless one is still going; a failed run is logged and retried on the next tick. */
-  private tick() {
-    if (this.running) return;
-    this.running = this.relayPending()
-      // The timer is the loop's top level: nothing above it could handle the error, and the next tick retries.
-      .then(() => undefined, (error: unknown) => this.logger.error(error, "Outbox relay failed"))
-      .finally(() => {
-        this.running = undefined;
-      });
   }
 }

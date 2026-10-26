@@ -92,6 +92,8 @@ export interface CommerceStore {
   }): Promise<{ id: string }>;
   setProviderRef(orderId: string, providerRef: string): Promise<void>;
   findOrder(orderId: string, userId: string): Promise<OrderSummary | null>;
+  /** Marks a pending order failed: its gateway said the payment will not complete. Other orders are left alone. */
+  failOrder(orderId: string): Promise<void>;
   /** Any buyer's order in the school, for staff. */
   findSchoolOrder(orderId: string): Promise<OrderSummary | null>;
   /**
@@ -126,7 +128,8 @@ export interface CommerceStore {
 export interface PaymentConfirmationStore {
   /**
    * Marks the order paid and enrolls its buyer in one transaction. A repeat for an order already
-   * paid changes nothing. Returns null when no order has the reference.
+   * paid changes nothing. An order marked failed (expired) is paid all the same: the gateway took the
+   * money. Returns null when no order has the reference.
    */
   confirm(method: PaymentMethod, providerRef: string): Promise<{ orderId: string; isNewlyPaid: boolean } | null>;
 }
@@ -210,4 +213,10 @@ export interface OrderHistoryStore {
   listOrders(filter: OrderFilter, window: { limit: number; offset: number }): Promise<{ orders: OrderDetail[]; total: number }>;
   /** The order, or null when the school has no such order. */
   findOrder(orderId: string): Promise<OrderDetail | null>;
+}
+
+/** Pending orders across schools, for the worker's expiry sweep. `@reanit/db` implements it with `createOrderExpiryStore`. */
+export interface OrderExpiryStore {
+  /** Marks failed every pending order placed with a method before its cutoff, and returns how many. */
+  failPendingOrders(placedBefore: Record<PaymentMethod, Date>): Promise<number>;
 }

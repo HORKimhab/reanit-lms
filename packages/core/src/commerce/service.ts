@@ -390,7 +390,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
 
     /**
      * Reads an order for its buyer, e.g. while a status page waits for the payment. A pending order
-     * whose gateway can be asked (PayWay, Bakong) is checked with it, and enrolled once it is paid.
+     * whose gateway can be asked (PayWay, Bakong) is checked with it: enrolled once it is paid, failed once the gateway says so.
      *
      * @param orderId The order.
      * @param userId The signed-in user.
@@ -403,6 +403,10 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
       const gateway = gateways.find(({ method }) => method === order.method);
       if (order.status !== "pending" || !order.providerRef || !gateway?.checkPayment) return order;
       const check = await gateway.checkPayment(order.providerRef);
+      if (check === "failed") {
+        await store.failOrder(order.id);
+        return { ...order, status: "failed" };
+      }
       if (check !== "paid") return order;
       await confirmation.confirm(order.method, order.providerRef);
       return { ...order, status: "paid" };

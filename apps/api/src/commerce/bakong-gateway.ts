@@ -1,10 +1,10 @@
-import type { Currency, PaymentCheck, PaymentGateway, PaymentRequest } from "@reanit/core/commerce";
+import { PAYMENT_WINDOWS_MS, type Currency, type PaymentCheck, type PaymentGateway, type PaymentRequest } from "@reanit/core/commerce";
 import khqr from "bakong-khqr";
 
 /** Bakong Open API endpoint that looks a transaction up by the MD5 of the KHQR code it paid (api-bakong.nbc.gov.kh). */
 const CHECK_PATH = "/v1/check_transaction_by_md5";
-/** How long a code can be scanned before banking apps refuse it. */
-const KHQR_LIFETIME_MS = 15 * 60 * 1000;
+/** How long a code can be scanned before banking apps refuse it; the order expiry sweep uses the same window. */
+const KHQR_LIFETIME_MS = PAYMENT_WINDOWS_MS.bakong_khqr;
 /** `responseCode` of a successful lookup. */
 const FOUND_CODE = 0;
 /** `errorCode` of a lookup that found nothing: the student has not paid yet. */

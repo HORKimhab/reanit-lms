@@ -6,6 +6,7 @@ import type {
   CouponInput,
   Currency,
   OrderDetail,
+  OrderExpiryStore,
   OrderFilter,
   OrderHistoryStore,
   OrderLine,
@@ -183,6 +184,16 @@ export class FakeCommerceStore implements CommerceStore {
   }
 
   /**
+   * Marks a pending order failed.
+   *
+   * @param orderId The order.
+   */
+  async failOrder(orderId: string) {
+    const order = this.orders.find(({ id }) => id === orderId);
+    if (order?.status === "pending") order.status = "failed";
+  }
+
+  /**
    * Finds any buyer's order.
    *
    * @param orderId The order.
@@ -352,7 +363,7 @@ export class FakeConfirmationStore implements PaymentConfirmationStore {
   constructor(private readonly commerce: FakeCommerceStore) {}
 
   /**
-   * Marks the matching order paid and enrolls its buyer, once.
+   * Marks the matching order paid (pending or expired) and enrolls its buyer, once.
    *
    * @param method The gateway.
    * @param providerRef The gateway's reference.
@@ -361,7 +372,7 @@ export class FakeConfirmationStore implements PaymentConfirmationStore {
   async confirm(method: PaymentMethod, providerRef: string) {
     const order = this.commerce.orders.find((candidate) => candidate.method === method && candidate.providerRef === providerRef);
     if (!order) return null;
-    const isNewlyPaid = order.status === "pending";
+    const isNewlyPaid = order.status === "pending" || order.status === "failed";
     order.status = "paid";
     for (const line of order.lines) this.commerce.enrollments.add(`${order.userId}:${line.courseId}`);
     return { orderId: order.id, isNewlyPaid };
@@ -471,5 +482,22 @@ export class FakeOrderHistoryStore implements OrderHistoryStore {
    */
   async findOrder(orderId: string) {
     return this.orders.find(({ id }) => id === orderId) ?? null;
+  }
+}
+
+/** `OrderExpiryStore` that records the cutoffs it was given and answers with `failed`. */
+export class FakeOrderExpiryStore implements OrderExpiryStore {
+  failed = 0;
+  lastCutoffs: Record<PaymentMethod, Date> | null = null;
+
+  /**
+   * Records the cutoffs.
+   *
+   * @param placedBefore Each method's cutoff.
+   * @returns `failed`.
+   */
+  async failPendingOrders(placedBefore: Record<PaymentMethod, Date>) {
+    this.lastCutoffs = placedBefore;
+    return this.failed;
   }
 }
