@@ -14,6 +14,7 @@ export const AUDIT_ACTIONS = [
   "bundle.create",
   "bundle.update",
   "bundle.price.set",
+  "order.refund",
   "lesson.media.attach",
   "lesson.quiz.save",
   "comment.reply",

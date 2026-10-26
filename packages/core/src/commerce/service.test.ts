@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { CourseNotFoundError } from "../catalog";
 import { FakeClock } from "../test/auth-fakes";
-import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway } from "../test/commerce-fakes";
+import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway, RefundingFakeGateway } from "../test/commerce-fakes";
 import {
   AlreadyEnrolledError,
   BundleNotFoundError,
@@ -11,7 +11,9 @@ import {
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
+  OrderNotRefundableError,
   PaymentMethodUnavailableError,
+  RefundByHandRequiredError,
   UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
@@ -332,5 +334,82 @@ describe("payment confirmation", () => {
     const confirmation = createPaymentConfirmation(new FakeConfirmationStore(store));
 
     await expect(confirmation.confirm("stripe", "ref-nope")).rejects.toThrow(UnknownPaymentError);
+  });
+});
+
+describe("refundOrder", () => {
+  let refundingStripe: RefundingFakeGateway;
+  let refunds: CommerceService;
+
+  beforeEach(() => {
+    refundingStripe = new RefundingFakeGateway("stripe", ["USD"]);
+    refunds = createCommerceService({
+      store,
+      gateways: [refundingStripe, khqr],
+      confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)),
+      clock: new FakeClock(NOW),
+    });
+  });
+
+  /**
+   * Buys a course and confirms its payment.
+   *
+   * @param courseSlug The course.
+   * @param method The gateway.
+   * @returns The paid order's id.
+   */
+  async function paidOrder(courseSlug: string, method: "stripe" | "bakong_khqr") {
+    const { orderId } = await refunds.checkout(BUYER, { courseSlug, method, locale: "en" }, urls);
+    await new FakeConfirmationStore(store).confirm(method, `ref-${orderId}`);
+    return orderId;
+  }
+
+  it("refunds through a gateway that can, and takes the course back", async () => {
+    const orderId = await paidOrder("intro", "stripe");
+
+    await refunds.refundOrder(orderId, { isRefundedByHand: false });
+
+    expect(refundingStripe.refunded).toEqual([`ref-${orderId}`]);
+    expect(store.orders[0]).toMatchObject({ status: "refunded", refund: { at: NOW, isRefundedByHand: false } });
+    expect(store.enrollments.size).toBe(0);
+  });
+
+  it("records a refund the gateway made as not by hand, whatever staff said", async () => {
+    const orderId = await paidOrder("intro", "stripe");
+
+    await refunds.refundOrder(orderId, { isRefundedByHand: true });
+
+    expect(refundingStripe.refunded).toEqual([`ref-${orderId}`]);
+    expect(store.orders[0]?.refund?.isRefundedByHand).toBe(false);
+  });
+
+  it("throws RefundByHandRequiredError for a gateway that cannot refund until staff refunded by hand", async () => {
+    const orderId = await paidOrder("riel", "bakong_khqr");
+
+    await expect(refunds.refundOrder(orderId, { isRefundedByHand: false })).rejects.toThrow(RefundByHandRequiredError);
+    expect(store.orders[0]?.status).toBe("paid");
+
+    await refunds.refundOrder(orderId, { isRefundedByHand: true });
+    expect(store.orders[0]).toMatchObject({ status: "refunded", refund: { isRefundedByHand: true } });
+  });
+
+  it("keeps the order paid when the gateway refuses the refund", async () => {
+    const orderId = await paidOrder("intro", "stripe");
+    refundingStripe.failure = new Error("charge disputed");
+
+    await expect(refunds.refundOrder(orderId, { isRefundedByHand: false })).rejects.toThrow("charge disputed");
+    expect(store.orders[0]?.status).toBe("paid");
+  });
+
+  it.each(["pending", "refunded"])("throws OrderNotRefundableError for a %s order", async (status) => {
+    const { orderId } = await refunds.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
+    store.orders[0]!.status = status as "pending" | "refunded"; // checkout stored the order
+
+    await expect(refunds.refundOrder(orderId, { isRefundedByHand: true })).rejects.toThrow(OrderNotRefundableError);
+    expect(refundingStripe.refunded).toEqual([]);
+  });
+
+  it("throws OrderNotFoundError for an order the school does not have", async () => {
+    await expect(refunds.refundOrder("order-404", { isRefundedByHand: true })).rejects.toThrow(OrderNotFoundError);
   });
 });

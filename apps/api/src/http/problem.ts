@@ -13,7 +13,9 @@ import {
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
+  OrderNotRefundableError,
   PaymentMethodUnavailableError,
+  RefundByHandRequiredError,
   UnknownBundleCourseError,
 } from "@reanit/core/commerce";
 import {
@@ -97,6 +99,8 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: CouponNotFoundError, status: HttpStatus.NOT_FOUND, code: "coupon-not-found", detail: "The coupon does not exist." },
   { error: BundleNotFoundError, status: HttpStatus.NOT_FOUND, code: "bundle-not-found", detail: "The bundle does not exist." },
   { error: UnknownBundleCourseError, status: HttpStatus.BAD_REQUEST, code: "unknown-bundle-course", detail: "A course in the bundle does not exist." },
+  { error: OrderNotRefundableError, status: HttpStatus.CONFLICT, code: "order-not-refundable", detail: "Only a paid order can be refunded." },
+  { error: RefundByHandRequiredError, status: HttpStatus.CONFLICT, code: "refund-by-hand-required", detail: "This payment method cannot refund. Pay the student back yourself, then confirm the refund." },
   { error: OrderNotFoundError, status: HttpStatus.NOT_FOUND, code: "order-not-found", detail: "The order does not exist." },
   { error: LessonNotFoundError, status: HttpStatus.NOT_FOUND, code: "lesson-not-found", detail: "The lesson does not exist." },
   { error: LessonMediaMissingError, status: HttpStatus.NOT_FOUND, code: "lesson-media-missing", detail: "The lesson has no file yet." },

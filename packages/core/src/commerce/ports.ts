@@ -92,6 +92,13 @@ export interface CommerceStore {
   }): Promise<{ id: string }>;
   setProviderRef(orderId: string, providerRef: string): Promise<void>;
   findOrder(orderId: string, userId: string): Promise<OrderSummary | null>;
+  /** Any buyer's order in the school, for staff. */
+  findSchoolOrder(orderId: string): Promise<OrderSummary | null>;
+  /**
+   * Refunds a paid order in one transaction: it becomes `refunded`, the enrollments it gave are
+   * revoked, its day's sales are reversed and `OrderRefunded` is recorded. Returns false when the order is no longer paid.
+   */
+  refundOrder(orderId: string, refund: { at: Date; isRefundedByHand: boolean }): Promise<boolean>;
   /** Returns null when the school already has a coupon with the code. */
   createCoupon(coupon: CouponInput): Promise<Coupon | null>;
   /** The school's coupons, newest first. */
@@ -155,4 +162,9 @@ export interface PaymentGateway {
   startPayment(request: PaymentRequest): Promise<PaymentStart>;
   /** Asks the gateway whether a payment arrived; gateways that only push (Stripe) leave it out. */
   checkPayment?(providerRef: string): Promise<PaymentCheck>;
+  /**
+   * Refunds a payment in full; repeating it for the same payment refunds once. Gateways without a
+   * refund API (KHQR, PayWay) leave it out, and staff refund by hand.
+   */
+  refund?(providerRef: string): Promise<void>;
 }

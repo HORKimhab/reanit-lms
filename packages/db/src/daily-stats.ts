@@ -37,6 +37,27 @@ export async function recordSale(
 }
 
 /**
+ * Takes a refunded order item back out of its course's sales for the day it was paid, so revenue counts only what was kept.
+ *
+ * @param tx Transaction scoped to the school.
+ * @param sale The refunded sale.
+ * @param sale.schoolId The school.
+ * @param sale.courseId The course sold.
+ * @param sale.amount Amount paid, in minor units.
+ * @param sale.currency ISO code.
+ * @param sale.at When it was paid.
+ */
+export async function reverseSale(
+  tx: SchoolTransaction,
+  { schoolId, courseId, amount, currency, at }: { schoolId: string; courseId: string; amount: number; currency: string; at: Date },
+) {
+  await tx.dailySales.updateMany({
+    where: { schoolId, courseId, day: utcDay(at), currency },
+    data: { sales: { decrement: 1 }, revenue: { decrement: amount } },
+  });
+}
+
+/**
  * Counts one course completion for the day.
  *
  * @param tx Transaction scoped to the school.

@@ -19,6 +19,13 @@ export interface CommentPosted {
   payload: { commentId: string; lessonId: string; authorId: string };
 }
 
+/** Staff refunded a paid order; the courses it gave were taken back. */
+export interface OrderRefunded {
+  type: "OrderRefunded";
+  schoolId: string;
+  payload: { orderId: string; userId: string; courseIds: string[]; isRefundedByHand: boolean };
+}
+
 /** A student's account was erased; the school's files that named them must go too. */
 export interface StudentErased {
   type: "StudentErased";
@@ -28,7 +35,7 @@ export interface StudentErased {
 }
 
 /** Something that happened in a school, written to the outbox in the same transaction as the change itself. */
-export type DomainEvent = OrderPaid | CourseCompleted | CommentPosted | StudentErased;
+export type DomainEvent = OrderPaid | OrderRefunded | CourseCompleted | CommentPosted | StudentErased;
 
 /** A domain event as the outbox stores and relays it. */
 export type OutboxEvent = DomainEvent & {

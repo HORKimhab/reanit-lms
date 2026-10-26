@@ -7,6 +7,7 @@ import {
   offerQuerySchema,
   PAYMENT_METHODS,
   priceSchema,
+  refundSchema,
   updateBundleSchema,
 } from "@reanit/core/commerce";
 import { subdomainSchema } from "@reanit/core/schools";
@@ -38,6 +39,9 @@ export class CreateCouponBody extends createZodDto(z.object({ coupon: couponSche
 
 /** Path of a coupon or bundle. */
 export class IdParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
+/** `POST /orders/:id/refund` body: whether staff already paid the student back, for KHQR and PayWay orders. */
+export class RefundBody extends createZodDto(refundSchema) {}
 
 /** Path of a bundle in the dashboard. */
 export class BundleSlugParams extends createZodDto(z.object({ slug: slugSchema })) {}

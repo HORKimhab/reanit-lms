@@ -59,3 +59,13 @@ export class BundleNotFoundError extends Error {
 export class UnknownBundleCourseError extends Error {
   override readonly name = "UnknownBundleCourseError";
 }
+
+/** Only a paid order can be refunded; this one is pending, failed or already refunded. */
+export class OrderNotRefundableError extends Error {
+  override readonly name = "OrderNotRefundableError";
+}
+
+/** The order's gateway cannot refund (KHQR, PayWay): staff pay the student back themselves, then confirm it. */
+export class RefundByHandRequiredError extends Error {
+  override readonly name = "RefundByHandRequiredError";
+}

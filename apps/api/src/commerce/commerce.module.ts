@@ -16,6 +16,7 @@ import { BAKONG, CARD, COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYMENT_GATEWA
 import { createPayWayGateway } from "./payway-gateway";
 import { PayWayWebhookController } from "./payway-webhook.controller";
 import { PriceController } from "./price.controller";
+import { RefundsController } from "./refunds.controller";
 import { createStripeGateway } from "./stripe-gateway";
 import { StripeWebhookController } from "./stripe-webhook.controller";
 
@@ -108,10 +109,10 @@ function provideConfirmation(db: DbClient) {
   return createPaymentConfirmation(createPaymentConfirmationStore(db));
 }
 
-/** Prices, coupons, bundles, checkout with the configured gateways, and the webhooks that enroll on payment. */
+/** Prices, coupons, bundles, checkout with the configured gateways, refunds, and the webhooks that enroll on payment. */
 @Module({
   imports: [SchoolsModule],
-  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, StripeWebhookController, PayWayWebhookController],
+  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, RefundsController, StripeWebhookController, PayWayWebhookController],
   providers: [
     { provide: STRIPE, inject: [ENV], useFactory: provideStripe },
     { provide: PAYWAY, inject: [ENV], useFactory: providePayWay },

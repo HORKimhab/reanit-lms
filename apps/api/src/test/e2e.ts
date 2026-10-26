@@ -30,16 +30,20 @@ export type Agent = ReturnType<typeof request.agent>;
 /** In-memory object storage: an upload "arrives" when a test adds its key to `uploaded`. */
 type MemoryStorage = ObjectStorage & { uploaded: Set<string> };
 
-/** The app under test, the email it has sent, its object storage, the PayWay-like gateway's paid references, and public DNS's TXT records. */
+/** The app under test, the email it has sent, its object storage, the test gateways' paid and refunded references, and public DNS's TXT records. */
 export type E2eApp = {
   app: NestFastifyApplication;
   mail: MailMessage[];
   storage: MemoryStorage;
   paidAtGateway: Set<string>;
+  refundedAtGateway: Set<string>;
   txtRecords: Map<string, string[]>;
 };
 
-/** Stripe without the network: the session id is `cs_e2e_<order id>`, so tests can sign its webhook. */
+/** Sessions the Stripe-like test gateway refunded. */
+const refundedAtGateway = new Set<string>();
+
+/** Stripe without the network: the session id is `cs_e2e_<order id>`, so tests can sign its webhook; refunds are recorded. */
 const e2eStripeGateway: PaymentGateway = {
   method: "stripe",
   /**
@@ -59,6 +63,14 @@ const e2eStripeGateway: PaymentGateway = {
    */
   async startPayment(request) {
     return { kind: "redirect", url: `https://checkout.stripe.test/cs_e2e_${request.orderId}`, providerRef: `cs_e2e_${request.orderId}` };
+  },
+  /**
+   * Fakes a refund, recording the session it refunded.
+   *
+   * @param sessionId The session.
+   */
+  async refund(sessionId) {
+    refundedAtGateway.add(sessionId);
   },
 };
 
@@ -234,7 +246,7 @@ async function createE2eApp(databaseUrl: string, redisUrl?: string): Promise<E2e
   // Rate limits let requests through uncounted until Redis has connected, so tests start once it has.
   const redis = app.get<Redis>(REDIS);
   if (redisUrl && redis.status !== "ready") await once(redis, "ready");
-  return { app, mail, storage, paidAtGateway, txtRecords };
+  return { app, mail, storage, paidAtGateway, refundedAtGateway, txtRecords };
 }
 
 /**

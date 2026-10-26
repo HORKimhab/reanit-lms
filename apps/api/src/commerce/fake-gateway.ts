@@ -6,7 +6,7 @@ const REFERENCE_PREFIX = "fake_";
 /**
  * A card gateway for end-to-end tests (`FAKE_PAYMENTS`): it sends the student straight back to the
  * order page, and reports the payment paid when the order is read. The order is then confirmed and
- * the student enrolled the same way a Bakong or PayWay status check does it.
+ * the student enrolled the same way a Bakong or PayWay status check does it; refunds go through at once.
  *
  * @returns The gateway, standing in for Stripe.
  */
@@ -41,5 +41,8 @@ export function createFakeGateway(): PaymentGateway {
     async checkPayment() {
       return "paid";
     },
+
+    /** Refunds nothing: no money ever moved. */
+    async refund() {},
   };
 }

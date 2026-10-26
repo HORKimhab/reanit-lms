@@ -50,6 +50,8 @@ export async function dispatchEvent(handlers: EventHandlers, job: EventJob): Pro
   switch (job.type) {
     case "OrderPaid":
       return handlers.OrderPaid?.[job.handler]?.(toEvent(job));
+    case "OrderRefunded":
+      return handlers.OrderRefunded?.[job.handler]?.(toEvent(job));
     case "CourseCompleted":
       return handlers.CourseCompleted?.[job.handler]?.(toEvent(job));
     case "CommentPosted":

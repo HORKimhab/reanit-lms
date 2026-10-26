@@ -59,3 +59,46 @@ describe("createStripeGateway", () => {
     await expect(createStripeGateway(stripe).startPayment(REQUEST)).rejects.toThrow("no URL");
   });
 });
+
+describe("createStripeGateway refund", () => {
+  /**
+   * Creates a Stripe client whose session lookup and refund creation are stubbed.
+   *
+   * @param paymentIntent The session's payment, or null.
+   * @returns The client and the refund stub.
+   */
+  function refundingStripe(paymentIntent: string | null) {
+    const stripe = new Stripe("sk_test_reanit");
+    vi.spyOn(stripe.checkout.sessions, "retrieve").mockResolvedValue({ id: "cs_1", payment_intent: paymentIntent } as never);
+    const create = vi.spyOn(stripe.refunds, "create").mockResolvedValue({ id: "re_1" } as never);
+    return { stripe, create };
+  }
+
+  it("refunds the session's payment in full, keyed by the session so a retry refunds once", async () => {
+    const { stripe, create } = refundingStripe("pi_1");
+
+    await createStripeGateway(stripe).refund?.("cs_1");
+
+    expect(create).toHaveBeenCalledWith({ payment_intent: "pi_1" }, { idempotencyKey: "refund-cs_1" });
+  });
+
+  it("counts a payment Stripe already refunded as refunded", async () => {
+    const { stripe, create } = refundingStripe("pi_1");
+    create.mockRejectedValue(new Stripe.errors.StripeInvalidRequestError({ type: "invalid_request_error", code: "charge_already_refunded", message: "Charge already refunded" }));
+
+    await expect(createStripeGateway(stripe).refund?.("cs_1")).resolves.toBeUndefined();
+  });
+
+  it("throws when Stripe refuses the refund for another reason", async () => {
+    const { stripe, create } = refundingStripe("pi_1");
+    create.mockRejectedValue(new Stripe.errors.StripeInvalidRequestError({ type: "invalid_request_error", code: "charge_disputed", message: "Charge disputed" }));
+
+    await expect(createStripeGateway(stripe).refund?.("cs_1")).rejects.toThrow("Charge disputed");
+  });
+
+  it("throws for a session with no payment", async () => {
+    const { stripe } = refundingStripe(null);
+
+    await expect(createStripeGateway(stripe).refund?.("cs_1")).rejects.toThrow("Stripe session cs_1 has no payment to refund");
+  });
+});

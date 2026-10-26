@@ -28,4 +28,8 @@ describe("createFakeGateway", () => {
   it("reports the payment paid when asked", async () => {
     expect(await createFakeGateway().checkPayment?.("fake_order-1")).toBe("paid");
   });
+
+  it("refunds at once, since no money moved", async () => {
+    await expect(createFakeGateway().refund?.("fake_order-1")).resolves.toBeUndefined();
+  });
 });

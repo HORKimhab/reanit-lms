@@ -20,7 +20,26 @@ import type {
 import type { EmailLocale } from "../notifications";
 
 /** A stored order with its buyer, lines, bundle, coupon and gateway reference; `courseId` and `amount` sum up its lines. */
-type FakeOrder = OrderSummary & { userId: string; locale: EmailLocale; couponId: string | null; bundleId: string | null; lines: OrderLine[] };
+type FakeOrder = OrderSummary & {
+  userId: string;
+  locale: EmailLocale;
+  couponId: string | null;
+  bundleId: string | null;
+  lines: OrderLine[];
+  /** Set once refunded. */
+  refund?: { at: Date; isRefundedByHand: boolean };
+};
+
+/**
+ * Shapes a stored order as the store returns it.
+ *
+ * @param order The stored order.
+ * @returns Its summary.
+ */
+function summaryOf(order: FakeOrder): OrderSummary {
+  const { id, status, courseId, amount, currency, method, providerRef } = order;
+  return { id, status, courseId, amount, currency, method, providerRef };
+}
 
 /** In-memory `CommerceStore` for one school, whose rows tests can inspect. */
 export class FakeCommerceStore implements CommerceStore {
@@ -157,9 +176,35 @@ export class FakeCommerceStore implements CommerceStore {
    */
   async findOrder(orderId: string, userId: string) {
     const order = this.orders.find((candidate) => candidate.id === orderId && candidate.userId === userId);
-    if (!order) return null;
-    const { id, status, courseId, amount, currency, method, providerRef } = order;
-    return order.userId === userId ? { id, status, courseId, amount, currency, method, providerRef } : null;
+    return order ? summaryOf(order) : null;
+  }
+
+  /**
+   * Finds any buyer's order.
+   *
+   * @param orderId The order.
+   * @returns The order, or null.
+   */
+  async findSchoolOrder(orderId: string) {
+    const order = this.orders.find(({ id }) => id === orderId);
+    return order ? summaryOf(order) : null;
+  }
+
+  /**
+   * Refunds a paid order and revokes its lines' enrollments.
+   *
+   * @param orderId The order.
+   * @param refund When, and whether by hand.
+   * @param refund.at When it was refunded.
+   * @param refund.isRefundedByHand Whether staff paid the student back themselves.
+   * @returns False when the order is not paid.
+   */
+  async refundOrder(orderId: string, refund: { at: Date; isRefundedByHand: boolean }) {
+    const order = this.orders.find(({ id }) => id === orderId);
+    if (order?.status !== "paid") return false;
+    Object.assign(order, { status: "refunded", refund });
+    for (const line of order.lines) this.enrollments.delete(`${order.userId}:${line.courseId}`);
+    return true;
   }
 
   /**
@@ -373,5 +418,24 @@ export class AskableFakeGateway extends FakeGateway {
   async checkPayment(providerRef: string) {
     this.checked.push(providerRef);
     return this.checkResult;
+  }
+}
+
+/** A gateway that can also refund, like Stripe. */
+export class RefundingFakeGateway extends FakeGateway {
+  /** References it refunded. */
+  readonly refunded: string[] = [];
+  /** Set to make the next refund fail, as a gateway refusing it would. */
+  failure: Error | null = null;
+
+  /**
+   * Records the refund, or fails with `failure`.
+   *
+   * @param providerRef The payment's reference.
+   * @throws {Error} `failure`, when set.
+   */
+  async refund(providerRef: string) {
+    if (this.failure) throw this.failure;
+    this.refunded.push(providerRef);
   }
 }

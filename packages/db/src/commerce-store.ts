@@ -1,5 +1,5 @@
 import type { DbClient } from "./client";
-import { recordSale } from "./daily-stats";
+import { recordSale, reverseSale } from "./daily-stats";
 import { Prisma, type PaymentMethod } from "./generated/prisma/client";
 import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction, type SchoolTransaction } from "./tenant";
@@ -118,6 +118,38 @@ function toPrice({ id, amount, currency }: { id: string; amount: number; currenc
  */
 export function createCommerceStore(db: DbClient, schoolId: string) {
   const tenant = forSchool(db, schoolId);
+
+  /**
+   * Finds one of the school's orders, with its first course.
+   *
+   * @param where Which order: by id, and by buyer when given.
+   * @returns The order, or null when the school has no matching order.
+   */
+  async function findOrderWhere(where: Prisma.OrderWhereInput) {
+    const order = await tenant.order.findFirst({
+      where,
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        currency: true,
+        paymentMethod: true,
+        providerRef: true,
+        items: { select: { courseId: true }, take: 1 },
+      },
+    });
+    const [item] = order?.items ?? [];
+    if (!order || !item) return null;
+    return {
+      id: order.id,
+      status: order.status,
+      courseId: item.courseId,
+      amount: order.totalAmount,
+      currency: order.currency as Currency,
+      method: order.paymentMethod,
+      providerRef: order.providerRef,
+    };
+  }
 
   return {
     /**
@@ -242,30 +274,48 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * @param userId The buyer.
      * @returns The order, or null when the user has no such order in this school.
      */
-    async findOrder(orderId: string, userId: string) {
-      const order = await tenant.order.findFirst({
-        where: { id: orderId, userId },
-        select: {
-          id: true,
-          status: true,
-          totalAmount: true,
-          currency: true,
-          paymentMethod: true,
-          providerRef: true,
-          items: { select: { courseId: true }, take: 1 },
-        },
+    findOrder(orderId: string, userId: string) {
+      return findOrderWhere({ id: orderId, userId });
+    },
+
+    /**
+     * Finds any buyer's order in the school, for staff.
+     *
+     * @param orderId The order.
+     * @returns The order, or null when the school has no such order.
+     */
+    findSchoolOrder(orderId: string) {
+      return findOrderWhere({ id: orderId });
+    },
+
+    /**
+     * Refunds a paid order in one transaction: marks it refunded, revokes the enrollments it gave,
+     * takes its items out of the day's sales they were counted in, and records `OrderRefunded`.
+     *
+     * @param orderId The order.
+     * @param refund When it was refunded, and whether staff paid the student back by hand.
+     * @param refund.at When.
+     * @param refund.isRefundedByHand Whether by hand.
+     * @returns False when the order is not paid (any more), so nothing changed.
+     */
+    refundOrder(orderId: string, { at, isRefundedByHand }: { at: Date; isRefundedByHand: boolean }) {
+      return inSchoolTransaction(db, schoolId, async (tx) => {
+        // A refund running at the same time waits for this row, then finds it no longer paid.
+        const { count } = await tx.order.updateMany({ where: { id: orderId, status: "paid" }, data: { status: "refunded", refundedAt: at, isRefundedByHand } });
+        if (count === 0) return false;
+        const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, select: { userId: true, paidAt: true } });
+        // Confirmation sets paidAt whenever it marks an order paid.
+        const paidAt = order.paidAt!;
+        const items = await tx.orderItem.findMany({ where: { orderId }, select: { courseId: true, amount: true, currency: true } });
+        await tx.enrollment.deleteMany({ where: { orderId } });
+        for (const item of items) await reverseSale(tx, { schoolId, ...item, at: paidAt });
+        await appendEvent(tx, {
+          type: "OrderRefunded",
+          schoolId,
+          payload: { orderId, userId: order.userId, courseIds: items.map((item) => item.courseId), isRefundedByHand },
+        });
+        return true;
       });
-      const [item] = order?.items ?? [];
-      if (!order || !item) return null;
-      return {
-        id: order.id,
-        status: order.status,
-        courseId: item.courseId,
-        amount: order.totalAmount,
-        currency: order.currency as Currency,
-        method: order.paymentMethod,
-        providerRef: order.providerRef,
-      };
     },
 
     /**

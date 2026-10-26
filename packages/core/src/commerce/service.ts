@@ -11,7 +11,9 @@ import {
   CourseNotForSaleError,
   InvalidCouponError,
   OrderNotFoundError,
+  OrderNotRefundableError,
   PaymentMethodUnavailableError,
+  RefundByHandRequiredError,
   UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
@@ -34,6 +36,7 @@ import type {
   OfferQuery,
   PaymentMethod,
   PriceInput,
+  RefundInput,
   UpdateBundleInput,
 } from "./rules";
 
@@ -73,7 +76,7 @@ export interface CommerceDependencies {
  * @param dependencies.store The school's prices and orders.
  * @param dependencies.gateways Every configured gateway.
  * @param dependencies.confirmation Enrolls from a confirmed payment.
- * @param dependencies.clock The current time, for coupon expiry.
+ * @param dependencies.clock The current time, for coupon expiry and when refunds happen.
  * @returns Pricing, coupon, bundle, offer and checkout operations.
  * @example
  * const commerce = createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation, clock });
@@ -403,6 +406,30 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
       if (check !== "paid") return order;
       await confirmation.confirm(order.method, order.providerRef);
       return { ...order, status: "paid" };
+    },
+
+    /**
+     * Refunds a paid order in full and takes back what it gave: through its gateway when the gateway
+     * can refund (Stripe), or, for gateways that cannot (KHQR, PayWay), once staff confirm they paid the
+     * student back themselves.
+     *
+     * @param orderId The order.
+     * @param input Whether staff already refunded by hand.
+     * @param input.isRefundedByHand Staff paid the student back outside the platform.
+     * @throws {OrderNotFoundError} When the school has no such order.
+     * @throws {OrderNotRefundableError} When the order is not paid, or stopped being paid meanwhile.
+     * @throws {RefundByHandRequiredError} When the gateway cannot refund and staff have not refunded by hand.
+     * @throws {Error} When the gateway refuses the refund; the order stays paid.
+     */
+    async refundOrder(orderId: string, { isRefundedByHand }: RefundInput): Promise<void> {
+      const order = await store.findSchoolOrder(orderId);
+      if (!order) throw new OrderNotFoundError();
+      if (order.status !== "paid" || !order.providerRef) throw new OrderNotRefundableError();
+      const gateway = gateways.find(({ method }) => method === order.method);
+      if (gateway?.refund) await gateway.refund(order.providerRef);
+      else if (!isRefundedByHand) throw new RefundByHandRequiredError();
+      const isRefunded = await store.refundOrder(orderId, { at: clock.now(), isRefundedByHand: !gateway?.refund });
+      if (!isRefunded) throw new OrderNotRefundableError();
     },
   };
 }

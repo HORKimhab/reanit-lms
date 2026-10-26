@@ -4,7 +4,7 @@ import type { Prisma } from "./generated/prisma/client";
 import type { SchoolTransaction } from "./tenant";
 
 /** Event types the outbox carries; matches `DomainEvent["type"]` in `@reanit/core/events`. */
-type EventType = "OrderPaid" | "CourseCompleted" | "CommentPosted" | "StudentErased";
+type EventType = "OrderPaid" | "OrderRefunded" | "CourseCompleted" | "CommentPosted" | "StudentErased";
 
 /** An event as it is written. */
 type NewEvent = { type: EventType; schoolId: string; payload: Prisma.InputJsonObject };

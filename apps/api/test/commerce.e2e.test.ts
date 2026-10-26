@@ -80,6 +80,47 @@ describe("checkout", () => {
     await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "aba_payway" }).expect(409);
   });
 
+  it("refunds a Stripe order through Stripe and takes the course back, and audits it", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-refund"));
+    const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe" }).expect(201)).body;
+    await paidWebhook(orderId).expect(200);
+
+    await alpha.agent.post(`/orders/${orderId}/refund`).send({}).expect(204);
+
+    expect(e2e().refundedAtGateway.has(`cs_e2e_${orderId}`)).toBe(true);
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("refunded");
+    await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe" }).expect(201);
+    const again = await alpha.agent.post(`/orders/${orderId}/refund`).send({}).expect(409);
+    expect(again.body.type).toBe("urn:reanit:problem:order-not-refundable");
+    expect((await alpha.agent.get("/audit-events").expect(200)).body.entries).toContainEqual(expect.objectContaining({ action: "order.refund", targetId: orderId }));
+  });
+
+  it("refunds a PayWay order only once staff say they paid the student back", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-aba-refund"));
+    const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "aba_payway" }).expect(201)).body;
+    e2e().paidAtGateway.add(`pw_${orderId}`);
+    await buyer.get(`${base}/orders/${orderId}`).expect(200);
+
+    const refused = await alpha.agent.post(`/orders/${orderId}/refund`).send({}).expect(409);
+    expect(refused.body.type).toBe("urn:reanit:problem:refund-by-hand-required");
+    await alpha.agent.post(`/orders/${orderId}/refund`).send({ isRefundedByHand: true }).expect(204);
+
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("refunded");
+  });
+
+  it("keeps another school's orders from its staff", async () => {
+    const base = `/schools/by-subdomain/${alpha.school.subdomain}`;
+    const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-guarded"));
+    const { orderId } = (await buyer.post(`${base}/checkout`).send({ courseSlug: course.slug, method: "stripe" }).expect(201)).body;
+    await paidWebhook(orderId).expect(200);
+    const rival = await openSchool(e2e().app, uniqueName("shop-rival"));
+
+    await rival.agent.post(`/orders/${orderId}/refund`).send({ isRefundedByHand: true }).expect(404);
+    expect((await buyer.get(`${base}/orders/${orderId}`).expect(200)).body.order.status).toBe("paid");
+  });
+
   it("refuses a method that is not configured", async () => {
     const { agent: buyer } = await signUp(e2e().app, uniqueName("buyer-khqr"));
 

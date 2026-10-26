@@ -287,22 +287,26 @@ model BundleCourse {
 }
 
 model Order {
-  id            String        @id @default(uuid()) @db.Uuid
-  schoolId      String        @map("school_id") @db.Uuid
-  userId        String        @map("user_id") @db.Uuid
-  status        OrderStatus   @default(pending)
-  totalAmount   Int           @map("total_amount")
-  currency      String        @db.Char(3)
-  paymentMethod PaymentMethod @map("payment_method")
+  id               String        @id @default(uuid()) @db.Uuid
+  schoolId         String        @map("school_id") @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  status           OrderStatus   @default(pending)
+  totalAmount      Int           @map("total_amount")
+  currency         String        @db.Char(3)
+  paymentMethod    PaymentMethod @map("payment_method")
   /// The language the buyer checked out in (`en` or `km`); their receipt and welcome emails use it.
-  locale        String        @default("en")
+  locale           String        @default("en")
   /// The gateway's id for this payment (Stripe session, PayWay tran_id, KHQR md5); set once payment starts.
-  providerRef   String?       @unique @map("provider_ref")
+  providerRef      String?       @unique @map("provider_ref")
   /// The coupon used; null without one, or once the coupon is deleted (`total_amount` keeps the discount).
-  couponId      String?       @map("coupon_id") @db.Uuid
-  paidAt        DateTime?     @map("paid_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  couponId         String?       @map("coupon_id") @db.Uuid
+  paidAt           DateTime?     @map("paid_at")
+  /// When staff refunded it (API-22); null unless `refunded`.
+  refundedAt       DateTime?     @map("refunded_at")
+  /// The gateway could not refund (KHQR, PayWay), so staff paid the student back themselves.
+  isRefundedByHand Boolean       @default(false) @map("is_refunded_by_hand")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)

@@ -1658,6 +1658,41 @@
         ]
       }
     },
+    "/orders/{id}/refund": {
+      "post": {
+        "operationId": "RefundsController_refund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
     "/schools/by-subdomain/{subdomain}/learn/{slug}": {
       "get": {
         "operationId": "LearningController_course",
@@ -4705,6 +4740,15 @@
           "order"
         ]
       },
+      "RefundBody": {
+        "type": "object",
+        "properties": {
+          "isRefundedByHand": {
+            "default": false,
+            "type": "boolean"
+          }
+        }
+      },
       "PlayerCourseResponse": {
         "type": "object",
         "properties": {
@@ -6044,6 +6088,7 @@
                     "bundle.create",
                     "bundle.update",
                     "bundle.price.set",
+                    "order.refund",
                     "lesson.media.attach",
                     "lesson.quiz.save",
                     "comment.reply",

@@ -277,4 +277,42 @@ describe("bundles", () => {
   it("refuses a price that belongs to neither a course nor a bundle", async () => {
     await expect(db.price.create({ data: { schoolId: alphaId, amount: 100, currency: "USD" } })).rejects.toThrow();
   });
+
+  it("refunds a paid order: takes the course back, reverses the day's sales and records OrderRefunded, once", async () => {
+    const refundedBuyer = (await db.user.create({ data: { email: "commerce-refunded@example.com" } })).id;
+    const { id, providerRef } = await pendingOrder(refundedBuyer);
+    await confirmations.confirm("stripe", providerRef);
+    const { paidAt } = await db.order.findUniqueOrThrow({ where: { id }, select: { paidAt: true } });
+    const day = new Date(`${paidAt!.toISOString().slice(0, 10)}T00:00:00Z`); // confirm set paidAt
+    /**
+     * Reads the course's USD sales on the day the order was paid.
+     *
+     * @returns The day's row.
+     */
+    function salesOfDay() {
+      return db.dailySales.findUniqueOrThrow({ where: { schoolId_courseId_day_currency: { schoolId: alphaId, courseId, day, currency: "USD" } } });
+    }
+    const before = await salesOfDay();
+    const at = new Date("2026-10-26T09:00:00Z");
+    const store = createCommerceStore(db, alphaId);
+
+    expect(await store.refundOrder(id, { at, isRefundedByHand: true })).toBe(true);
+
+    expect(await db.order.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: "refunded", refundedAt: at, isRefundedByHand: true });
+    expect(await db.enrollment.count({ where: { userId: refundedBuyer } })).toBe(0);
+    expect(await salesOfDay()).toMatchObject({ sales: before.sales - 1, revenue: before.revenue - 4900n });
+    expect(await db.outboxEvent.findMany({ where: { type: "OrderRefunded", schoolId: alphaId }, select: { payload: true } })).toEqual([
+      { payload: { orderId: id, userId: refundedBuyer, courseIds: [courseId], isRefundedByHand: true } },
+    ]);
+    expect(await store.refundOrder(id, { at, isRefundedByHand: true })).toBe(false);
+    expect((await salesOfDay()).sales).toBe(before.sales - 1);
+  });
+
+  it("refunds neither a pending order nor another school's order", async () => {
+    const { id } = await pendingOrder((await db.user.create({ data: { email: "commerce-pending-refund@example.com" } })).id);
+
+    expect(await createCommerceStore(db, alphaId).refundOrder(id, { at: new Date(), isRefundedByHand: true })).toBe(false);
+    expect(await createCommerceStore(db, betaId).findSchoolOrder(id)).toBeNull();
+    expect((await createCommerceStore(db, alphaId).findSchoolOrder(id))?.status).toBe("pending");
+  });
 });

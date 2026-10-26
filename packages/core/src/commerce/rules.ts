@@ -149,3 +149,9 @@ export type BundleCheckoutInput = z.infer<typeof bundleCheckoutSchema>;
 export type OfferQuery = z.infer<typeof offerQuerySchema>;
 /** Parsed checkout input. */
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+/** Refund form: whether staff already paid the student back themselves, for gateways that cannot refund. */
+export const refundSchema = z.object({ isRefundedByHand: z.boolean().default(false) });
+
+/** Parsed refund input. */
+export type RefundInput = z.infer<typeof refundSchema>;

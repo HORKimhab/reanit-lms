@@ -165,6 +165,7 @@ const COMMERCE_METHODS = [
   "getBundleOffer",
   "checkoutBundle",
   "getOrder",
+  "refundOrder",
 ] as const satisfies readonly (keyof CommerceService)[];
 const LEARNING_METHODS = [
   "getCourse",
