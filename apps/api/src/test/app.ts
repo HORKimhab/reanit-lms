@@ -9,7 +9,7 @@ import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
-import type { SchoolService, StudentService } from "@reanit/core/schools";
+import type { DomainService, SchoolService, StudentService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
@@ -31,7 +31,7 @@ import { CERTIFICATES_FOR_SCHOOL, COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SC
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
-import { SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL } from "../schools/schools.tokens";
+import { DOMAIN_SERVICE, SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL } from "../schools/schools.tokens";
 
 /** Environment the test app boots with; nothing connects to these URLs (e2e tests swap in a real database). */
 export const TEST_ENV: Env = {
@@ -67,6 +67,8 @@ export type FakeClients = {
   auth: Record<keyof AuthService, Mock>;
   /** Stands in for `@reanit/core/schools`. */
   schools: Record<keyof SchoolService, Mock>;
+  /** Stands in for the custom domain use cases. */
+  domains: Record<keyof DomainService, Mock>;
   /** Stands in for every school's students list; `studentsFor` records which school was asked for. */
   students: Record<keyof StudentService, Mock>;
   studentsFor: Mock<(schoolId: string) => StudentService>;
@@ -120,6 +122,14 @@ const SCHOOL_METHODS = [
   "requestLogoUpload",
   "updateSettings",
 ] as const satisfies readonly (keyof SchoolService)[];
+const DOMAIN_METHODS = [
+  "isAvailable",
+  "getDomain",
+  "addDomain",
+  "verifyDomain",
+  "removeDomain",
+  "resolveHostname",
+] as const satisfies readonly (keyof DomainService)[];
 const STUDENT_METHODS = ["searchStudents"] as const satisfies readonly (keyof StudentService)[];
 const CATALOG_METHODS = [
   "listCourses",
@@ -179,7 +189,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, students, catalog, media, commerce, learning, moderation, certificate, stats and audit services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats and audit services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -198,6 +208,7 @@ export function createFakeClients(): FakeClients {
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
     auth,
     schools: fakeService(SCHOOL_METHODS),
+    domains: fakeService(DOMAIN_METHODS),
     students,
     studentsFor: vi.fn(() => students as unknown as StudentService),
     catalog,
@@ -244,6 +255,8 @@ export async function createTestApp(
     .useValue(clients.auth)
     .overrideProvider(SCHOOL_SERVICE)
     .useValue(clients.schools)
+    .overrideProvider(DOMAIN_SERVICE)
+    .useValue(clients.domains)
     .overrideProvider(STUDENTS_FOR_SCHOOL)
     .useValue(clients.studentsFor)
     .overrideProvider(CATALOG_FOR_SCHOOL)

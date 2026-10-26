@@ -1,5 +1,12 @@
 import { uploadRequestSchema } from "@reanit/core/media";
-import { createSchoolSchema, schoolSettingsSchema, studentSearchSchema, subdomainSchema } from "@reanit/core/schools";
+import {
+  createSchoolSchema,
+  customDomainSchema,
+  domainHostnameSchema,
+  schoolSettingsSchema,
+  studentSearchSchema,
+  subdomainSchema,
+} from "@reanit/core/schools";
 import { z } from "zod";
 
 import { pageResponseSchema } from "../http/page-response";
@@ -16,6 +23,12 @@ export class SchoolSettingsBody extends createZodDto(schoolSettingsSchema) {}
 
 /** `POST /schools/current/logo-uploads` body: the image the browser is about to send. */
 export class LogoUploadBody extends createZodDto(uploadRequestSchema) {}
+
+/** `POST /schools/current/domain` body: the custom domain to set up. */
+export class CustomDomainBody extends createZodDto(customDomainSchema) {}
+
+/** `GET /schools/by-domain/:hostname` path. */
+export class HostnameParams extends createZodDto(z.object({ hostname: domainHostnameSchema })) {}
 
 /** `GET /students` query. */
 export class StudentsQuery extends createZodDto(studentSearchSchema) {}
@@ -55,3 +68,20 @@ export class StudentsResponse extends createZodDto(
     }),
   ),
 ) {}
+
+const customDomainResponseSchema = z.object({
+  hostname: z.string(),
+  status: z.enum(["awaiting_dns", "issuing_certificate", "active", "certificate_failed"]),
+  dnsRecords: z.array(z.object({ type: z.enum(["TXT", "CNAME"]), name: z.string(), value: z.string() })),
+});
+
+/** The school's custom domain, its setup status and the DNS records its owner adds. */
+export class CustomDomainResponse extends createZodDto(z.object({ domain: customDomainResponseSchema })) {}
+
+/** Whether this deployment offers custom domains, and the school's domain (null when it has none). */
+export class CustomDomainSettingsResponse extends createZodDto(
+  z.object({ isAvailable: z.boolean(), domain: customDomainResponseSchema.nullable() }),
+) {}
+
+/** The subdomain of the school a verified custom domain serves. */
+export class DomainSiteResponse extends createZodDto(z.object({ subdomain: z.string() })) {}

@@ -8,3 +8,12 @@ export const STUDENTS_FOR_SCHOOL = Symbol("STUDENTS_FOR_SCHOOL");
 
 /** Builds one school's students list on the tenant client. */
 export type StudentsForSchool = (schoolId: string) => StudentService;
+
+/** Injection token for the `DomainService` from `@reanit/core/schools`. */
+export const DOMAIN_SERVICE = Symbol("DOMAIN_SERVICE");
+
+/** Injection token for the `DnsLookup` that checks domain ownership records. */
+export const DNS_LOOKUP = Symbol("DNS_LOOKUP");
+
+/** Injection token for the custom domains' `DomainEdge`; null when custom domains are not configured. */
+export const DOMAIN_EDGE = Symbol("DOMAIN_EDGE");

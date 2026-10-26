@@ -78,7 +78,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 ### Key decisions
 
 1. **Modular monolith first.** All code lives in one TypeScript codebase with strict module boundaries: `auth`, `schools`, `catalog`, `commerce`, `learning`, `media`, `notifications`, `analytics`. Domain logic sits in `packages/core` and data access in `packages/db`; the NestJS API (`apps/api`) exposes them over HTTP with one Nest module per domain module, and the web app is a client of that API. A module becomes its own service only when load or team size forces it.
-2. **Multi-tenancy.** All schools share one Postgres database, and every tenant table carries a `school_id`. Isolation is enforced by **Postgres Row-Level Security** and a tenant-scoped data-access layer. Middleware works out the tenant from the subdomain or custom domain, and that lookup is cached in Redis. Very large tenants can be moved to separate shards later.
+2. **Multi-tenancy.** All schools share one Postgres database, and every tenant table carries a `school_id`. Isolation is enforced by **Postgres Row-Level Security** and a tenant-scoped data-access layer. Middleware works out the tenant from the subdomain or custom domain; custom domain lookups go through the API and are cached for a minute in the web app. Very large tenants can be moved to separate shards later.
 3. **Video is outsourced.** Mux or Cloudflare Stream handles upload, transcoding, adaptive HLS and signed playback URLs, so only enrolled students can stream.
 4. **Payments run through Stripe Connect.** Each creator is a connected account and the platform takes an application fee. Webhooks are processed idempotently through a queue. A student is enrolled **only when a confirmed webhook arrives**, never on the client-side redirect.
 5. **Cache public pages; keep learning dynamic.** Sales pages and school home pages use ISR behind a CDN, since that is where most traffic lands. The student area and dashboard are rendered dynamically.
@@ -112,7 +112,7 @@ A multi-tenant online course platform, similar to Teachable. Creators open their
 ## 4. Data model
 
 ```
-User ─┬─< Membership >─ School ──< Domain
+User ─┬─< Membership >─ School ──o Domain  (one custom domain per school, served once a TXT record verifies it)
       │                   │
       │                   ├──< Course ──< Section ──< Lesson ──< Attachment
       │                   │       │                      │
@@ -224,6 +224,7 @@ Subscriptions and payment plans, affiliates, communities, page builder, analytic
 | 4 | ✅ Hosting | **Decided:** DigitalOcean droplets (Docker Compose, managed Postgres + Redis, DOCR) behind Cloudflare (DNS, wildcard TLS); files on R2 | One droplet each for staging and production; CI builds the images, migrates, then deploys. Runbook: [infra/deploy/README.md](infra/deploy/README.md) |
 | 5 | 🟡 ORM | Prisma · Drizzle | Prisma is the default; Drizzle gives finer control over RLS and SQL |
 | 6 | ✅ Package manager / runtime | **Decided:** pnpm + Node.js 24 LTS | Chosen over Bun for strict dependencies and maturity. See [pnpm usage](#pnpm-usage) |
+| 7 | ✅ Custom domain TLS | **Decided:** Cloudflare for SaaS (custom hostnames) | Keeps every request behind Cloudflare, so the droplet firewall and Caddy's Origin CA setup stay as they are. Schools prove ownership with a TXT record, then CNAME to the fallback origin; behind the `DomainCertificates` port in `@reanit/core/schools`. API-16 |
 
 ---
 

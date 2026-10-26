@@ -43,6 +43,13 @@ enum PaymentMethod {
   bakong_khqr
 }
 
+/// Where a custom domain's certificate stands at the edge (Cloudflare for SaaS).
+enum DomainTlsStatus {
+  pending
+  active
+  failed
+}
+
 enum CouponKind {
   percent
   fixed
@@ -130,6 +137,7 @@ model School {
   lessonComments      LessonComment[]
   certificates        Certificate[]
   certificateTemplate CertificateTemplate?
+  domain              Domain?
 
   @@map("schools")
 }
@@ -566,4 +574,25 @@ model CertificateTemplate {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("certificate_templates")
+}
+
+/// A school's custom domain (API-16): served once a TXT record proves ownership, with a certificate from the edge.
+model Domain {
+  id                String           @id @default(uuid()) @db.Uuid
+  /// One custom domain per school.
+  schoolId          String           @unique @map("school_id") @db.Uuid
+  /// Not unique: an unverified claim must not block the hostname's real owner; the service refuses a second verification.
+  hostname          String
+  verificationToken String           @map("verification_token")
+  verifiedAt        DateTime?        @map("verified_at")
+  /// The certificate provider's id for the hostname; null until verified.
+  certificateId     String?          @map("certificate_id")
+  tlsStatus         DomainTlsStatus? @map("tls_status")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([hostname])
+  @@map("domains")
 }

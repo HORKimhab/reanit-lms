@@ -41,6 +41,12 @@ const envSchema = baseEnvSchema
   BAKONG_MERCHANT_CITY: z.string().min(1).max(15).default("Phnom Penh"),
   /** Bakong Open API host: the sandbox until the account goes live (https://api-bakong.nbc.gov.kh). */
   BAKONG_BASE_URL: z.url().default("https://sit-api-bakong.nbc.gov.kh"),
+  /** Cloudflare API token that may edit the zone's SSL and certificates; custom domains are offered only when it, the zone and the target are set. */
+  CLOUDFLARE_API_TOKEN: z.string().min(1).optional(),
+  /** Zone of the root domain, with Cloudflare for SaaS enabled; custom domains become its custom hostnames. */
+  CLOUDFLARE_ZONE_ID: z.string().min(1).optional(),
+  /** The zone's fallback origin, which every custom domain CNAMEs to, e.g. `customers.reanit.com`. */
+  CUSTOM_DOMAIN_TARGET: z.hostname().optional(),
   /**
    * End-to-end tests only: card payments go to a fake that pays every order as soon as it is checked.
    * Refused unless APP_URL is a localhost address, so it can never take orders on a real deployment.
@@ -67,6 +73,10 @@ const envSchema = baseEnvSchema
   .refine((env) => Boolean(env.BAKONG_ACCOUNT_ID) === Boolean(env.BAKONG_TOKEN), {
     message: "Set BAKONG_ACCOUNT_ID and BAKONG_TOKEN together",
     path: ["BAKONG_TOKEN"],
+  })
+  .refine((env) => new Set([env.CLOUDFLARE_API_TOKEN, env.CLOUDFLARE_ZONE_ID, env.CUSTOM_DOMAIN_TARGET].map(Boolean)).size === 1, {
+    message: "Set CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID and CUSTOM_DOMAIN_TARGET together",
+    path: ["CUSTOM_DOMAIN_TARGET"],
   })
   .refine((env) => !env.FAKE_PAYMENTS || isLocalhost(env.APP_URL), {
     message: "FAKE_PAYMENTS is for end-to-end tests: APP_URL must be a localhost address",

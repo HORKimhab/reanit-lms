@@ -1,12 +1,14 @@
-# Origin server for one environment. Cloudflare proxies <ROOT_DOMAIN> and *.<ROOT_DOMAIN> here (SSL mode
-# "Full (strict)"), and the droplet's firewall admits 80/443 from Cloudflare only (infra/deploy/README.md).
+# Origin server for one environment. Cloudflare proxies <ROOT_DOMAIN>, *.<ROOT_DOMAIN> and schools' custom domains
+# here (SSL mode "Full (strict)"), and the droplet's firewall admits 80/443 from Cloudflare only (infra/deploy/README.md).
 {
 	# Certificates come from Cloudflare's Origin CA, never from ACME.
 	auto_https disable_certs
+	# A custom domain (Cloudflare for SaaS) arrives with its own name as SNI, which no certificate here has. Caddy then
+	# answers with the Origin CA certificate, which covers the fallback origin the domain CNAMEs to, as Cloudflare requires.
+	fallback_sni {$ROOT_DOMAIN}
 }
 
-{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
-	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+(web) {
 	encode zstd gzip
 
 	reverse_proxy web:3000 {
@@ -14,4 +16,15 @@
 		# own hop, the API's TRUST_PROXY_HOPS=2 then reads the browser's address for rate limits.
 		header_up X-Forwarded-For {header.CF-Connecting-IP}
 	}
+}
+
+{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+	import web
+}
+
+# Schools' custom domains: any other host Cloudflare forwards. The web app serves only domains a school has verified.
+:443 {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+	import web
 }

@@ -9,7 +9,7 @@ x-app: &app
   restart: unless-stopped
 
 services:
-  # TLS for <ROOT_DOMAIN> and *.<ROOT_DOMAIN> with the Origin CA certificate; Cloudflare terminates the public TLS.
+  # TLS for <ROOT_DOMAIN>, *.<ROOT_DOMAIN> and custom domains with the Origin CA certificate; Cloudflare terminates the public TLS.
   caddy:
     <<: *app
     image: caddy:2.10-alpine

@@ -5,6 +5,7 @@ export { createCatalogStore } from "./catalog-store";
 export { createCommentStore } from "./comment-store";
 export { createCommerceStore, createPaymentConfirmationStore } from "./commerce-store";
 export { createDbClient, type DbClient } from "./client";
+export { createDomainStore } from "./domain-store";
 export { createLearningStore } from "./learning-store";
 export { createLessonMediaStore } from "./lesson-media-store";
 export { createOutboxStore } from "./outbox";

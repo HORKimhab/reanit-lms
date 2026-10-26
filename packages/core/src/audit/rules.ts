@@ -19,6 +19,9 @@ export const AUDIT_ACTIONS = [
   "comment.reply",
   "comment.moderate",
   "school.settings.update",
+  "school.domain.add",
+  "school.domain.verify",
+  "school.domain.remove",
   "certificate.template.update",
 ] as const;
 

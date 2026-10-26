@@ -2,11 +2,11 @@
 
 Each environment is one DigitalOcean droplet running [`compose.yml`](compose.yml): Caddy, web, api and worker
 from images in DigitalOcean Container Registry (DOCR). Postgres and Redis are DigitalOcean managed databases,
-lesson files go to Cloudflare R2, and Cloudflare serves DNS and public TLS for the root domain and every school
-subdomain.
+lesson files go to Cloudflare R2, and Cloudflare serves DNS and public TLS for the root domain, every school
+subdomain and every school's verified custom domain (Cloudflare for SaaS).
 
 ```
-browser ─► Cloudflare (DNS, wildcard edge TLS) ─► droplet: Caddy (Origin CA cert) ─► web ─/api/*─► api
+browser ─► Cloudflare (DNS, wildcard + custom hostname edge TLS) ─► droplet: Caddy (Origin CA cert) ─► web ─/api/*─► api
                                                                                     worker ◄─ Redis ─┘
                                                      managed Postgres ◄── api, worker, migrate
 ```
@@ -57,13 +57,22 @@ keep them backward compatible with the release before.
    `/opt/reanit/certs/origin.pem` and `/opt/reanit/certs/origin-key.pem` (mode 600, owner `deploy`).
 4. **R2**: a bucket per environment and an API token for it, then run the bucket CORS setup once from the droplet
    after the first deploy: `docker compose run --rm api node dist/storage-setup.js`.
+5. **Custom domains** (optional; the dashboard says they are unavailable until this is done). Schools point a
+   domain at the platform with a CNAME, and the API adds each verified one to the zone as a custom hostname, for which
+   Cloudflare issues the certificate (the first 100 hostnames are free, then per hostname per month).
+   1. **SSL/TLS → Custom Hostnames**: enable Cloudflare for SaaS on the zone.
+   2. Add a **proxied** `A customers → <droplet IP>` record and set `customers.example.com` as the **fallback
+      origin**; wait until it shows Active. Custom domains CNAME to it. The Origin CA certificate covers it, and
+      Caddy answers custom domains with that certificate (`fallback_sni` in the [`Caddyfile`](Caddyfile)).
+   3. An API token with **Zone → SSL and Certificates → Edit** on the zone. Set `CLOUDFLARE_API_TOKEN`,
+      `CLOUDFLARE_ZONE_ID` and `CUSTOM_DOMAIN_TARGET=customers.example.com` in `api.env`.
 
 ### 3. Files on the droplet (`/opt/reanit`, owner `deploy`, mode 600)
 
 | File | Contents |
 |---|---|
 | `.env` | `REGISTRY=registry.digitalocean.com/reanit`, `DEPLOY_ENV=staging` (or `production`), `ROOT_DOMAIN=<root domain>`. `deploy.sh` adds `IMAGE_TAG`. |
-| `api.env` | Every variable in [`apps/api/.env.example`](../../apps/api/.env.example) with production values: managed `DATABASE_URL` (`?sslmode=require&uselibpqcompat=true`, since node-postgres otherwise verifies against a CA it lacks) and `REDIS_URL` (`rediss://`), `APP_URL=https://<root domain>`, the R2 `S3_*` values (no `S3_FORCE_PATH_STYLE`), SMTP, payment keys, `DEPLOY_ENV`, `SENTRY_DSN`. Set `TRUST_PROXY_HOPS=2` (Caddy, then web). Never `FAKE_PAYMENTS`. |
+| `api.env` | Every variable in [`apps/api/.env.example`](../../apps/api/.env.example) with production values: managed `DATABASE_URL` (`?sslmode=require&uselibpqcompat=true`, since node-postgres otherwise verifies against a CA it lacks) and `REDIS_URL` (`rediss://`), `APP_URL=https://<root domain>`, the R2 `S3_*` values (no `S3_FORCE_PATH_STYLE`), SMTP, payment keys, the Cloudflare custom domain settings (step 2.5), `DEPLOY_ENV`, `SENTRY_DSN`. Set `TRUST_PROXY_HOPS=2` (Caddy, then web). Never `FAKE_PAYMENTS`. |
 | `worker.env` | Every variable in [`apps/worker/.env.example`](../../apps/worker/.env.example), same values as the API. |
 | `web.env` | `API_URL=http://api:4000`, `ROOT_DOMAIN=<root domain>`, `OTEL_EXPORTER_OTLP_ENDPOINT` if used. |
 | `migrate.env` | `DATABASE_URL`: the managed database's owner connection (`doadmin`, `?sslmode=require`), which creates the `reanit_app` role. |

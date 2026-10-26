@@ -1,5 +1,40 @@
-export { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "./errors";
-export type { MembershipRole, School, SchoolChanges, SchoolRecord, SchoolStore, StudentStore, StudentSummary } from "./ports";
+export {
+  createDomainService,
+  customDomainSchema,
+  domainHostnameSchema,
+  type CustomDomain,
+  type CustomDomainInput,
+  type CustomDomainStatus,
+  type DnsRecord,
+  type DomainEdge,
+  type DomainService,
+} from "./domains";
+export {
+  CustomDomainsUnavailableError,
+  DomainNotAllowedError,
+  DomainNotFoundError,
+  DomainNotVerifiedError,
+  DomainTakenError,
+  NotSchoolStaffError,
+  SchoolHasDomainError,
+  SchoolNotFoundError,
+  SubdomainTakenError,
+} from "./errors";
+export type {
+  DnsLookup,
+  DomainCertificates,
+  DomainChanges,
+  DomainRecord,
+  DomainStore,
+  DomainTlsStatus,
+  MembershipRole,
+  School,
+  SchoolChanges,
+  SchoolRecord,
+  SchoolStore,
+  StudentStore,
+  StudentSummary,
+} from "./ports";
 export {
   createSchoolSchema,
   DEFAULT_BRAND_COLOR,

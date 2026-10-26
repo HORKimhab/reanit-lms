@@ -44,6 +44,27 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...REQUIRED, ...half })).toThrow(ZodError);
   });
 
+  it("accepts the custom domain settings set together", () => {
+    const cloudflare = { CLOUDFLARE_API_TOKEN: "token", CLOUDFLARE_ZONE_ID: "zone", CUSTOM_DOMAIN_TARGET: "customers.reanit.com" };
+
+    expect(parseEnv({ ...REQUIRED, ...cloudflare })).toMatchObject(cloudflare);
+  });
+
+  it.each([
+    { CLOUDFLARE_API_TOKEN: "token" },
+    { CLOUDFLARE_ZONE_ID: "zone" },
+    { CUSTOM_DOMAIN_TARGET: "customers.reanit.com" },
+    { CLOUDFLARE_API_TOKEN: "token", CLOUDFLARE_ZONE_ID: "zone" },
+  ])("throws a ZodError for part of the custom domain settings: %j", (part) => {
+    expect(() => parseEnv({ ...REQUIRED, ...part })).toThrow(ZodError);
+  });
+
+  it("throws a ZodError for a custom domain target that is a URL, not a hostname", () => {
+    const cloudflare = { CLOUDFLARE_API_TOKEN: "token", CLOUDFLARE_ZONE_ID: "zone", CUSTOM_DOMAIN_TARGET: "https://customers.reanit.com" };
+
+    expect(() => parseEnv({ ...REQUIRED, ...cloudflare })).toThrow(ZodError);
+  });
+
   it.each(["http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000", "http://angkor.localhost:3000"])("allows fake payments when the app runs on %s", (appUrl) => {
     expect(parseEnv({ ...REQUIRED, APP_URL: appUrl, FAKE_PAYMENTS: "true" }).FAKE_PAYMENTS).toBe(true);
   });

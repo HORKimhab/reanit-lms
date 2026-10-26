@@ -32,7 +32,17 @@ import {
   NotEnrolledError,
   QuizNotFoundError,
 } from "@reanit/core/learning";
-import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "@reanit/core/schools";
+import {
+  CustomDomainsUnavailableError,
+  DomainNotAllowedError,
+  DomainNotFoundError,
+  DomainNotVerifiedError,
+  DomainTakenError,
+  NotSchoolStaffError,
+  SchoolHasDomainError,
+  SchoolNotFoundError,
+  SubdomainTakenError,
+} from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
 
@@ -70,6 +80,12 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: SubdomainTakenError, status: HttpStatus.CONFLICT, code: "subdomain-taken", detail: "Another school already uses this subdomain." },
   { error: NotSchoolStaffError, status: HttpStatus.FORBIDDEN, code: "not-school-staff", detail: "You do not run a school." },
   { error: SchoolNotFoundError, status: HttpStatus.NOT_FOUND, code: "school-not-found", detail: "No school uses this subdomain." },
+  { error: CustomDomainsUnavailableError, status: HttpStatus.SERVICE_UNAVAILABLE, code: "custom-domains-unavailable", detail: "Custom domains are not offered here yet." },
+  { error: DomainNotAllowedError, status: HttpStatus.BAD_REQUEST, code: "domain-not-allowed", detail: "This domain belongs to the platform; use your school's subdomain instead." },
+  { error: DomainTakenError, status: HttpStatus.CONFLICT, code: "domain-taken", detail: "Another school has already verified this domain." },
+  { error: SchoolHasDomainError, status: HttpStatus.CONFLICT, code: "school-has-domain", detail: "The school already has a custom domain. Remove it first." },
+  { error: DomainNotFoundError, status: HttpStatus.NOT_FOUND, code: "domain-not-found", detail: "No custom domain was found." },
+  { error: DomainNotVerifiedError, status: HttpStatus.CONFLICT, code: "domain-not-verified", detail: "The verification TXT record was not found yet. DNS changes can take a while to show." },
   { error: CourseNotForSaleError, status: HttpStatus.CONFLICT, code: "course-not-for-sale", detail: "This course or bundle has no price yet." },
   { error: AlreadyEnrolledError, status: HttpStatus.CONFLICT, code: "already-enrolled", detail: "You already have this course, or every course of this bundle." },
   { error: PaymentMethodUnavailableError, status: HttpStatus.BAD_REQUEST, code: "payment-method-unavailable", detail: "This payment method cannot take this payment." },

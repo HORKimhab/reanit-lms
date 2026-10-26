@@ -8,6 +8,7 @@ import { Test } from "@nestjs/testing";
 import type { Mailer, MailMessage } from "@reanit/core/auth";
 import type { PaymentGateway } from "@reanit/core/commerce";
 import type { ObjectStorage } from "@reanit/core/media";
+import type { DnsLookup, DomainEdge } from "@reanit/core/schools";
 import type { Redis } from "ioredis";
 // Types `inject("databaseUrl")` and `inject("redisUrl")` for the e2e files.
 import type {} from "@reanit/db/testing/postgres";
@@ -19,6 +20,7 @@ import { AppModule } from "../app.module";
 import { ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
 import { REDIS } from "../redis/redis.module";
+import { DNS_LOOKUP, DOMAIN_EDGE } from "../schools/schools.tokens";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
 
@@ -28,8 +30,14 @@ export type Agent = ReturnType<typeof request.agent>;
 /** In-memory object storage: an upload "arrives" when a test adds its key to `uploaded`. */
 type MemoryStorage = ObjectStorage & { uploaded: Set<string> };
 
-/** The app under test, the email it has sent, its object storage, and the PayWay-like gateway's paid references. */
-export type E2eApp = { app: NestFastifyApplication; mail: MailMessage[]; storage: MemoryStorage; paidAtGateway: Set<string> };
+/** The app under test, the email it has sent, its object storage, the PayWay-like gateway's paid references, and public DNS's TXT records. */
+export type E2eApp = {
+  app: NestFastifyApplication;
+  mail: MailMessage[];
+  storage: MemoryStorage;
+  paidAtGateway: Set<string>;
+  txtRecords: Map<string, string[]>;
+};
 
 /** Stripe without the network: the session id is `cs_e2e_<order id>`, so tests can sign its webhook. */
 const e2eStripeGateway: PaymentGateway = {
@@ -88,6 +96,48 @@ const e2ePayWayGateway: PaymentGateway = {
   },
 };
 
+/** TXT records public DNS answers with, by name; tests add a domain's ownership record to "publish" it. */
+const txtRecords = new Map<string, string[]>();
+
+/** Public DNS without the network, answering from `txtRecords`. */
+const e2eDns: DnsLookup = {
+  /**
+   * Fakes a TXT lookup.
+   *
+   * @param name Fully qualified name.
+   * @returns The records a test published there, or none.
+   */
+  async txtRecords(name) {
+    return txtRecords.get(name) ?? [];
+  },
+};
+
+/** Cloudflare for SaaS without the network: every certificate is issued at once. */
+const e2eDomainEdge: DomainEdge = {
+  cnameTarget: "customers.reanit.test",
+  certificates: {
+    /**
+     * Fakes adding a custom hostname.
+     *
+     * @param hostname The verified domain.
+     * @returns An active certificate whose id names the hostname.
+     */
+    async request(hostname) {
+      return { id: `cf_${hostname}`, status: "active" };
+    },
+    /**
+     * Fakes a status check.
+     *
+     * @returns Active.
+     */
+    async status() {
+      return "active";
+    },
+    /** Fakes deleting a custom hostname. */
+    async remove() {},
+  },
+};
+
 /**
  * Creates storage that signs nothing: URLs name the key, and uploads are simulated.
  *
@@ -143,7 +193,7 @@ function createMemoryStorage(): MemoryStorage {
  *
  * @param databaseUrl Owner connection from `inject("databaseUrl")`.
  * @param redisUrl Redis from `inject("redisUrl")`, for the tests about rate limits; others never get blocked.
- * @returns The app, an inbox of every email it sends, and its in-memory object storage.
+ * @returns The app, an inbox of every email it sends, its in-memory object storage, the gateway's paid references and DNS's TXT records.
  */
 async function createE2eApp(databaseUrl: string, redisUrl?: string): Promise<E2eApp> {
   const mail: MailMessage[] = [];
@@ -166,13 +216,17 @@ async function createE2eApp(databaseUrl: string, redisUrl?: string): Promise<E2e
     .overrideProvider(ENV)
     .useValue({ ...TEST_ENV, DATABASE_URL: databaseUrl, ...(redisUrl && { REDIS_URL: redisUrl }) })
     .overrideProvider(MAILER)
-    .useValue(mailer);
+    .useValue(mailer)
+    .overrideProvider(DNS_LOOKUP)
+    .useValue(e2eDns)
+    .overrideProvider(DOMAIN_EDGE)
+    .useValue(e2eDomainEdge);
   if (!redisUrl) builder = builder.overrideProvider(REDIS).useValue(createFakeClients().redis).overrideProvider(RATE_LIMIT_STORAGE).useValue(UNLIMITED_RATE);
   const app = await bootTestApp(builder);
   // Rate limits let requests through uncounted until Redis has connected, so tests start once it has.
   const redis = app.get<Redis>(REDIS);
   if (redisUrl && redis.status !== "ready") await once(redis, "ready");
-  return { app, mail, storage, paidAtGateway };
+  return { app, mail, storage, paidAtGateway, txtRecords };
 }
 
 /**

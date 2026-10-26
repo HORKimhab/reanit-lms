@@ -534,6 +534,119 @@
         ]
       }
     },
+    "/schools/current/domain": {
+      "get": {
+        "operationId": "DomainsController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDomainSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Domains"
+        ]
+      },
+      "post": {
+        "operationId": "DomainsController_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomDomainBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDomainResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Domains"
+        ]
+      },
+      "delete": {
+        "operationId": "DomainsController_remove",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Domains"
+        ]
+      }
+    },
+    "/schools/current/domain/verify": {
+      "post": {
+        "operationId": "DomainsController_verify",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomDomainResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Domains"
+        ]
+      }
+    },
+    "/schools/by-domain/{hostname}": {
+      "get": {
+        "operationId": "DomainsController_byDomain",
+        "parameters": [
+          {
+            "name": "hostname",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainSiteResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Domains"
+        ]
+      }
+    },
     "/students": {
       "get": {
         "operationId": "StudentsController_list",
@@ -2648,6 +2761,145 @@
         "required": [
           "school",
           "owner"
+        ]
+      },
+      "CustomDomainSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "isAvailable": {
+            "type": "boolean"
+          },
+          "domain": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "hostname": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "awaiting_dns",
+                  "issuing_certificate",
+                  "active",
+                  "certificate_failed"
+                ]
+              },
+              "dnsRecords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "TXT",
+                        "CNAME"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "name",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "hostname",
+              "status",
+              "dnsRecords"
+            ]
+          }
+        },
+        "required": [
+          "isAvailable",
+          "domain"
+        ]
+      },
+      "CustomDomainBody": {
+        "type": "object",
+        "properties": {
+          "hostname": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostname"
+        ]
+      },
+      "CustomDomainResponse": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "object",
+            "properties": {
+              "hostname": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "awaiting_dns",
+                  "issuing_certificate",
+                  "active",
+                  "certificate_failed"
+                ]
+              },
+              "dnsRecords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "TXT",
+                        "CNAME"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "name",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "hostname",
+              "status",
+              "dnsRecords"
+            ]
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "DomainSiteResponse": {
+        "type": "object",
+        "properties": {
+          "subdomain": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subdomain"
         ]
       },
       "StudentsResponse": {
@@ -5349,6 +5601,9 @@
                     "comment.reply",
                     "comment.moderate",
                     "school.settings.update",
+                    "school.domain.add",
+                    "school.domain.verify",
+                    "school.domain.remove",
                     "certificate.template.update"
                   ]
                 },

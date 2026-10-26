@@ -75,3 +75,54 @@ describe("schools", () => {
   });
 });
 
+
+describe("custom domains", () => {
+  /**
+   * Publishes a domain's ownership record in the test DNS, as its owner would at their DNS provider.
+   *
+   * @param domain The domain as the API returned it.
+   * @param domain.dnsRecords Its DNS records; the TXT one proves ownership.
+   */
+  function publishTxt({ dnsRecords }: { dnsRecords: { type: string; name: string; value: string }[] }) {
+    const txt = dnsRecords.find((record) => record.type === "TXT")!; // the API always lists the TXT record
+    e2e().txtRecords.set(txt.name, [txt.value]);
+  }
+
+  it("serves a school on its domain once its TXT record verifies it, and stops when it is removed", async () => {
+    const { agent, school } = await openSchool(e2e().app, uniqueName("domain-owner"));
+    const hostname = `${uniqueName("learn")}.example.com`;
+    const anonymous = request(e2e().app.getHttpServer());
+
+    const added = (await agent.post("/schools/current/domain").send({ hostname }).expect(201)).body.domain;
+    expect(added).toMatchObject({ hostname, status: "awaiting_dns" });
+    expect(added.dnsRecords).toContainEqual({ type: "CNAME", name: hostname, value: "customers.reanit.test" });
+    const notYet = await agent.post("/schools/current/domain/verify").expect(409);
+    expect(notYet.body.type).toBe("urn:reanit:problem:domain-not-verified");
+    await anonymous.get(`/schools/by-domain/${hostname}`).expect(404);
+
+    publishTxt(added);
+    expect((await agent.post("/schools/current/domain/verify").expect(200)).body.domain.status).toBe("active");
+    expect((await anonymous.get(`/schools/by-domain/${hostname}`).expect(200)).body).toEqual({ subdomain: school.subdomain });
+    expect((await agent.get("/schools/current/domain").expect(200)).body).toEqual({ isAvailable: true, domain: { ...added, status: "active" } });
+
+    await agent.delete("/schools/current/domain").expect(204);
+    await anonymous.get(`/schools/by-domain/${hostname}`).expect(404);
+    expect((await agent.get("/schools/current/domain").expect(200)).body.domain).toBeNull();
+  });
+
+  it("keeps one school's domain from another school, which cannot verify it after the owner did", async () => {
+    const owner = await openSchool(e2e().app, uniqueName("domain-first"));
+    const rival = await openSchool(e2e().app, uniqueName("domain-rival"));
+    const hostname = `${uniqueName("www")}.example.com`;
+    const claimed = (await rival.agent.post("/schools/current/domain").send({ hostname }).expect(201)).body.domain;
+    const added = (await owner.agent.post("/schools/current/domain").send({ hostname }).expect(201)).body.domain;
+    publishTxt(added);
+    await owner.agent.post("/schools/current/domain/verify").expect(200);
+
+    publishTxt(claimed);
+    const refused = await rival.agent.post("/schools/current/domain/verify").expect(409);
+    expect(refused.body.type).toBe("urn:reanit:problem:domain-taken");
+    expect((await rival.agent.get("/schools/current/domain").expect(200)).body.domain).toMatchObject({ status: "awaiting_dns" });
+    expect((await request(e2e().app.getHttpServer()).get(`/schools/by-domain/${hostname}`).expect(200)).body.subdomain).toBe(owner.school.subdomain);
+  });
+});
