@@ -44,6 +44,26 @@ describe("DashboardOrder", () => {
     expect(screen.queryByRole("button", { name: "Refund order" })).not.toBeInTheDocument();
   });
 
+  it("lets an owner confirm or reject an offline payment waiting for them, and offers no refund yet", async () => {
+    signInAsStaff("owner");
+    onApi(`GET /orders/${ORDER.id}`, Response.json({ order: { ...ORDER_JSON, method: "offline_qr", status: "awaiting_confirmation", paymentReference: "ABA-1" } }));
+
+    renderWithIntl(await visit());
+
+    expect(await screen.findByRole("button", { name: "Confirm payment" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refund order" })).not.toBeInTheDocument();
+  });
+
+  it("offers no offline review for a paid offline order", async () => {
+    signInAsStaff("owner");
+    onApi(`GET /orders/${ORDER.id}`, Response.json({ order: { ...ORDER_JSON, method: "offline_qr" } }));
+
+    renderWithIntl(await visit());
+
+    expect(await screen.findByRole("button", { name: "Refund order" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm payment" })).not.toBeInTheDocument();
+  });
+
   it("is not found for an order the school does not have", async () => {
     signInAsStaff("admin");
     onApi(`GET /orders/${ORDER.id}`, problem(404, "urn:reanit:problem:order-not-found"));

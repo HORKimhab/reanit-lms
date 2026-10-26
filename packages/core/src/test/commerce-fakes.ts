@@ -104,6 +104,17 @@ export class FakeCommerceStore implements CommerceStore {
   }
 
   /**
+   * Reads a course's price.
+   *
+   * @param courseId The course.
+   * @returns The price (null without one), or null for an unknown course.
+   */
+  async findCoursePrice(courseId: string) {
+    const course = this.courses.get(courseId);
+    return course ? { price: course.price } : null;
+  }
+
+  /**
    * Sets a course's price.
    *
    * @param courseId The course.

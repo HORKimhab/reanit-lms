@@ -1,6 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { OfflinePaymentReview } from "@/components/dashboard/offline-payment-review";
 import { OrderBuyer } from "@/components/dashboard/order-buyer";
 import { RefundButton } from "@/components/dashboard/refund-button";
 import { ReceiptCard } from "@/components/orders/receipt-card";
@@ -8,15 +9,18 @@ import { Link } from "@/i18n/navigation";
 import { getSchoolOrder } from "@/server/commerce/orders";
 import { canManageSchool, getStaffSchool } from "@/server/schools/staff";
 
-import { refundOrder } from "../actions";
+import { refundOrder, reviewOfflinePayment } from "../actions";
+
+/** Offline QR order statuses staff still settle: not paid yet, or paid according to the student. */
+const OPEN_OFFLINE_STATUSES = new Set(["pending", "awaiting_confirmation"]);
 
 /**
- * One of the school's orders: who bought it, its receipt, and a refund button while it is paid.
- * Instructors see why they cannot see it.
+ * One of the school's orders: who bought it, its receipt, confirm and reject buttons while an offline QR
+ * payment waits, and a refund button while it is paid. Instructors see why they cannot see it.
  *
  * @param props - Page props.
  * @param props.params - Route params with the order's id.
- * @returns A link back to the orders, the buyer, the receipt and the refund button, or a notice for instructors.
+ * @returns A link back to the orders, the buyer, the receipt, and the offline payment review or refund button, or a notice for instructors.
  * @throws {Error} Next's not-found signal when the school has no such order.
  */
 export default async function DashboardOrder({ params }: PageProps<"/[locale]/dashboard/orders/[orderId]">) {
@@ -33,6 +37,9 @@ export default async function DashboardOrder({ params }: PageProps<"/[locale]/da
         <>
           <OrderBuyer buyer={order.buyer} />
           <ReceiptCard order={order} />
+          {order.method === "offline_qr" && OPEN_OFFLINE_STATUSES.has(order.status) ? (
+            <OfflinePaymentReview order={order} review={reviewOfflinePayment.bind(null, order.id)} />
+          ) : null}
           {order.status === "paid" ? <RefundButton order={order} refund={refundOrder.bind(null, order.id)} /> : null}
         </>
       ) : (

@@ -1,11 +1,12 @@
 "use server";
 
-import { createBundleSchema, priceSchema, toMinorUnits, updateBundleSchema } from "@reanit/core/commerce";
+import { createBundleSchema, updateBundleSchema } from "@reanit/core/commerce";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { CourseFormState } from "@/app/[locale]/dashboard/courses/actions";
 import { getApi } from "@/server/api";
+import { priceFrom } from "@/server/commerce/prices";
 import { invalidFieldsOf } from "@/server/form-errors";
 import { idPath } from "@/server/id-path";
 import { checkStaffResponse } from "@/server/schools/staff";
@@ -72,20 +73,18 @@ export async function updateBundle(bundleId: string, _previous: CourseFormState,
 }
 
 /**
- * Sets a bundle's price from an amount typed in major units. Bind the bundle id: `setBundlePrice.bind(null, id)`.
+ * Sets a bundle's price from an amount typed in major units and how it bills. Bind the bundle id: `setBundlePrice.bind(null, id)`.
  *
  * @param bundleId The bundle being priced.
  * @param _previous The form's last state; unused, but `useActionState` passes it first.
- * @param formData Untrusted `amount` (major units, e.g. "49.50") and `currency`.
- * @returns `saved`, or `invalid` with `amount` when it is not a price in that currency.
+ * @param formData Untrusted `amount` (major units, e.g. "49.50"), `currency`, `billing` and its `interval` or `installments`.
+ * @returns `saved`, or `invalid` with `amount` when it is not a price in that currency, or `installments` when the plan's number is out of range.
  * @throws {Error} Next's not-found signal for an unknown bundle, or any unexpected failure.
  */
 export async function setBundlePrice(bundleId: string, _previous: CourseFormState, formData: FormData): Promise<CourseFormState> {
-  const currency = String(formData.get("currency"));
-  // An unknown currency still reads as a number here; the schema then rejects the currency.
-  const parsed = priceSchema.safeParse({ amount: toMinorUnits(String(formData.get("amount") ?? ""), currency), currency });
-  if (!parsed.success) return { status: "invalid", invalidFields: ["amount"] };
-  const { response } = await (await getApi()).PUT("/bundles/{id}/price", { params: idPath(bundleId), body: parsed.data });
+  const parsed = priceFrom(formData);
+  if (parsed.status === "invalid") return parsed;
+  const { response } = await (await getApi()).PUT("/bundles/{id}/price", { params: idPath(bundleId), body: parsed.price });
   checkStaffResponse(response);
   revalidatePath(BUNDLES_PATH, "layout");
   return { status: "saved", invalidFields: [] };

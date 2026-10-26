@@ -16,6 +16,19 @@ function putPrice(payload: object) {
   return staff.app.inject({ method: "PUT", url: `/courses/${COURSE_ID}/price`, headers: staff.headers, payload });
 }
 
+describe("GET /courses/:id/price", () => {
+  it("reads the course's current price, null before one is set", async () => {
+    setStaffRole(staff.clients, "admin");
+    staff.clients.commerce.getPrice.mockResolvedValueOnce({ id: "p", amount: 1500, currency: "USD", billing: { kind: "one_time" } }).mockResolvedValueOnce(null);
+
+    const priced = await staff.app.inject({ method: "GET", url: `/courses/${COURSE_ID}/price`, headers: staff.headers });
+    const unpriced = await staff.app.inject({ method: "GET", url: `/courses/${COURSE_ID}/price`, headers: staff.headers });
+
+    expect(priced.json()).toEqual({ price: { amount: 1500, currency: "USD", billing: { kind: "one_time" } } });
+    expect(unpriced.json()).toEqual({ price: null });
+  });
+});
+
 describe("PUT /courses/:id/price", () => {
   it("sets a monthly subscription price", async () => {
     setStaffRole(staff.clients, "owner");

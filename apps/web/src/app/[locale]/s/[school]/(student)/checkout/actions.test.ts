@@ -2,11 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onApi, problem, requestTo } from "@/test/api";
+import { formData as form } from "@/test/form";
 import { setTestLocale } from "@/test/intl-server";
 import { NotFoundError, RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
-import { checkCoupon, getOrderStatus, startCheckout, type CheckoutState } from "./actions";
+import { checkCoupon, getOrderStatus, startCheckout, startRenewal, submitOfflinePayment, type CheckoutState } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
@@ -200,3 +201,54 @@ describe("getOrderStatus", () => {
     await expect(getOrderStatus("angkor", ORDER_ID)).rejects.toBeInstanceOf(NotFoundError);
   });
 });
+
+describe("startRenewal", () => {
+  const SUBSCRIPTION_ID = "6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a30";
+  const RENEW_ROUTE = `POST /schools/by-subdomain/angkor/subscriptions/${SUBSCRIPTION_ID}/renew`;
+
+  beforeEach(() => {
+    signIn();
+  });
+
+  it("pays the next period in the page's language and shows the next step", async () => {
+    setTestLocale("km");
+    onApi(RENEW_ROUTE, started({ kind: "offline", qrImageUrl: "https://storage.test/qr.png" }));
+
+    expect(await startRenewal("angkor", SUBSCRIPTION_ID, IDLE, form({ method: "offline_qr" }))).toEqual({ status: "offline", qrImageUrl: "https://storage.test/qr.png", orderId: ORDER_ID });
+    expect(await requestTo(RENEW_ROUTE)?.json()).toEqual({ method: "offline_qr", locale: "km" });
+  });
+
+  it("refuses a method that cannot renew, and a subscription that cannot take a payment", async () => {
+    expect(await startRenewal("angkor", SUBSCRIPTION_ID, IDLE, form({ method: "cash" }))).toEqual({ status: "unavailable" });
+    onApi(RENEW_ROUTE, problem(409, "urn:reanit:problem:subscription-not-renewable"));
+
+    expect(await startRenewal("angkor", SUBSCRIPTION_ID, IDLE, form({ method: "aba_payway" }))).toEqual({ status: "unavailable" });
+  });
+});
+
+describe("submitOfflinePayment", () => {
+  const PAID_ROUTE = `POST /schools/by-subdomain/angkor/orders/${ORDER_ID}/offline-payment`;
+
+  beforeEach(() => {
+    signIn();
+  });
+
+  it("sends the reference, then opens the order's page", async () => {
+    onApi(PAID_ROUTE, new Response(null, { status: 204 }));
+
+    await expect(submitOfflinePayment("angkor", ORDER_ID, { status: "idle" }, form({ reference: " ABA-123 " }))).rejects.toThrow(new RedirectError(`/s/angkor/orders/${ORDER_ID}`));
+    expect(await requestTo(PAID_ROUTE)?.json()).toEqual({ reference: "ABA-123" });
+  });
+
+  it("asks for a reference without calling the API", async () => {
+    expect(await submitOfflinePayment("angkor", ORDER_ID, { status: "idle" }, form({ reference: " " }))).toEqual({ status: "invalid" });
+    expect(requestTo(PAID_ROUTE)).toBeUndefined();
+  });
+
+  it("says when the order no longer waits for a payment", async () => {
+    onApi(PAID_ROUTE, problem(409, "urn:reanit:problem:offline-payment-closed"));
+
+    expect(await submitOfflinePayment("angkor", ORDER_ID, { status: "idle" }, form({ reference: "ABA-123" }))).toEqual({ status: "closed" });
+  });
+});
+

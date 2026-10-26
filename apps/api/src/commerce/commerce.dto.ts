@@ -16,6 +16,7 @@ import {
   renewSchema,
   updateBundleSchema,
   type OrderDetail,
+  type PaymentMethod,
   type Price,
   type SubscriptionRecord,
 } from "@reanit/core/commerce";
@@ -95,6 +96,9 @@ export function toPriceResponse({ amount, currency, billing }: Price): z.infer<t
 
 /** A course's price, as the creator set it. */
 export class PriceResponse extends createZodDto(z.object({ price: priceResponseSchema })) {}
+
+/** A course's current price, or null before the creator sets one. */
+export class CurrentPriceResponse extends createZodDto(z.object({ price: priceResponseSchema.nullable() })) {}
 
 /** What a coupon takes off a price, and what is left to pay, in minor units. */
 const discountResponseSchema = z.object({ code: z.string(), amountOff: z.number().int(), total: z.number().int() });
@@ -226,6 +230,8 @@ const subscriptionResponseSchema = z.object({
   status: z.enum(["active", "completed", "lapsed"]),
   title: z.string(),
   price: priceResponseSchema,
+  /** How its next payment can be made, the default first. */
+  methods: z.array(z.enum(PAYMENT_METHODS)),
   paidPeriods: z.number().int(),
   /** The end of the last paid period. */
   currentPeriodEnd: z.iso.datetime(),
@@ -237,11 +243,11 @@ export class SubscriptionsResponse extends createZodDto(z.object({ subscriptions
 /**
  * Shapes a paid subscription for a response.
  *
- * @param subscription A subscription that was paid at least once, so it has a period end and is not pending.
+ * @param subscription A subscription that was paid at least once, so it has a period end and is not pending, with its payment methods.
  * @returns The subscription as the API sends it.
  */
-export function toSubscriptionResponse(subscription: SubscriptionRecord): z.infer<typeof subscriptionResponseSchema> {
-  const { id, status, title, price, paidPeriods, currentPeriodEnd } = subscription;
+export function toSubscriptionResponse(subscription: SubscriptionRecord & { methods: PaymentMethod[] }): z.infer<typeof subscriptionResponseSchema> {
+  const { id, status, title, price, methods, paidPeriods, currentPeriodEnd } = subscription;
   // Only paid subscriptions are listed: never pending, always with a period end.
-  return { id, status: status as Exclude<typeof status, "pending">, title, price: toPriceResponse(price), paidPeriods, currentPeriodEnd: currentPeriodEnd!.toISOString() };
+  return { id, status: status as Exclude<typeof status, "pending">, title, price: toPriceResponse(price), methods, paidPeriods, currentPeriodEnd: currentPeriodEnd!.toISOString() };
 }

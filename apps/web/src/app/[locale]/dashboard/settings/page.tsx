@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { CertificateTemplateForm } from "@/components/settings/certificate-template-form";
 import { CustomDomainSection } from "@/components/settings/custom-domain-section";
 import { NotificationPreferencesForm } from "@/components/settings/notification-preferences-form";
+import { PaymentQrForm } from "@/components/settings/payment-qr-form";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { TeamSection } from "@/components/settings/team-section";
 import { getCertificateTemplate } from "@/server/learning/certificates";
@@ -18,16 +19,17 @@ import {
   inviteTeamMember,
   removeCustomDomain,
   removeTeamMember,
+  savePaymentQr,
   saveCertificateTemplate,
   saveNotificationPreferences,
   saveSchoolSettings,
-  startLogoUpload,
+  startImageUpload,
   verifyCustomDomain,
 } from "./actions";
 
 /**
- * School settings: name, brand color and logo with a live preview, who signs certificates, the
- * custom domain and the team, which instructors see why they cannot edit; then every staff member's own email settings.
+ * School settings: name, brand color and logo with a live preview, the payment QR students scan to pay
+ * offline, who signs certificates, the custom domain and the team, which instructors see why they cannot edit; then every staff member's own email settings.
  *
  * @returns The page heading, the settings forms and team (or a notice for instructors) and the email settings.
  */
@@ -38,7 +40,8 @@ export default async function DashboardSettings() {
       <h1 className="text-2xl font-semibold tracking-tight">{nav("settings")}</h1>
       {canManageSchool(role) ? (
         <>
-          <SettingsForm school={school} actions={{ save: saveSchoolSettings, startLogoUpload }} />
+          <SettingsForm school={school} actions={{ save: saveSchoolSettings, startLogoUpload: startImageUpload.bind(null, "logo") }} />
+          <PaymentQrForm qrUrl={school.paymentQrUrl} actions={{ save: savePaymentQr, startUpload: startImageUpload.bind(null, "payment-qr") }} />
           <CertificateTemplateForm template={await getCertificateTemplate()} save={saveCertificateTemplate} />
           <CustomDomainSection
             settings={await getCustomDomainSettings()}

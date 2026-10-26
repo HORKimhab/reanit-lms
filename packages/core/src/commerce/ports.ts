@@ -108,6 +108,8 @@ export interface NewOrder {
 /** One school's prices, bundles, coupons and orders. `@reanit/db` implements it with `createCommerceStore`. */
 export interface CommerceStore {
   findCourse(slug: string): Promise<SellableCourse | null>;
+  /** The course's current price (null without one), or null when the school has no such course. */
+  findCoursePrice(courseId: string): Promise<{ price: Price | null } | null>;
   /** Returns the new price, or null when the school has no such course. */
   setPrice(courseId: string, price: PriceInput): Promise<Price | null>;
   /** The ones among `courseIds` the user has access to at `at`: enrolled, and not expired. */

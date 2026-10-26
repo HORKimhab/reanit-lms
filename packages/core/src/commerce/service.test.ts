@@ -89,6 +89,17 @@ describe("getOffer", () => {
   });
 });
 
+describe("getPrice", () => {
+  it("reads a draft course's price, and null for a course without one", async () => {
+    expect(await commerce.getPrice("c4")).toEqual({ id: "p4", amount: 100, currency: "USD", billing: ONE_TIME });
+    expect(await commerce.getPrice("c3")).toBeNull();
+  });
+
+  it("throws CourseNotFoundError for a course the school does not have", async () => {
+    await expect(commerce.getPrice("missing")).rejects.toThrow(CourseNotFoundError);
+  });
+});
+
 describe("setPrice", () => {
   it("sets a course's price", async () => {
     expect(await commerce.setPrice("c3", { amount: 1500, currency: "USD", billing: ONE_TIME })).toMatchObject({ amount: 1500, currency: "USD" });
@@ -541,7 +552,7 @@ describe("subscriptions and payment plans", () => {
   it("lists the student's paid subscriptions, showing one past its grace week as lapsed", async () => {
     await payFirstPeriod("club");
     await plans.checkout(BUYER, { courseSlug: "plan", method: "aba_payway", locale: "en" }, urls);
-    expect((await plans.listMySubscriptions("user-1")).map(({ id, status }) => [id, status])).toEqual([["subscription-1", "active"]]);
+    expect((await plans.listMySubscriptions("user-1")).map(({ id, status, methods }) => [id, status, methods])).toEqual([["subscription-1", "active", ["offline_qr", "aba_payway"]]]);
 
     clock.advance(40 * 24 * 60 * 60 * 1000);
 

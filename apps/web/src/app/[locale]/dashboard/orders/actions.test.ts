@@ -6,7 +6,7 @@ import { onApi, problem, requestTo } from "@/test/api";
 import { ORDER } from "@/test/orders";
 import { signIn } from "@/test/session";
 
-import { refundOrder } from "./actions";
+import { refundOrder, reviewOfflinePayment } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 // Cache revalidation needs a running Next server; it is a boundary, so record calls instead.
@@ -43,3 +43,26 @@ describe("refundOrder", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
+
+describe("reviewOfflinePayment", () => {
+  it.each([
+    ["confirm", "confirm-payment"],
+    ["reject", "reject-payment"],
+  ] as const)("posts the %s decision and refreshes the orders pages", async (decision, path) => {
+    onApi(`POST /orders/${ORDER.id}/${path}`, new Response(null, { status: 204 }));
+
+    await reviewOfflinePayment(ORDER.id, decision);
+
+    expect(requestTo(`POST /orders/${ORDER.id}/${path}`)).toBeDefined();
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/orders", "layout");
+  });
+
+  it("shows a payment another admin settled meanwhile as it now is", async () => {
+    onApi(`POST /orders/${ORDER.id}/confirm-payment`, problem(409, "urn:reanit:problem:offline-payment-closed"));
+
+    await reviewOfflinePayment(ORDER.id, "confirm");
+
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/orders", "layout");
+  });
+});
+

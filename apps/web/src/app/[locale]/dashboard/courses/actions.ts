@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getApi } from "@/server/api";
+import { priceFrom } from "@/server/commerce/prices";
 import { invalidFieldsOf } from "@/server/form-errors";
 import { idPath } from "@/server/id-path";
 import { checkStaffResponse } from "@/server/schools/staff";
@@ -37,6 +38,24 @@ export async function createCourse(_previous: CourseFormState, formData: FormDat
   revalidatePath(COURSES_PATH);
   // checkStaffResponse returned, so the API answered 2xx with the course.
   redirect(`${COURSES_PATH}/${data!.course.slug}`);
+}
+
+/**
+ * Sets a course's price from an amount typed in major units and how it bills. Bind the course id: `setCoursePrice.bind(null, id)`.
+ *
+ * @param courseId The course being priced.
+ * @param _previous The form's last state; unused, but `useActionState` passes it first.
+ * @param formData Untrusted `amount` (major units, e.g. "49.50"), `currency`, `billing` and its `interval` or `installments`.
+ * @returns `saved`, or `invalid` with `amount` when it is not a price in that currency, or `installments` when the plan's number is out of range.
+ * @throws {Error} Next's not-found signal for an unknown course, or any unexpected failure.
+ */
+export async function setCoursePrice(courseId: string, _previous: CourseFormState, formData: FormData): Promise<CourseFormState> {
+  const parsed = priceFrom(formData);
+  if (parsed.status === "invalid") return parsed;
+  const { response } = await (await getApi()).PUT("/courses/{id}/price", { params: idPath(courseId), body: parsed.price });
+  checkStaffResponse(response);
+  revalidatePath(COURSES_PATH, "layout");
+  return { status: "saved", invalidFields: [] };
 }
 
 /**

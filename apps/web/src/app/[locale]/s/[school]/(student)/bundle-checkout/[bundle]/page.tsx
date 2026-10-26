@@ -23,8 +23,7 @@ export default async function BundleCheckoutPage({ params }: PageProps<"/[locale
   return (
     <ProductCheckout
       school={school}
-      kind="bundle"
-      slug={bundle.slug}
+      purchase={{ kind: "bundle", slug: bundle.slug }}
       title={bundle.title}
       offer={{ price: offer.price, methods: offer.methods }}
       ownedHref={`/s/${school}/my-courses`}

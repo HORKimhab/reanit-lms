@@ -175,6 +175,19 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     },
 
     /**
+     * Reads a course's current (newest) price.
+     *
+     * @param courseId The course.
+     * @returns The price (null without one), or null when the school has no such course.
+     */
+    async findCoursePrice(courseId: string) {
+      const course = await tenant.course.findFirst({ where: { id: courseId }, select: { prices: { orderBy: NEWEST_FIRST, take: 1, select: PRICE_FIELDS } } });
+      if (!course) return null;
+      const [price] = course.prices;
+      return { price: price ? toPrice(price) : null };
+    },
+
+    /**
      * Gives a course a new price; older prices stay for the orders that used them.
      *
      * @param courseId The course.

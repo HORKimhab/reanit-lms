@@ -1312,6 +1312,36 @@
       }
     },
     "/courses/{id}/price": {
+      "get": {
+        "operationId": "PriceController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentPriceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Price"
+        ]
+      },
       "put": {
         "operationId": "PriceController_set",
         "parameters": [
@@ -4718,6 +4748,97 @@
           "expiresAt"
         ]
       },
+      "CurrentPriceResponse": {
+        "type": "object",
+        "properties": {
+          "price": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "USD",
+                  "KHR"
+                ]
+              },
+              "billing": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "one_time"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "recurring"
+                        ]
+                      },
+                      "interval": {
+                        "type": "string",
+                        "enum": [
+                          "month",
+                          "year"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "interval"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "payment_plan"
+                        ]
+                      },
+                      "installments": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 24
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "installments"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "amount",
+              "currency",
+              "billing"
+            ]
+          }
+        },
+        "required": [
+          "price"
+        ]
+      },
       "PriceBody": {
         "type": "object",
         "properties": {
@@ -6288,6 +6409,18 @@
                     "billing"
                   ]
                 },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "stripe",
+                      "aba_payway",
+                      "bakong_khqr",
+                      "offline_qr"
+                    ]
+                  }
+                },
                 "paidPeriods": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -6304,6 +6437,7 @@
                 "status",
                 "title",
                 "price",
+                "methods",
                 "paidPeriods",
                 "currentPeriodEnd"
               ]

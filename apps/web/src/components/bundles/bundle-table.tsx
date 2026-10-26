@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Cell, DataTable, RowHeader } from "@/components/dashboard/data-table";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { EmptyState } from "@/components/shells/empty-state";
-import { useMoney } from "@/i18n/format";
+import { usePriceLabel } from "@/components/pricing/use-price-label";
 import { Link } from "@/i18n/navigation";
 import type { BundleView } from "@/server/commerce/bundles";
 
@@ -17,7 +17,7 @@ import type { BundleView } from "@/server/commerce/bundles";
 export function BundleTable({ bundles }: { bundles: BundleView[] }) {
   const t = useTranslations("Bundles");
   const dashboard = useTranslations("Dashboard");
-  const money = useMoney();
+  const priceLabel = usePriceLabel();
 
   if (bundles.length === 0) return <EmptyState title={t("emptyTitle")} text={t("emptyText")} />;
 
@@ -34,7 +34,7 @@ export function BundleTable({ bundles }: { bundles: BundleView[] }) {
             </Link>
           </RowHeader>
           <Cell isNumeric>{t("courseCount", { count: bundle.courses.length })}</Cell>
-          <Cell isNumeric>{bundle.price ? money(bundle.price.amount, bundle.price.currency) : t("notPriced")}</Cell>
+          <Cell isNumeric>{bundle.price ? priceLabel(bundle.price) : t("notPriced")}</Cell>
           <Cell>
             <StatusBadge status={bundle.status} />
           </Cell>

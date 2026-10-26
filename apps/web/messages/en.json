@@ -553,12 +553,36 @@
     "emptyTitle": "No bundles yet",
     "emptyText": "Sell several courses together at one price.",
     "allBundles": "All bundles",
-    "details": "Bundle details",
+    "details": "Bundle details"
+  },
+  "Pricing": {
+    "title": "Price",
+    "staffOnly": "Only the school's owner and admins can set prices.",
     "amount": "Amount",
+    "amountPerPeriod": "Amount per period",
+    "amountPerInstallment": "Amount per payment",
     "currency": "Currency",
     "amountError": "Enter a price above zero in this currency.",
-    "savePrice": "Save price",
-    "priceStaffOnly": "Only the school's owner and admins can set prices."
+    "billing": "How it's paid",
+    "kinds": {
+      "one_time": "Once",
+      "recurring": "Subscription",
+      "payment_plan": "Payment plan"
+    },
+    "interval": "Billed every",
+    "intervals": {
+      "month": "Month",
+      "year": "Year"
+    },
+    "installmentCount": "Number of monthly payments",
+    "installmentHint": "Students keep the course once every payment is made.",
+    "installmentsError": "Choose between 2 and {max} payments.",
+    "save": "Save price",
+    "per": {
+      "month": "{amount} / month",
+      "year": "{amount} / year"
+    },
+    "installments": "{count} payments of {amount}"
   },
   "Checkout": {
     "title": "Checkout",
@@ -586,7 +610,18 @@
     "applyingCoupon": "Checking…",
     "couponApplied": "{code} applied: {discount} off",
     "removeCoupon": "Remove coupon",
-    "couponInvalid": "This coupon can't be used on this course."
+    "couponInvalid": "This coupon can't be used on this course.",
+    "renewTitle": "Pay the next period",
+    "billing": "Billed as {price}. Each payment keeps your access for one more period.",
+    "offlineTitle": "Scan to pay {price}",
+    "offlineQrLabel": "The school's payment QR, to pay {price}",
+    "offlineSteps": "Scan this code in your banking app and pay the amount above. Then enter the transaction reference your app shows, so the school can find your payment.",
+    "reference": "Transaction reference",
+    "referenceHint": "For example the transaction ID or hash on your receipt.",
+    "referenceError": "Enter the reference from your banking app.",
+    "offlineClosed": "This order no longer waits for a payment. Start again from the course page.",
+    "iPaid": "I've paid",
+    "sendingPaid": "Sending…"
   },
   "Orders": {
     "status": {
@@ -633,6 +668,45 @@
     "emptyTitle": "No purchases yet",
     "emptyText": "Courses you buy from this school, and their receipts, show up here.",
     "pages": "Purchases pages"
+  },
+  "Subscriptions": {
+    "title": "Subscriptions and payment plans",
+    "status": {
+      "active": "Active",
+      "lapsed": "Lapsed",
+      "completed": "Paid off"
+    },
+    "paidOf": "{paid} of {total} payments made",
+    "paidUntil": "Paid until {date}",
+    "payNext": "Pay next period",
+    "payInstallment": "Pay next instalment"
+  },
+  "PaymentQr": {
+    "title": "Payment QR",
+    "intro": "Upload your own payment QR, such as your bank's KHQR. Students paying a subscription or payment plan can scan it, then you confirm each payment on its order.",
+    "none": "No payment QR yet. Students can pay subscriptions only through the payment gateways.",
+    "image": "QR image",
+    "hint": "PNG, JPEG or WebP, up to {maxMb} MB.",
+    "error": "Choose a PNG, JPEG or WebP image of up to {maxMb} MB.",
+    "preview": "Your payment QR",
+    "save": "Save payment QR",
+    "saving": "Saving…",
+    "saved": "Payment QR saved",
+    "failed": "Couldn't upload the image. Try again.",
+    "remove": "Remove"
+  },
+  "OfflineReview": {
+    "title": "Offline payment",
+    "reference": "The student says they paid {amount}, with reference {reference}. Check your account, then confirm or reject the payment.",
+    "noReference": "The student hasn't said they paid {amount} yet. If the money is in your account, you can confirm it now.",
+    "confirm": "Confirm payment",
+    "confirmWarning": "Only confirm once {amount} is in your account. The student gets the course right away.",
+    "confirmYes": "Yes, I received it",
+    "reject": "Reject",
+    "rejectWarning": "The order fails and the student isn't enrolled. They can pay again.",
+    "rejectYes": "Reject payment",
+    "saving": "Saving…",
+    "cancel": "Cancel"
   },
   "Refund": {
     "trigger": "Refund order",

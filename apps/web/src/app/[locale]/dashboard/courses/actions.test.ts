@@ -13,6 +13,7 @@ import {
   createCourse,
   deleteCourse,
   saveOutline,
+  setCoursePrice,
   startLessonUpload,
   updateCourse,
   saveQuiz,
@@ -72,6 +73,24 @@ describe("createCourse", () => {
     onApi("POST /courses", problem(403, "urn:reanit:problem:not-school-staff"));
 
     await expect(createCourse(IDLE, form({ title: "Intro" }))).rejects.toEqual(new RedirectError("/onboarding"));
+  });
+});
+
+describe("setCoursePrice", () => {
+  it("sets a monthly subscription price in minor units and refreshes the courses", async () => {
+    onApi(`PUT ${COURSE_URL}/price`, Response.json({ price: {} }));
+
+    expect(await setCoursePrice(COURSE.id, IDLE, form({ amount: "15", currency: "USD", billing: "recurring", interval: "month" }))).toEqual({ status: "saved", invalidFields: [] });
+    expect(await requestTo(`PUT ${COURSE_URL}/price`)?.json()).toEqual({ amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/courses", "layout");
+  });
+
+  it("reports a payment plan of one payment without calling the API", async () => {
+    expect(await setCoursePrice(COURSE.id, IDLE, form({ amount: "15", currency: "USD", billing: "payment_plan", installments: "1" }))).toEqual({
+      status: "invalid",
+      invalidFields: ["installments"],
+    });
+    expect(requestTo(`PUT ${COURSE_URL}/price`)).toBeUndefined();
   });
 });
 

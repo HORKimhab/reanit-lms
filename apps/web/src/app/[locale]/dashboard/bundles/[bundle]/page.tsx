@@ -2,7 +2,7 @@ import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { BundleForm } from "@/components/bundles/bundle-form";
-import { BundlePriceForm } from "@/components/bundles/bundle-price-form";
+import { PriceForm } from "@/components/pricing/price-form";
 import { Link } from "@/i18n/navigation";
 import { listStaffCourses } from "@/server/catalog/courses";
 import { getStaffBundle } from "@/server/commerce/bundles";
@@ -20,8 +20,9 @@ import { setBundlePrice, updateBundle } from "../actions";
  */
 export default async function BundleEditorPage({ params }: PageProps<"/[locale]/dashboard/bundles/[bundle]">) {
   const { bundle: slug } = await params;
-  const [t, bundle, courses, { role }] = await Promise.all([
+  const [t, pricing, bundle, courses, { role }] = await Promise.all([
     getTranslations("Bundles"),
+    getTranslations("Pricing"),
     getStaffBundle(decodeURIComponent(slug)),
     listStaffCourses(),
     getStaffSchool(),
@@ -39,11 +40,11 @@ export default async function BundleEditorPage({ params }: PageProps<"/[locale]/
         <BundleForm courses={courses} bundle={bundle} action={updateBundle.bind(null, bundle.id)} />
       </section>
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">{t("price")}</h2>
+        <h2 className="text-lg font-semibold">{pricing("title")}</h2>
         {canManageSchool(role) ? (
-          <BundlePriceForm price={bundle.price} action={setBundlePrice.bind(null, bundle.id)} />
+          <PriceForm price={bundle.price} action={setBundlePrice.bind(null, bundle.id)} />
         ) : (
-          <p className="text-sm text-muted-foreground">{t("priceStaffOnly")}</p>
+          <p className="text-sm text-muted-foreground">{pricing("staffOnly")}</p>
         )}
       </section>
     </div>

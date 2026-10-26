@@ -5,13 +5,23 @@ import { Card } from "@reanit/ui/components/card";
 import { Check, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { useMoney } from "@/i18n/format";
+import { usePriceLabel } from "@/components/pricing/use-price-label";
 import { Link } from "@/i18n/navigation";
 
 import { Duration } from "./duration";
 import { LessonIcon } from "./lesson-icon";
 
 const INCLUDES = ["lifetime", "certificate", "anyDevice"] as const;
+
+/**
+ * Lists what buying includes: a subscription lasts while it is paid, so it leaves out lifetime access.
+ *
+ * @param price - The price, or null.
+ * @returns The included items, in order.
+ */
+function includesFor(price: CoursePrice) {
+  return price?.billing.kind === "recurring" ? INCLUDES.filter((key) => key !== "lifetime") : INCLUDES;
+}
 
 /** A course's price; null while it is not for sale. */
 type CoursePrice = PriceInput | null;
@@ -122,7 +132,7 @@ export function MobileBuyBar({ price, checkoutHref }: { price: CoursePrice; chec
 }
 
 /**
- * The price, or "coming soon" when the course is not for sale.
+ * The price with how often it is paid, or "coming soon" when the course is not for sale.
  *
  * @param props - Component props.
  * @param props.price - The price, or null.
@@ -130,8 +140,8 @@ export function MobileBuyBar({ price, checkoutHref }: { price: CoursePrice; chec
  */
 function PriceTag({ price }: { price: CoursePrice }) {
   const t = useTranslations("Course");
-  const money = useMoney();
-  return <span className="text-2xl font-bold">{price ? money(price.amount, price.currency) : t("notForSale")}</span>;
+  const priceLabel = usePriceLabel();
+  return <span className="text-2xl font-bold">{price ? priceLabel(price) : t("notForSale")}</span>;
 }
 
 /**
@@ -170,7 +180,7 @@ export function BuyBox({ price, checkoutHref, className }: { price: CoursePrice;
       <PriceTag price={price} />
       <EnrollButton price={price} checkoutHref={checkoutHref} className="w-full" />
       <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-        {INCLUDES.map((key) => (
+        {includesFor(price).map((key) => (
           <li key={key} className="flex gap-2">
             <Check aria-hidden className="size-4 shrink-0 text-success" />
             {t(`includes.${key}`)}

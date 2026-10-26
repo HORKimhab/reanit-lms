@@ -159,6 +159,7 @@ const CATALOG_METHODS = [
 ] as const satisfies readonly (keyof CatalogService)[];
 const MEDIA_METHODS = ["requestUpload", "attachMedia", "getPlaybackUrl"] as const satisfies readonly (keyof MediaService)[];
 const COMMERCE_METHODS = [
+  "getPrice",
   "setPrice",
   "createCoupon",
   "listCoupons",

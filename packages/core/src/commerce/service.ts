@@ -269,6 +269,19 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
 
   return {
     /**
+     * Reads a course's current price, draft or published, for its editor.
+     *
+     * @param courseId The course.
+     * @returns The price, or null when the course has none yet.
+     * @throws {CourseNotFoundError} When the school has no such course.
+     */
+    async getPrice(courseId: string): Promise<Price | null> {
+      const found = await store.findCoursePrice(courseId);
+      if (!found) throw new CourseNotFoundError();
+      return found.price;
+    },
+
+    /**
      * Sets a course's price; earlier prices stay on past orders.
      *
      * @param courseId The course.
@@ -540,14 +553,18 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
     },
 
     /**
-     * Lists the student's subscriptions and payment plans in the school, with where each stands now.
+     * Lists the student's subscriptions and payment plans in the school, with where each stands now
+     * and the methods its next payment can use.
      *
      * @param userId The signed-in student.
      * @returns Every subscription ever paid, newest first; an active one past its grace period shows as lapsed.
      */
-    async listMySubscriptions(userId: string): Promise<SubscriptionRecord[]> {
+    async listMySubscriptions(userId: string): Promise<(SubscriptionRecord & { methods: PaymentMethod[] })[]> {
       const now = clock.now();
-      return (await store.listSubscriptions(userId)).map((subscription) => ({ ...subscription, status: currentStatus(subscription, now) }));
+      const subscriptions = await store.listSubscriptions(userId);
+      return Promise.all(
+        subscriptions.map(async (subscription) => ({ ...subscription, status: currentStatus(subscription, now), methods: await methodsFor(subscription.price) })),
+      );
     },
 
     /**

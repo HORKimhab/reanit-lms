@@ -58,6 +58,8 @@ describe("prices", () => {
       billing: { kind: "payment_plan", installments: 3 },
     });
     expect((await store.findCourse("club"))?.price?.billing).toEqual(MONTHLY);
+    expect((await store.findCoursePrice(otherId))?.price).toMatchObject({ amount: 10_000, billing: { kind: "payment_plan", installments: 3 } });
+    expect(await createCommerceStore(db, betaId).findCoursePrice(otherId)).toBeNull();
   });
 });
 

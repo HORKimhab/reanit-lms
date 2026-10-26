@@ -2,7 +2,9 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CheckoutState, CouponCheck } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
+import type { PriceInput } from "@reanit/core/commerce";
+
+import type { CheckoutState, CouponCheck, OfflinePaymentState } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
 import { renderWithIntl } from "@/test/render";
 
 import { CheckoutForm } from "./checkout-form";
@@ -15,28 +17,32 @@ const PRICE = { amount: 4900, currency: "USD" as const, billing: { kind: "one_ti
  * @param answer - What the checkout action returns.
  * @param methods - The methods offered.
  * @param coupon - What checking a coupon code returns.
- * @returns The user-event instance and the action spy.
+ * @param price - The price paid.
+ * @returns The user-event instance, the action spy and the offline payment spy.
  */
 async function setup(
   answer: CheckoutState,
-  methods: ("stripe" | "aba_payway" | "bakong_khqr")[] = ["aba_payway", "bakong_khqr", "stripe"],
+  methods: ("stripe" | "aba_payway" | "bakong_khqr" | "offline_qr")[] = ["aba_payway", "bakong_khqr", "stripe"],
   coupon: CouponCheck = { status: "invalid" },
+  price: PriceInput = PRICE,
 ) {
   const user = userEvent.setup();
   const action = vi.fn<(previous: CheckoutState, formData: FormData) => Promise<CheckoutState>>().mockResolvedValue(answer);
+  const submitOffline = vi.fn<(orderId: string, state: OfflinePaymentState, formData: FormData) => Promise<OfflinePaymentState>>().mockResolvedValue({ status: "closed" });
   renderWithIntl(
     <CheckoutForm
       methods={methods}
-      price={PRICE}
+      price={price}
       courseHref="/s/angkor/learn/brand"
       action={action}
       ordersBase="/s/angkor/orders"
       checkStatus={vi.fn().mockResolvedValue("pending")}
       checkCoupon={vi.fn().mockResolvedValue(coupon)}
+      submitOfflinePayment={submitOffline}
     />,
   );
   await screen.findByText(methods.length > 0 ? "How do you want to pay?" : "No payment method takes this course's currency yet.");
-  return { user, action };
+  return { user, action, submitOffline };
 }
 
 afterEach(() => {
@@ -113,3 +119,29 @@ describe("CheckoutForm", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+describe("CheckoutForm for a subscription", () => {
+  const MONTHLY: PriceInput = { amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } };
+
+  it("says how it bills and takes no coupon", async () => {
+    await setup({ status: "unavailable" }, ["offline_qr", "aba_payway"], { status: "invalid" }, MONTHLY);
+
+    expect(screen.getByText(/Billed as \$15\.00 \/ month\./)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Payment QR" })).toBeChecked();
+    expect(screen.queryByRole("textbox", { name: /coupon/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the school's payment QR, then sends the student's transaction reference for the order", async () => {
+    const { user, submitOffline } = await setup({ status: "offline", qrImageUrl: "https://storage.test/qr.png", orderId: "order-1" }, ["offline_qr"], { status: "invalid" }, MONTHLY);
+
+    await user.click(screen.getByRole("button", { name: "Pay $15.00" }));
+    expect(await screen.findByRole("img", { name: "The school's payment QR, to pay $15.00" })).toHaveAttribute("src", "https://storage.test/qr.png");
+    await user.type(screen.getByRole("textbox", { name: "Transaction reference" }), "ABA-123");
+    await user.click(screen.getByRole("button", { name: "I've paid" }));
+
+    expect(submitOffline).toHaveBeenCalledWith("order-1", { status: "idle" }, expect.any(FormData));
+    expect((submitOffline.mock.calls[0]?.[2] as FormData).get("reference")).toBe("ABA-123");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This order no longer waits for a payment.");
+  });
+});
+

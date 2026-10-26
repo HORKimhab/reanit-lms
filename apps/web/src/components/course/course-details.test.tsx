@@ -62,6 +62,21 @@ describe("CourseDetails", () => {
     expect(screen.getAllByText("$49.00")).toHaveLength(2);
   });
 
+  it("shows a subscription's price per month, without lifetime access", async () => {
+    renderDetails({ price: { amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } } });
+
+    expect(await screen.findAllByText("$15.00 / month")).toHaveLength(2);
+    expect(screen.queryByText("Lifetime access")).not.toBeInTheDocument();
+    expect(screen.getByText("Certificate of completion")).toBeInTheDocument();
+  });
+
+  it("keeps lifetime access for a payment plan, paid off in the end", async () => {
+    renderDetails({ price: { amount: 2500, currency: "USD", billing: { kind: "payment_plan", installments: 4 } } });
+
+    expect(await screen.findAllByText("4 payments of $25.00")).toHaveLength(2);
+    expect(screen.getByText("Lifetime access")).toBeInTheDocument();
+  });
+
   it("says coming soon and offers no enrollment while the course has no price", async () => {
     renderDetails({ price: null });
     expect(await screen.findAllByText("Coming soon")).toHaveLength(2);

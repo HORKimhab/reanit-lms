@@ -7,9 +7,12 @@ import { useActionState, useState } from "react";
 
 import type { CouponField, CouponFormState } from "@/app/[locale]/dashboard/coupons/actions";
 import { Field, INPUT_CLASS } from "@/components/form/field";
+import { RadioChoice } from "@/components/form/radio-choice";
 import { END_OF_DAY, localDayToIso } from "@/components/form/local-day";
 
 const INITIAL_STATE: CouponFormState = { status: "idle", invalidFields: [] };
+/** A coupon takes a share of the price off, or a fixed amount. */
+const COUPON_KINDS = ["percent", "fixed"] as const;
 /**
  * Creates a coupon: its code, a percent or an amount off in one currency, an optional last day and
  * an optional usage limit.
@@ -55,17 +58,7 @@ export function CouponForm({ action }: { action: (state: CouponFormState, formDa
       <Field label={t("code")} hint={t("codeHint")} error={errorFor("code")}>
         {(control) => <input {...control} name="code" required maxLength={COUPON_CODE_MAX_LENGTH} autoComplete="off" className={`${INPUT_CLASS} uppercase`} />}
       </Field>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">{t("kind")}</legend>
-        <div className="flex flex-wrap gap-4">
-          {(["percent", "fixed"] as const).map((option) => (
-            <label key={option} className="flex items-center gap-2 text-sm">
-              <input type="radio" name="kind" value={option} checked={kind === option} onChange={() => setKind(option)} className="accent-primary" />
-              {t(`kinds.${option}`)}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <RadioChoice legend={t("kind")} name="kind" options={COUPON_KINDS} value={kind} onChange={setKind} labelOf={(option) => t(`kinds.${option}`)} />
       {kind === "percent" ? (
         <Field label={t("percentOff")} error={errorFor("percentOff")}>
           {(control) => <input {...control} name="percentOff" type="number" required min={1} max={MAX_PERCENT_OFF} step={1} className={INPUT_CLASS} />}

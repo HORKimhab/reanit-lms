@@ -1,38 +1,23 @@
 "use client";
 
-import { DEFAULT_BRAND_COLOR, SCHOOL_IMAGE_RULES, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
+import { DEFAULT_BRAND_COLOR, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
 import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
-import type * as React from "react";
 
-import type { LogoUploadStart, SettingsField, SettingsState } from "@/app/[locale]/dashboard/settings/actions";
+import type { ImageUploadStart, SettingsField, SettingsState } from "@/app/[locale]/dashboard/settings/actions";
 import { Field, INPUT_CLASS } from "@/components/form/field";
 
 import { BrandPreview } from "./brand-preview";
+import { IMAGE_MAX_MB, IMAGE_TYPES, useImageChoice } from "./use-image-choice";
 
 const INITIAL_STATE: SettingsState = { status: "idle", invalidFields: [] };
-const BYTES_PER_MB = 1024 * 1024;
-const LOGO_TYPES = Object.keys(SCHOOL_IMAGE_RULES.contentTypes);
-const LOGO_MAX_MB = SCHOOL_IMAGE_RULES.maxBytes / BYTES_PER_MB;
 
 /** The server actions the settings form calls. */
 export type SettingsActions = {
   save: (state: SettingsState, formData: FormData) => Promise<SettingsState>;
-  startLogoUpload: (file: { contentType: string; sizeBytes: number }) => Promise<LogoUploadStart>;
+  startLogoUpload: (file: { contentType: string; sizeBytes: number }) => Promise<ImageUploadStart>;
 };
-
-/**
- * Checks a logo file's type and size before previewing it, as the API will when it is uploaded.
- *
- * @param file - The chosen file.
- * @param file.type - Its media type.
- * @param file.size - Its size in bytes.
- * @returns Whether the file can be used as a logo.
- */
-function isAllowedLogo({ type, size }: { type: string; size: number }) {
-  return LOGO_TYPES.includes(type) && size <= SCHOOL_IMAGE_RULES.maxBytes;
-}
 
 /**
  * School settings: name, brand color and logo, with a live preview that updates as they change.
@@ -47,9 +32,7 @@ export function SettingsForm({ school, actions }: { school: School; actions: Set
   const t = useTranslations("Settings");
   const [name, setName] = useState(school.name);
   const [brand, setBrand] = useState(school.brandColor ?? DEFAULT_BRAND_COLOR);
-  const [logoUrl, setLogoUrl] = useState(school.logoUrl ?? undefined);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [isLogoRejected, setIsLogoRejected] = useState(false);
+  const logo = useImageChoice(school.logoUrl);
 
   /**
    * Uploads the chosen logo, if any, then saves the form with the logo's key.
@@ -59,15 +42,12 @@ export function SettingsForm({ school, actions }: { school: School; actions: Set
    * @returns The save's result, or why the logo could not be uploaded.
    */
   async function submit(previous: SettingsState, formData: FormData): Promise<SettingsState> {
-    if (logoFile) {
-      const started = await actions.startLogoUpload({ contentType: logoFile.type, sizeBytes: logoFile.size });
-      if (started.status !== "ready") return { status: "invalid", invalidFields: ["logo"] };
-      const stored = await fetch(started.url, { method: "PUT", headers: started.headers, body: logoFile }).catch(() => undefined);
-      if (!stored?.ok) return { status: "failed", invalidFields: [] };
-      formData.set("logoKey", started.key);
-    }
+    const upload = await logo.upload(actions.startLogoUpload);
+    if (upload.status === "rejected") return { status: "invalid", invalidFields: ["logo"] };
+    if (upload.status === "failed") return { status: "failed", invalidFields: [] };
+    if (upload.status === "uploaded") formData.set("logoKey", upload.key);
     const result = await actions.save(previous, formData);
-    if (result.status === "saved") setLogoFile(null);
+    if (result.status === "saved") logo.done();
     return result;
   }
 
@@ -84,28 +64,7 @@ export function SettingsForm({ school, actions }: { school: School; actions: Set
     return state.invalidFields.includes(field) ? message : undefined;
   }
 
-  /**
-   * Previews a chosen logo and keeps it for the next save, or clears the choice and shows an error when the file is not allowed.
-   *
-   * @param event - The file input's change event.
-   */
-  function chooseLogo(event: React.ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
-    if (!file) return;
-    if (!isAllowedLogo(file)) {
-      input.value = "";
-      setIsLogoRejected(true);
-      return;
-    }
-    setIsLogoRejected(false);
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.addEventListener("load", () => setLogoUrl(String(reader.result)));
-    reader.readAsDataURL(file);
-  }
-
-  const logoError = t("errors.logo", { maxMb: LOGO_MAX_MB });
+  const logoError = t("errors.logo", { maxMb: IMAGE_MAX_MB });
 
   return (
     <form action={formAction} className="grid items-start gap-8 lg:grid-cols-[1fr_20rem]">
@@ -140,16 +99,16 @@ export function SettingsForm({ school, actions }: { school: School; actions: Set
         </Field>
         <Field
           label={t("logo")}
-          hint={t("logoHint", { maxMb: LOGO_MAX_MB })}
-          error={isLogoRejected ? logoError : errorFor("logo", logoError)}
+          hint={t("logoHint", { maxMb: IMAGE_MAX_MB })}
+          error={logo.isRejected ? logoError : errorFor("logo", logoError)}
         >
           {(control) => (
             // No name: the image goes to storage, and only its key is posted.
             <input
               {...control}
               type="file"
-              accept={LOGO_TYPES.join(",")}
-              onChange={chooseLogo}
+              accept={IMAGE_TYPES.join(",")}
+              onChange={logo.choose}
               className="text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm"
             />
           )}
@@ -164,7 +123,7 @@ export function SettingsForm({ school, actions }: { school: School; actions: Set
           </p>
         </div>
       </div>
-      <BrandPreview name={name} brand={brand} logoUrl={logoUrl} />
+      <BrandPreview name={name} brand={brand} logoUrl={logo.previewUrl} />
     </form>
   );
 }

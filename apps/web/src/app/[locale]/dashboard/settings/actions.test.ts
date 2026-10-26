@@ -18,7 +18,8 @@ import {
   saveCertificateTemplate,
   saveNotificationPreferences,
   saveSchoolSettings,
-  startLogoUpload,
+  startImageUpload,
+  savePaymentQr,
   verifyCustomDomain,
   type CustomDomainState,
   type SettingsState,
@@ -84,7 +85,7 @@ describe("saveSchoolSettings", () => {
   });
 });
 
-describe("startLogoUpload", () => {
+describe("startImageUpload", () => {
   const UPLOAD_ROUTE = "POST /schools/current/logo-uploads";
 
   it("returns where to upload the logo", async () => {
@@ -96,7 +97,7 @@ describe("startLogoUpload", () => {
       ),
     );
 
-    expect(await startLogoUpload({ contentType: "image/png", sizeBytes: 2048 })).toEqual({
+    expect(await startImageUpload("logo", { contentType: "image/png", sizeBytes: 2048 })).toEqual({
       status: "ready",
       url: "https://storage.test/a.png",
       headers: { "content-type": "image/png" },
@@ -105,10 +106,16 @@ describe("startLogoUpload", () => {
     expect(await requestTo(UPLOAD_ROUTE)?.json()).toEqual({ contentType: "image/png", sizeBytes: 2048 });
   });
 
+  it("asks for a payment QR upload on its own route", async () => {
+    onApi("POST /schools/current/payment-qr-uploads", Response.json({ key: "k", url: "https://storage.test/qr.png", headers: {}, expiresAt: "2026-10-19T00:15:00.000Z" }, { status: 201 }));
+
+    expect(await startImageUpload("payment-qr", { contentType: "image/png", sizeBytes: 2048 })).toMatchObject({ status: "ready", key: "k" });
+  });
+
   it.each([415, 413])("rejects the image when the API answers %i", async (status) => {
     onApi(UPLOAD_ROUTE, problem(status));
 
-    expect(await startLogoUpload({ contentType: "image/gif", sizeBytes: 2048 })).toEqual({ status: "rejected" });
+    expect(await startImageUpload("logo", { contentType: "image/gif", sizeBytes: 2048 })).toEqual({ status: "rejected" });
   });
 });
 
@@ -272,3 +279,40 @@ describe("removeTeamMember", () => {
     await expect(removeTeamMember(ID)).rejects.toThrow("API answered 409");
   });
 });
+
+describe("savePaymentQr", () => {
+  const QR_KEY = `schools/${STAFF_SCHOOL.id}/payment-qr/qr.png`;
+
+  /**
+   * Answers the staff school lookup and the settings save.
+   *
+   * @param answer - The settings save's response.
+   */
+  function answer(answer: Response) {
+    onApi("GET /schools/current", Response.json({ school: STAFF_SCHOOL, role: "owner" }));
+    onApi(ROUTE, answer);
+  }
+
+  it("saves the payment QR key, keeping the school's name and brand color, and refreshes the page", async () => {
+    answer(Response.json({ school: STAFF_SCHOOL }));
+
+    expect(await savePaymentQr({ status: "idle" }, form({ paymentQrKey: QR_KEY }))).toEqual({ status: "saved" });
+    expect(await requestTo(ROUTE)?.json()).toEqual({ name: STAFF_SCHOOL.name, brandColor: STAFF_SCHOOL.brandColor, paymentQrKey: QR_KEY });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("removes the payment QR for an empty key", async () => {
+    answer(Response.json({ school: STAFF_SCHOOL }));
+
+    await savePaymentQr({ status: "idle" }, form({ paymentQrKey: "" }));
+
+    expect(await requestTo(ROUTE)?.json()).toMatchObject({ paymentQrKey: null });
+  });
+
+  it("reports a key the API refuses", async () => {
+    answer(problem(400, "urn:reanit:problem:invalid-media-key"));
+
+    expect(await savePaymentQr({ status: "idle" }, form({ paymentQrKey: "schools/other/payment-qr/qr.png" }))).toEqual({ status: "invalid" });
+  });
+});
+

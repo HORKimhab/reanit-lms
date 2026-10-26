@@ -2,12 +2,12 @@
 
 import { certificateTemplateSchema } from "@reanit/core/learning";
 import { NOTIFICATION_KINDS, notificationPreferencesSchema } from "@reanit/core/notifications";
-import { changeRoleSchema, customDomainSchema, inviteSchema, schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
+import { changeRoleSchema, customDomainSchema, inviteSchema, schoolSettingsSchema, type SchoolImage, type SchoolSettingsInput } from "@reanit/core/schools";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 
 import { getApi } from "@/server/api";
-import { checkStaffResponse } from "@/server/schools/staff";
+import { checkStaffResponse, getStaffSchool } from "@/server/schools/staff";
 
 /** A settings field that can fail validation. */
 export type SettingsField = "name" | "brand" | "logo" | "paymentQr";
@@ -15,33 +15,38 @@ export type SettingsField = "name" | "brand" | "logo" | "paymentQr";
 /** Result of the last save, shown by the settings form; `failed` means the logo never reached storage. */
 export type SettingsState = { status: "idle" | "saved" | "invalid" | "failed"; invalidFields: SettingsField[] };
 
-/** Answer to starting a logo upload: where to PUT the image, or that the API refused it. */
-export type LogoUploadStart = { status: "ready"; url: string; headers: Record<string, string>; key: string } | { status: "rejected" };
+/** Answer to starting a school image's upload: where to PUT the image, or that the API refused it. */
+export type ImageUploadStart = { status: "ready"; url: string; headers: Record<string, string>; key: string } | { status: "rejected" };
 
 /** The form field each settings value comes from. */
 const FIELD_OF: Record<keyof SchoolSettingsInput, SettingsField> = { name: "name", brandColor: "brand", logoKey: "logo", paymentQrKey: "paymentQr" };
 
-/** API answers to a logo upload request that mean the image is not acceptable: wrong type (415) or too big (413). */
-const LOGO_REFUSALS = new Set([415, 413]);
+/** API answers to an image upload request that mean the image is not acceptable: wrong type (415) or too big (413). */
+const IMAGE_REFUSALS = new Set([415, 413]);
 
 /** The settings page, refreshed after a certificate template save so the form shows what was saved. */
 const SETTINGS_PATH = "/dashboard/settings";
 
-/** API answers to a settings save that blame the logo: not this school's key (400) or not uploaded yet (409). */
-const LOGO_PROBLEMS = new Set(["urn:reanit:problem:invalid-media-key", "urn:reanit:problem:media-not-uploaded"]);
+/** API answers to a settings save that blame an image: not this school's key (400) or not uploaded yet (409). */
+const IMAGE_PROBLEMS = new Set(["urn:reanit:problem:invalid-media-key", "urn:reanit:problem:media-not-uploaded"]);
+
+/** Where each school image is presigned. */
+const UPLOAD_ROUTES = { logo: "/schools/current/logo-uploads", "payment-qr": "/schools/current/payment-qr-uploads" } as const;
 
 /**
- * Asks the API where to upload a new logo; the browser then sends the image straight to storage.
+ * Asks the API where to upload a new logo or payment QR; the browser then sends the image straight to
+ * storage. Bind the image: `startImageUpload.bind(null, "logo")`.
  *
+ * @param image Which school image.
  * @param file What the browser is about to send.
  * @param file.contentType Its content type.
  * @param file.sizeBytes Its size in bytes.
  * @returns The upload URL, headers and key, or `rejected` when the image is the wrong type or too big.
  * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
  */
-export async function startLogoUpload(file: { contentType: string; sizeBytes: number }): Promise<LogoUploadStart> {
-  const { data, response } = await (await getApi()).POST("/schools/current/logo-uploads", { body: file });
-  if (LOGO_REFUSALS.has(response.status)) return { status: "rejected" };
+export async function startImageUpload(image: SchoolImage, file: { contentType: string; sizeBytes: number }): Promise<ImageUploadStart> {
+  const { data, response } = await (await getApi()).POST(UPLOAD_ROUTES[image], { body: file });
+  if (IMAGE_REFUSALS.has(response.status)) return { status: "rejected" };
   checkStaffResponse(response);
   // checkStaffResponse returned, so the API answered 2xx with the upload.
   const { url, headers, key } = data!;
@@ -70,7 +75,7 @@ export async function saveSchoolSettings(_previous: SettingsState, formData: For
 
   const { error, response } = await (await getApi()).PATCH("/schools/current", { body: parsed.data });
   const problemType = (error as { type?: string } | undefined)?.type;
-  if (problemType && LOGO_PROBLEMS.has(problemType)) return { status: "invalid", invalidFields: ["logo"] };
+  if (problemType && IMAGE_PROBLEMS.has(problemType)) return { status: "invalid", invalidFields: ["logo"] };
   checkStaffResponse(response);
   // The school's name, color and logo show in every layout, so refresh them all.
   revalidatePath("/", "layout");
@@ -234,4 +239,28 @@ export async function removeTeamMember(userId: string): Promise<void> {
   const { response } = await (await getApi()).DELETE("/team/members/{id}", { params: { path: { id: userId } } });
   if (response.status !== 404) checkStaffResponse(response);
   revalidatePath(SETTINGS_PATH);
+}
+
+/** Result of the last payment QR save, shown by its form: an image the API refused, or one that never reached storage. */
+export type PaymentQrState = { status: "idle" | "saved" | "invalid" | "failed" };
+
+/**
+ * Saves the school's own payment QR image, or removes it; the school's name and brand color stay as
+ * they are. Without a payment QR, subscriptions and plans are paid only through the gateways.
+ *
+ * @param _previous - The form's last state; unused, but `useActionState` passes it first.
+ * @param formData - `paymentQrKey`: the uploaded image's key, or empty to remove the image; untrusted until parsed.
+ * @returns `saved`, or `invalid` when the key is not one of this school's uploaded payment QR images.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function savePaymentQr(_previous: PaymentQrState, formData: FormData): Promise<PaymentQrState> {
+  const { school } = await getStaffSchool();
+  const parsed = schoolSettingsSchema.safeParse({ name: school.name, brandColor: school.brandColor, paymentQrKey: formData.get("paymentQrKey") || null });
+  if (!parsed.success) return { status: "invalid" };
+  const { error, response } = await (await getApi()).PATCH("/schools/current", { body: parsed.data });
+  const problemType = (error as { type?: string } | undefined)?.type;
+  if (problemType && IMAGE_PROBLEMS.has(problemType)) return { status: "invalid" };
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+  return { status: "saved" };
 }

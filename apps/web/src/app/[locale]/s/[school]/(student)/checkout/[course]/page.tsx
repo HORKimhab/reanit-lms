@@ -23,8 +23,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[locale]/s/[s
   return (
     <ProductCheckout
       school={school}
-      kind="course"
-      slug={course.slug}
+      purchase={{ kind: "course", slug: course.slug }}
       title={course.title}
       offer={{ price: offer.price, methods: offer.methods }}
       ownedHref={`/s/${school}/learn/${course.slug}`}

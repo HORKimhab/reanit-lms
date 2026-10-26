@@ -5,19 +5,23 @@ import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 
-import type { CheckoutState, CouponCheck } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
+import type { CheckoutState, CouponCheck, OfflinePaymentState } from "@/app/[locale]/s/[school]/(student)/checkout/actions";
 import { useMoney } from "@/i18n/format";
 import { Link } from "@/i18n/navigation";
+
+import { usePriceLabel } from "@/components/pricing/use-price-label";
 
 import { CouponField } from "./coupon-field";
 import { GatewayForm } from "./gateway-form";
 import { KhqrPayment } from "./khqr-payment";
+import { OfflinePayment } from "./offline-payment";
 
 const IDLE: CheckoutState = { status: "idle" };
 
 /**
- * Picks a payment method and an optional coupon and starts paying, then shows the gateway's next
- * step: a form posted to PayWay or a KHQR code to scan (Stripe is a redirect the server makes).
+ * Picks a payment method and an optional coupon and starts paying, then shows the next step: a form
+ * posted to PayWay, a KHQR code to scan, or the school's own payment QR to pay and then say so (Stripe
+ * is a redirect the server makes). A subscription or payment plan says how it bills and takes no coupon.
  *
  * @param props - Component props.
  * @param props.methods - The methods that take the course's currency, in the order to offer them.
@@ -26,7 +30,8 @@ const IDLE: CheckoutState = { status: "idle" };
  * @param props.action - Starts the checkout; bound to the school and course.
  * @param props.ordersBase - The school's orders path; an order's status page is `<ordersBase>/<order id>`.
  * @param props.checkStatus - Reads an order's status; bound to the school.
- * @param props.checkCoupon - Checks a coupon code against the price; bound to the school and course.
+ * @param props.checkCoupon - Checks a coupon code against the price; bound to the school and course. Left out where coupons do not apply, such as a renewal.
+ * @param props.submitOfflinePayment - Records that the student paid an offline QR order; bound to the school.
  * @returns The method picker and coupon box, or the step that follows them.
  */
 export function CheckoutForm({
@@ -37,6 +42,7 @@ export function CheckoutForm({
   ordersBase,
   checkStatus,
   checkCoupon,
+  submitOfflinePayment,
 }: {
   methods: PaymentMethod[];
   price: PriceInput;
@@ -44,12 +50,15 @@ export function CheckoutForm({
   action: (previous: CheckoutState, formData: FormData) => Promise<CheckoutState>;
   ordersBase: string;
   checkStatus: (orderId: string) => Promise<OrderStatus>;
-  checkCoupon: (code: string) => Promise<CouponCheck>;
+  checkCoupon?: (code: string) => Promise<CouponCheck>;
+  submitOfflinePayment: (orderId: string, state: OfflinePaymentState, formData: FormData) => Promise<OfflinePaymentState>;
 }) {
   const t = useTranslations("Checkout");
   const [state, submit, isPending] = useActionState(action, IDLE);
   const [discount, setDiscount] = useState<Discount | null>(null);
   const money = useMoney();
+  const billingLabel = usePriceLabel();
+  const isOneTime = price.billing.kind === "one_time";
   /**
    * Formats an amount in the course's currency.
    *
@@ -70,6 +79,9 @@ export function CheckoutForm({
         checkStatus={() => checkStatus(state.orderId)}
       />
     );
+  }
+  if (state.status === "offline") {
+    return <OfflinePayment qrImageUrl={state.qrImageUrl} priceLabel={priceLabel} submit={submitOfflinePayment.bind(null, state.orderId)} />;
   }
   if (state.status === "enrolled") {
     return (
@@ -94,7 +106,8 @@ export function CheckoutForm({
           </label>
         ))}
       </fieldset>
-      <CouponField applied={discount} formatMoney={formatMoney} checkCoupon={checkCoupon} onChange={setDiscount} />
+      {isOneTime ? null : <p className="text-sm text-muted-foreground">{t("billing", { price: billingLabel(price) })}</p>}
+      {checkCoupon && isOneTime ? <CouponField applied={discount} formatMoney={formatMoney} checkCoupon={checkCoupon} onChange={setDiscount} /> : null}
       {state.status === "unavailable" || state.status === "invalidCoupon" ? (
         <p role="alert" className="text-sm text-destructive">
           {t(state.status === "unavailable" ? "unavailable" : "couponInvalid")}
