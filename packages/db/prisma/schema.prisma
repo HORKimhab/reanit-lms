@@ -140,6 +140,7 @@ model School {
   certificateTemplate     CertificateTemplate?
   domain                  Domain?
   notificationPreferences NotificationPreference[]
+  teamInvites             TeamInvite[]
 
   @@map("schools")
 }
@@ -623,4 +624,23 @@ model NotificationPreference {
 
   @@unique([schoolId, userId])
   @@map("notification_preferences")
+}
+
+/// An invitation to join a school's staff (API-24), until it is accepted or expires. Inviting the same
+/// email again replaces it. Only the SHA-256 of the emailed token is stored.
+model TeamInvite {
+  id        String         @id @default(uuid()) @db.Uuid
+  schoolId  String         @map("school_id") @db.Uuid
+  /// Normalized: trimmed and lower case. Only the account with this email can accept.
+  email     String
+  /// `admin` or `instructor`.
+  role      MembershipRole
+  tokenHash String         @unique @map("token_hash")
+  expiresAt DateTime       @map("expires_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, email])
+  @@map("team_invites")
 }

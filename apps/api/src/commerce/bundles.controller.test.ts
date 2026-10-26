@@ -1,7 +1,7 @@
 import { BundleNotFoundError, UnknownBundleCourseError } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import { TEST_SCHOOL, useStaffApp } from "../test/session";
+import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const BUNDLE_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1e";
 const COURSE_IDS = ["5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c01", "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c02"];
@@ -16,11 +16,6 @@ const BUNDLE = {
 } as const;
 const BUNDLE_RESPONSE = { ...BUNDLE, price: { amount: 9900, currency: "USD" } };
 const staff = useStaffApp();
-
-/** Makes the signed-in staff member an owner, who may also price bundles. */
-function asOwner() {
-  staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
-}
 
 describe("bundles builder routes", () => {
   it("lists the school's bundles without their price ids", async () => {
@@ -78,7 +73,7 @@ describe("bundles builder routes", () => {
 
 describe("PUT /bundles/:id/price", () => {
   it("lets an owner set the price", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.setBundlePrice.mockResolvedValue({ id: "p", amount: 9900, currency: "USD" });
 
     const response = await staff.app.inject({ method: "PUT", url: `/bundles/${BUNDLE_ID}/price`, headers: staff.headers, payload: { amount: 9900, currency: "USD" } });

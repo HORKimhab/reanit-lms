@@ -132,7 +132,7 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
 ```
 
 - Every tenant-owned table has a `school_id` column with an RLS policy on it.
-- `Membership.role` is one of `owner | admin | instructor | student`.
+- `Membership.role` is one of `owner | admin | instructor | student`. Owners and admins invite admins and instructors by email (`TeamInvite`, 7-day link, only the token hash stored); the invitee accepts signed in with that email. The owner can't be removed or re-roled.
 - Prices are stored as integer minor units (cents) together with an ISO currency code.
 
 ---

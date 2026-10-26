@@ -48,19 +48,21 @@ export class AuditInterceptor implements NestInterceptor {
    * Writes the entry. The action has already happened, so a failed write is logged as an error
    * rather than turned into an error response the caller might retry.
    *
-   * @param route The route's action and target.
+   * @param route The route's action, target and school.
    * @param route.action What the route does.
    * @param route.target Finds the id of what it acted on.
+   * @param route.schoolOf Finds the school in the response, for a route outside a staff school.
    * @param params The call's path params.
    * @param response The handler's response body.
    */
-  private async record({ action, target }: AuditedRoute, params: Record<string, string>, response: unknown) {
-    // @Audited routes are @Roles routes, so the session and roles guards have set both.
+  private async record({ action, target, schoolOf }: AuditedRoute, params: Record<string, string>, response: unknown) {
+    // @Audited routes need a session, so the session guard has set the user. Without schoolOf they
+    // are @Roles routes, so the roles guard has set the school.
     const user = this.cls.get("user")!;
-    const school = this.cls.get("school")!;
-    const entry = { actorId: user.id, action, targetId: target({ params, response, schoolId: school.id }), requestId: this.cls.getId() };
+    const schoolId = schoolOf ? schoolOf(response) : this.cls.get("school")!.id;
+    const entry = { actorId: user.id, action, targetId: target({ params, response, schoolId }), requestId: this.cls.getId() };
     try {
-      await this.auditFor(school.id).record(entry);
+      await this.auditFor(schoolId).record(entry);
     } catch (error) {
       this.logger.error(error, `Audit entry not written: ${JSON.stringify(entry)}`);
     }

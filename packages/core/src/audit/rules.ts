@@ -24,6 +24,10 @@ export const AUDIT_ACTIONS = [
   "school.domain.verify",
   "school.domain.remove",
   "certificate.template.update",
+  "team.invite",
+  "team.invite.accept",
+  "team.member.update",
+  "team.member.remove",
 ] as const;
 
 /** A recorded staff action. */

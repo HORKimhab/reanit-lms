@@ -2,7 +2,7 @@ import { OrderNotFoundError, OrderNotRefundableError, RefundByHandRequiredError 
 import type { OrderDetail } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import { TEST_SCHOOL, useStaffApp } from "../test/session";
+import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const ORDER_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1d";
 const staff = useStaffApp();
@@ -22,14 +22,9 @@ const ORDER: OrderDetail = {
 };
 const ORDER_JSON = { ...ORDER, createdAt: "2026-10-20T08:00:00.000Z", paidAt: "2026-10-20T08:01:00.000Z", refundedAt: "2026-10-21T09:00:00.000Z" };
 
-/** Makes the signed-in staff member an owner, who sees and refunds orders. */
-function asOwner() {
-  staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
-}
-
 describe("POST /orders/:id/refund", () => {
   it("refunds the caller's school's order, through the gateway unless staff say otherwise", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.refundOrder.mockResolvedValue(undefined);
 
     const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/refund`, headers: staff.headers, payload: {} });
@@ -40,7 +35,7 @@ describe("POST /orders/:id/refund", () => {
   });
 
   it("passes on that staff refunded by hand", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.refundOrder.mockResolvedValue(undefined);
 
     await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/refund`, headers: staff.headers, payload: { isRefundedByHand: true } });
@@ -60,7 +55,7 @@ describe("POST /orders/:id/refund", () => {
     [new OrderNotRefundableError(), 409, "order-not-refundable"],
     [new RefundByHandRequiredError(), 409, "refund-by-hand-required"],
   ])("maps %s to %i", async (error, status, code) => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.refundOrder.mockRejectedValue(error);
 
     const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/refund`, headers: staff.headers, payload: {} });
@@ -72,7 +67,7 @@ describe("POST /orders/:id/refund", () => {
 
 describe("GET /orders", () => {
   it("lists the caller's school's orders with the parsed filters, times as ISO strings", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.history.listOrders.mockResolvedValue({ orders: [ORDER], total: 1, page: 1, pageSize: 50 });
 
     const response = await staff.app.inject({ method: "GET", url: "/orders?status=refunded&currency=KHR&from=2026-10-01&to=2026-10-31", headers: staff.headers });
@@ -84,7 +79,7 @@ describe("GET /orders", () => {
   });
 
   it("answers 400 for a status orders cannot have", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
 
     const response = await staff.app.inject({ method: "GET", url: "/orders?status=shipped", headers: staff.headers });
 
@@ -101,7 +96,7 @@ describe("GET /orders", () => {
 
 describe("GET /orders/:id", () => {
   it("returns one of the school's orders", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.history.getOrder.mockResolvedValue(ORDER);
 
     const response = await staff.app.inject({ method: "GET", url: `/orders/${ORDER_ID}`, headers: staff.headers });
@@ -111,7 +106,7 @@ describe("GET /orders/:id", () => {
   });
 
   it("answers 404 for an order the school does not have", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.history.getOrder.mockRejectedValue(new OrderNotFoundError());
 
     const response = await staff.app.inject({ method: "GET", url: `/orders/${ORDER_ID}`, headers: staff.headers });

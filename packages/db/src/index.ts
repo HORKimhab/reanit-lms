@@ -19,4 +19,5 @@ export { createSchoolStore } from "./school-store";
 export { createStaffNoticeStore } from "./staff-notice-store";
 export { createStatsStore } from "./stats-store";
 export { createStudentStore } from "./student-store";
+export { createInviteStore, createTeamStore } from "./team-store";
 export { forSchool, inSchoolTransaction, type SchoolTransaction, type TenantClient } from "./tenant";

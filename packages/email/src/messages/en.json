@@ -13,6 +13,19 @@
     "ignore": "If you didn't ask for it, you can ignore this email.",
     "sentBy": "Sent by Reanit."
   },
+  "TeamInvite": {
+    "subject": "Join {school} on Reanit",
+    "heading": "Join {school}",
+    "bodyFrom": "{inviter} invited you to help run {school} as {role}.",
+    "body": "You're invited to help run {school} as {role}.",
+    "roles": {
+      "admin": "an admin",
+      "instructor": "an instructor"
+    },
+    "expiry": "The invite works for {days} days. Sign in with this email address to accept it.",
+    "button": "Accept invite",
+    "ignore": "If you weren't expecting it, you can ignore this email."
+  },
   "Receipt": {
     "subject": "Your receipt from {school}",
     "heading": "Thanks for your purchase",

@@ -1,18 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { TEST_SCHOOL, useStaffApp } from "../test/session";
+import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const TEMPLATE = { signerName: "Dara Kim", signerTitle: "Founder" };
 const staff = useStaffApp();
 
-/** Makes the signed-in staff member an owner, who manages the certificate template. */
-function asOwner() {
-  staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
-}
-
 describe("GET /certificates/template", () => {
   it("reads the template of the caller's school", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.certificates.getTemplate.mockResolvedValue(TEMPLATE);
 
     const response = await staff.app.inject({ method: "GET", url: "/certificates/template", headers: staff.headers });
@@ -25,7 +20,7 @@ describe("GET /certificates/template", () => {
 
 describe("PUT /certificates/template", () => {
   it("saves the parsed template, blank fields as null, and records it in the audit log", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.certificates.saveTemplate.mockResolvedValue({ signerName: "Dara Kim", signerTitle: null });
 
     const response = await staff.app.inject({
@@ -42,7 +37,7 @@ describe("PUT /certificates/template", () => {
   });
 
   it("answers 400 for a signer name over the limit", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
 
     const response = await staff.app.inject({
       method: "PUT",

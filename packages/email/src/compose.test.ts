@@ -1,7 +1,7 @@
 import type { OrderReceipt } from "@reanit/core/notifications";
 import { describe, expect, it } from "vitest";
 
-import { composeMagicLinkEmail, purchaseEmailComposer } from "./compose";
+import { composeMagicLinkEmail, composeTeamInviteEmail, purchaseEmailComposer } from "./compose";
 
 const LINK = "https://reanit.com/api/auth/magic-link/verify?token=abc&next=%2F";
 const RECEIPT: OrderReceipt = {
@@ -37,6 +37,32 @@ describe("composeMagicLinkEmail", () => {
     expect(email.subject).toBe("តំណចូលគណនីរបស់អ្នក");
     expect(email.html).toContain('lang="km"');
     expect(email.text).toContain("15 នាទី");
+  });
+});
+
+describe("composeTeamInviteEmail", () => {
+  const INVITE_URL = "https://reanit.com/invite?token=abc";
+
+  it("says who invited them to which school as what, links to the invite and says how long it works", async () => {
+    const email = await composeTeamInviteEmail({ locale: "en", url: INVITE_URL, school: "Angkor Academy", inviter: "Sokha", role: "instructor", days: 7 });
+
+    expect(email.subject).toBe("Join Angkor Academy on Reanit");
+    expect(email.text).toContain("Sokha invited you to help run Angkor Academy as an instructor.");
+    expect(email.text).toContain("The invite works for 7 days.");
+    expect(email.html).toContain(`href="${INVITE_URL}"`);
+  });
+
+  it("names only the school when the inviter gave no name", async () => {
+    const email = await composeTeamInviteEmail({ locale: "en", url: INVITE_URL, school: "Angkor Academy", inviter: null, role: "admin", days: 7 });
+
+    expect(email.text).toContain("You're invited to help run Angkor Academy as an admin.");
+  });
+
+  it("is written in Khmer for km", async () => {
+    const email = await composeTeamInviteEmail({ locale: "km", url: INVITE_URL, school: "Angkor Academy", inviter: "Sokha", role: "admin", days: 7 });
+
+    expect(email.subject).toBe("ចូលរួមជាមួយ Angkor Academy នៅលើ Reanit");
+    expect(email.text).toContain("ជាអ្នកគ្រប់គ្រង");
   });
 });
 

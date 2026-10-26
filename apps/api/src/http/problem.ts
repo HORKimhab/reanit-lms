@@ -36,15 +36,21 @@ import {
 } from "@reanit/core/learning";
 import { InvalidUnsubscribeLinkError } from "@reanit/core/notifications";
 import {
+  AlreadyTeamMemberError,
   CustomDomainsUnavailableError,
   DomainNotAllowedError,
   DomainNotFoundError,
   DomainNotVerifiedError,
   DomainTakenError,
+  InviteEmailMismatchError,
+  InviteExpiredError,
+  InviteNotFoundError,
   NotSchoolStaffError,
+  OwnerLockedError,
   SchoolHasDomainError,
   SchoolNotFoundError,
   SubdomainTakenError,
+  TeamMemberNotFoundError,
 } from "@reanit/core/schools";
 
 import { RequestValidationError } from "./zod-validation.pipe";
@@ -91,6 +97,12 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: SchoolHasDomainError, status: HttpStatus.CONFLICT, code: "school-has-domain", detail: "The school already has a custom domain. Remove it first." },
   { error: DomainNotFoundError, status: HttpStatus.NOT_FOUND, code: "domain-not-found", detail: "No custom domain was found." },
   { error: DomainNotVerifiedError, status: HttpStatus.CONFLICT, code: "domain-not-verified", detail: "The verification TXT record was not found yet. DNS changes can take a while to show." },
+  { error: AlreadyTeamMemberError, status: HttpStatus.CONFLICT, code: "already-team-member", detail: "This email already belongs to the school's team." },
+  { error: TeamMemberNotFoundError, status: HttpStatus.NOT_FOUND, code: "team-member-not-found", detail: "This person is not on the school's team." },
+  { error: OwnerLockedError, status: HttpStatus.CONFLICT, code: "owner-locked", detail: "The school's owner can't be removed or given another role." },
+  { error: InviteNotFoundError, status: HttpStatus.NOT_FOUND, code: "invite-not-found", detail: "This invite link is not valid. It may have been used or replaced by a newer invite." },
+  { error: InviteExpiredError, status: HttpStatus.GONE, code: "invite-expired", detail: "This invite link has expired. Ask the school for a new invite." },
+  { error: InviteEmailMismatchError, status: HttpStatus.FORBIDDEN, code: "invite-email-mismatch", detail: "This invite was sent to another email. Sign in with that email to accept it." },
   { error: CourseNotForSaleError, status: HttpStatus.CONFLICT, code: "course-not-for-sale", detail: "This course or bundle has no price yet." },
   { error: AlreadyEnrolledError, status: HttpStatus.CONFLICT, code: "already-enrolled", detail: "You already have this course, or every course of this bundle." },
   { error: PaymentMethodUnavailableError, status: HttpStatus.BAD_REQUEST, code: "payment-method-unavailable", detail: "This payment method cannot take this payment." },

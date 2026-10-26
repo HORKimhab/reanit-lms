@@ -42,3 +42,33 @@ export class DomainNotFoundError extends Error {
 export class DomainNotVerifiedError extends Error {
   override readonly name = "DomainNotVerifiedError";
 }
+
+/** The invited email already belongs to one of the school's staff. */
+export class AlreadyTeamMemberError extends Error {
+  override readonly name = "AlreadyTeamMemberError";
+}
+
+/** The user is not one of the school's staff. */
+export class TeamMemberNotFoundError extends Error {
+  override readonly name = "TeamMemberNotFoundError";
+}
+
+/** The school's owner can't be removed or given another role. */
+export class OwnerLockedError extends Error {
+  override readonly name = "OwnerLockedError";
+}
+
+/** No invite has the token: it never existed, was replaced by a newer one, or was accepted. */
+export class InviteNotFoundError extends Error {
+  override readonly name = "InviteNotFoundError";
+}
+
+/** The invite's link is past its expiry; the school has to invite again. */
+export class InviteExpiredError extends Error {
+  override readonly name = "InviteExpiredError";
+}
+
+/** The signed-in account's email is not the one the invite was sent to. */
+export class InviteEmailMismatchError extends Error {
+  override readonly name = "InviteEmailMismatchError";
+}

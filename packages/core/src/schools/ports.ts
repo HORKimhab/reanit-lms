@@ -1,3 +1,5 @@
+import type { InviteRole } from "./team";
+
 /** A school as the schools module returns it. */
 export interface School {
   id: string;
@@ -21,6 +23,9 @@ export interface SchoolChanges {
 
 /** A member's role in a school. */
 export type MembershipRole = "owner" | "admin" | "instructor" | "student";
+
+/** The roles of a school's staff, who sign in to its dashboard. */
+export type StaffRole = Exclude<MembershipRole, "student">;
 
 /** Persistence for schools. `@reanit/db` implements it with `createSchoolStore`. */
 export interface SchoolStore {
@@ -98,4 +103,65 @@ export interface DomainCertificates {
   status(id: string): Promise<DomainTlsStatus>;
   /** Stops serving the hostname; resolves when it is already gone. */
   remove(id: string): Promise<void>;
+}
+
+/** One of a school's staff, as its team settings list them. */
+export interface TeamMember {
+  /** The user's id. */
+  id: string;
+  /** Null for accounts that only sign in by magic link. */
+  name: string | null;
+  email: string;
+  role: StaffRole;
+  /** When they became staff. */
+  joinedAt: Date;
+}
+
+/** An invitation to the school's staff that has not been accepted yet. */
+export interface TeamInvite {
+  id: string;
+  email: string;
+  role: InviteRole;
+  /** After this the link no longer works. */
+  expiresAt: Date;
+  /** When it was (last) sent. */
+  createdAt: Date;
+}
+
+/** One school's staff and invites. `@reanit/db` implements it with `createTeamStore`. */
+export interface TeamStore {
+  /** The school's staff: the owner, then admins, then instructors, each oldest first. */
+  listMembers(): Promise<TeamMember[]>;
+  /** Invites not accepted yet, expired ones included, newest first. */
+  listInvites(): Promise<TeamInvite[]>;
+  /** The staff member, or null when the user is not one of the school's staff. */
+  findMember(userId: string): Promise<TeamMember | null>;
+  /** Whether the email belongs to one of the school's staff. */
+  isStaffEmail(email: string): Promise<boolean>;
+  /** Saves the invite, replacing any earlier one to the same email (and so its link). */
+  saveInvite(invite: { email: string; role: InviteRole; tokenHash: string; expiresAt: Date }): Promise<TeamInvite>;
+  /** Gives a staff member another role. */
+  changeRole(userId: string, role: InviteRole): Promise<void>;
+  /** Removes a staff member's membership, ending their access to the dashboard. */
+  removeMember(userId: string): Promise<void>;
+}
+
+/** An invite as its link finds it, with the school it is for. */
+export interface InviteRecord {
+  id: string;
+  email: string;
+  role: InviteRole;
+  expiresAt: Date;
+  school: { id: string; name: string; subdomain: string };
+}
+
+/** Invites across schools, found by their token, for accepting. `@reanit/db` implements it with `createInviteStore`. */
+export interface InviteStore {
+  /** The invite whose token has this hash, or null. */
+  findInvite(tokenHash: string): Promise<InviteRecord | null>;
+  /**
+   * Makes the user staff of the invite's school with its role and deletes the invite, together.
+   * An owner keeps their role. Returns false when the invite was already used, so only one caller accepts it.
+   */
+  acceptInvite(invite: InviteRecord, userId: string): Promise<boolean>;
 }

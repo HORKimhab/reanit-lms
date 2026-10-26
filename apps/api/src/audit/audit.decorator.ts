@@ -10,20 +10,25 @@ export type AuditCall = { params: Record<string, string>; response: unknown; sch
 /** Finds the id of what a route call acted on. */
 export type AuditTarget = (call: AuditCall) => string;
 
-/** A route's audit action and how to find its target. */
-export type AuditedRoute = { action: AuditAction; target: AuditTarget };
+/** Finds the school a call happened in from its response, for a route outside the caller's staff school. */
+export type AuditSchool = (response: unknown) => string;
+
+/** A route's audit action, how to find its target, and for a route outside a staff school, its school. */
+export type AuditedRoute = { action: AuditAction; target: AuditTarget; schoolOf?: AuditSchool };
 
 /**
  * Records every successful call of a staff route in the school's audit log, with the caller and the request id.
  *
  * @param action What the route does.
  * @param target Finds the id of what it acted on.
+ * @param schoolOf Finds the school from the response, for a route that is not a `@Roles` route (such as
+ * accepting an invite, where the caller is not staff yet); `@Roles` routes log to the caller's school.
  * @returns The decorator.
  * @example
  * applyDecorators(Patch(":id"), Audited("course.update", pathParam("id")));
  */
-export function Audited(action: AuditAction, target: AuditTarget) {
-  return SetMetadata(AUDITED, { action, target } satisfies AuditedRoute);
+export function Audited(action: AuditAction, target: AuditTarget, schoolOf?: AuditSchool) {
+  return SetMetadata(AUDITED, { action, target, schoolOf } satisfies AuditedRoute);
 }
 
 /**

@@ -12,3 +12,4 @@ export {
   type SignUpInput,
 } from "./schemas";
 export { createAuthService, MAGIC_LINK_TTL_MS, SESSION_COOKIE, type AuthService, type AuthSession } from "./service";
+export { generateToken, hashToken } from "./token";

@@ -11,15 +11,21 @@ export {
   type DomainService,
 } from "./domains";
 export {
+  AlreadyTeamMemberError,
   CustomDomainsUnavailableError,
   DomainNotAllowedError,
   DomainNotFoundError,
   DomainNotVerifiedError,
   DomainTakenError,
+  InviteEmailMismatchError,
+  InviteExpiredError,
+  InviteNotFoundError,
   NotSchoolStaffError,
+  OwnerLockedError,
   SchoolHasDomainError,
   SchoolNotFoundError,
   SubdomainTakenError,
+  TeamMemberNotFoundError,
 } from "./errors";
 export type {
   DnsLookup,
@@ -28,13 +34,19 @@ export type {
   DomainRecord,
   DomainStore,
   DomainTlsStatus,
+  InviteRecord,
+  InviteStore,
   MembershipRole,
   School,
   SchoolChanges,
   SchoolRecord,
   SchoolStore,
+  StaffRole,
   StudentStore,
   StudentSummary,
+  TeamInvite,
+  TeamMember,
+  TeamStore,
 } from "./ports";
 export {
   createSchoolSchema,
@@ -51,3 +63,18 @@ export {
 } from "./rules";
 export { createSchoolService, LOGO_URL_TTL_SECONDS, type SchoolService } from "./service";
 export { createStudentService, STUDENTS_PAGE_SIZE, type StudentPage, type StudentService } from "./students";
+export {
+  changeRoleSchema,
+  createInviteAcceptance,
+  createTeamService,
+  INVITE_DAYS,
+  INVITE_ROLES,
+  inviteSchema,
+  type ComposeInvite,
+  type InviteAcceptance,
+  type InviteInput,
+  type InvitePreview,
+  type InviteRole,
+  type Team,
+  type TeamService,
+} from "./team";

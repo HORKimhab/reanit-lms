@@ -1,6 +1,6 @@
 // Signs a fake user in for route tests: the fake auth service resolves any session cookie to them.
 import { SESSION_COOKIE, type AuthUser } from "@reanit/core/auth";
-import type { School } from "@reanit/core/schools";
+import type { MembershipRole, School } from "@reanit/core/schools";
 
 import { useTestApp, type FakeClients, type TestApp } from "./app";
 
@@ -28,6 +28,16 @@ export function signInAs(clients: FakeClients, user: AuthUser = TEST_USER): { co
   return { cookie: `${SESSION_COOKIE}=test-session` };
 }
 
+/**
+ * Gives the signed-in staff member a role in `TEST_SCHOOL`, as the roles guard will find it.
+ *
+ * @param clients Fakes from `createFakeClients`.
+ * @param role Their role.
+ */
+export function setStaffRole(clients: FakeClients, role: MembershipRole) {
+  clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role });
+}
+
 /** A booted app with an instructor of `TEST_SCHOOL` signed in. */
 type StaffApp = TestApp & { headers: { cookie: string } };
 
@@ -38,7 +48,7 @@ type StaffApp = TestApp & { headers: { cookie: string } };
  */
 function signInStaff(clients: FakeClients) {
   signInAs(clients);
-  clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "instructor" });
+  setStaffRole(clients, "instructor");
 }
 
 /**

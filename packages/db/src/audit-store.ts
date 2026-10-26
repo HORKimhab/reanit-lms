@@ -13,11 +13,20 @@ type AuditAction =
   | "bundle.create"
   | "bundle.update"
   | "bundle.price.set"
+  | "order.refund"
   | "lesson.media.attach"
   | "lesson.quiz.save"
   | "comment.reply"
   | "comment.moderate"
-  | "school.settings.update";
+  | "school.settings.update"
+  | "school.domain.add"
+  | "school.domain.verify"
+  | "school.domain.remove"
+  | "certificate.template.update"
+  | "team.invite"
+  | "team.invite.accept"
+  | "team.member.update"
+  | "team.member.remove";
 
 /**
  * One school's audit log. Every query goes through the tenant client, so a school sees and writes

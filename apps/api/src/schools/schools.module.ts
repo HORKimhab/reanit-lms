@@ -2,9 +2,18 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import { Module } from "@nestjs/common";
 import type { ObjectStorage } from "@reanit/core/media";
-import { createDomainService, createSchoolService, createStudentService, type DnsLookup, type DomainEdge } from "@reanit/core/schools";
-import { createDomainStore, createSchoolStore, createStudentStore, type DbClient } from "@reanit/db";
-import { DB_CLIENT, ENV, OBJECT_STORAGE } from "@reanit/nest";
+import {
+  createDomainService,
+  createInviteAcceptance,
+  createSchoolService,
+  createStudentService,
+  createTeamService,
+  type DnsLookup,
+  type DomainEdge,
+} from "@reanit/core/schools";
+import { createDomainStore, createInviteStore, createSchoolStore, createStudentStore, createTeamStore, type DbClient } from "@reanit/db";
+import type { Mailer } from "@reanit/core/auth";
+import { DB_CLIENT, ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 
 import type { Env } from "../config/env";
 import { systemClock } from "../context/clock";
@@ -13,8 +22,20 @@ import { createDnsLookup } from "./dns-lookup";
 import { DomainsController } from "./domains.controller";
 import { RolesGuard } from "./roles.guard";
 import { SchoolsController } from "./schools.controller";
-import { DNS_LOOKUP, DOMAIN_EDGE, DOMAIN_SERVICE, SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL, type StudentsForSchool } from "./schools.tokens";
+import { InvitesController } from "./invites.controller";
+import {
+  DNS_LOOKUP,
+  DOMAIN_EDGE,
+  DOMAIN_SERVICE,
+  INVITE_ACCEPTANCE,
+  SCHOOL_SERVICE,
+  STUDENTS_FOR_SCHOOL,
+  TEAM_FOR_SCHOOL,
+  type StudentsForSchool,
+  type TeamForSchool,
+} from "./schools.tokens";
 import { StudentsController } from "./students.controller";
+import { TeamController } from "./team.controller";
 
 /** Bytes of randomness in a domain verification token. */
 const VERIFICATION_TOKEN_BYTES = 16;
@@ -38,6 +59,27 @@ function provideSchoolService(db: DbClient, storage: ObjectStorage) {
  */
 function provideStudentsForSchool(db: DbClient): StudentsForSchool {
   return (schoolId) => createStudentService({ store: createStudentStore(db, schoolId) });
+}
+
+/**
+ * Wires per-school teams to Postgres through the tenant client, the mailer and the clock.
+ *
+ * @param db The shared database client.
+ * @param mailer Sends invite emails.
+ * @returns A factory of team services limited to one school.
+ */
+function provideTeamForSchool(db: DbClient, mailer: Mailer): TeamForSchool {
+  return (schoolId) => createTeamService({ store: createTeamStore(db, schoolId), mailer, clock: systemClock });
+}
+
+/**
+ * Wires invite links to Postgres and the clock.
+ *
+ * @param db The shared database client.
+ * @returns The invite use cases.
+ */
+function provideInviteAcceptance(db: DbClient) {
+  return createInviteAcceptance({ store: createInviteStore(db), clock: systemClock });
 }
 
 /**
@@ -84,15 +126,17 @@ function provideDomainService(db: DbClient, dns: DnsLookup, edge: DomainEdge | n
   });
 }
 
-/** School routes and settings, custom domains, the students list, and `RolesGuard` for any module whose routes use `@Roles(...)`. */
+/** School routes and settings, custom domains, the students list, the team and its invites, and `RolesGuard` for any module whose routes use `@Roles(...)`. */
 @Module({
-  controllers: [SchoolsController, DomainsController, StudentsController],
+  controllers: [SchoolsController, DomainsController, StudentsController, TeamController, InvitesController],
   providers: [
     { provide: SCHOOL_SERVICE, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideSchoolService },
     { provide: DNS_LOOKUP, useFactory: createDnsLookup },
     { provide: DOMAIN_EDGE, inject: [ENV], useFactory: provideDomainEdge },
     { provide: DOMAIN_SERVICE, inject: [DB_CLIENT, DNS_LOOKUP, DOMAIN_EDGE, ENV], useFactory: provideDomainService },
     { provide: STUDENTS_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideStudentsForSchool },
+    { provide: TEAM_FOR_SCHOOL, inject: [DB_CLIENT, MAILER], useFactory: provideTeamForSchool },
+    { provide: INVITE_ACCEPTANCE, inject: [DB_CLIENT], useFactory: provideInviteAcceptance },
     RolesGuard,
   ],
   exports: [SCHOOL_SERVICE, RolesGuard],

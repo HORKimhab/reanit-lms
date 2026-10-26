@@ -4,9 +4,11 @@ import { createHash, randomBytes } from "node:crypto";
 const TOKEN_BYTES = 32;
 
 /**
- * Creates a random secret for a session cookie or magic link.
+ * Creates a random secret for a session cookie, magic link or invite link.
  *
  * @returns A URL-safe token. Give it to the user; store only `hashToken(token)`.
+ * @example
+ * const token = generateToken(); // put it in the emailed link
  */
 export function generateToken(): string {
   return randomBytes(TOKEN_BYTES).toString("base64url");
@@ -17,6 +19,8 @@ export function generateToken(): string {
  *
  * @param token Token from `generateToken`.
  * @returns Hex SHA-256 of the token.
+ * @example
+ * await store.saveInvite({ ...invite, tokenHash: hashToken(token) });
  */
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

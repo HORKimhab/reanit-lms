@@ -1,7 +1,7 @@
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import { describe, expect, it } from "vitest";
 
-import { TEST_SCHOOL, useStaffApp } from "../test/session";
+import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const COURSE_ID = "3c2b1a09-8f7e-4d6c-9b5a-4e3d2c1b0a99";
 const staff = useStaffApp();
@@ -18,7 +18,7 @@ function putPrice(payload: object) {
 
 describe("PUT /courses/:id/price", () => {
   it("lets an owner set the price in the school", async () => {
-    staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.setPrice.mockResolvedValue({ id: "p", amount: 4900, currency: "USD" });
 
     const response = await putPrice({ amount: 4900, currency: "USD" });
@@ -40,7 +40,7 @@ describe("PUT /courses/:id/price", () => {
     [{ amount: 0, currency: "USD" }],
     [{ amount: 100, currency: "EUR" }],
   ])("answers 400 for %j", async (payload) => {
-    staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
+    setStaffRole(staff.clients, "owner");
 
     const response = await putPrice(payload);
 
@@ -48,7 +48,7 @@ describe("PUT /courses/:id/price", () => {
   });
 
   it("answers 404 for another school's course", async () => {
-    staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "admin" });
+    setStaffRole(staff.clients, "admin");
     staff.clients.commerce.setPrice.mockRejectedValue(new CourseNotFoundError());
 
     const response = await putPrice({ amount: 4900, currency: "USD" });

@@ -1,2 +1,2 @@
 export { certificateText, type CertificateText } from "./certificate";
-export { composeMagicLinkEmail, purchaseEmailComposer, staffEmailComposer } from "./compose";
+export { composeMagicLinkEmail, composeTeamInviteEmail, purchaseEmailComposer, staffEmailComposer } from "./compose";

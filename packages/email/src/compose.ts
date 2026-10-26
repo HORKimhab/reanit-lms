@@ -6,6 +6,7 @@ import { CourseWelcomeEmail } from "./course-welcome-email";
 import { emailIntl } from "./intl";
 import { MagicLinkEmail } from "./magic-link-email";
 import { PurchaseReceiptEmail } from "./purchase-receipt-email";
+import { TeamInviteEmail, type TeamInvite } from "./team-invite-email";
 import { CourseCompletedEmail, NewCommentEmail, NewSaleEmail } from "./staff-emails";
 
 /**
@@ -33,6 +34,18 @@ async function compose(subject: string, email: ReactElement): Promise<ComposedEm
  */
 export function composeMagicLinkEmail(email: { locale: EmailLocale; url: string; minutes: number }): Promise<ComposedEmail> {
   return compose(emailIntl(email.locale).t("MagicLink.subject"), createElement(MagicLinkEmail, email));
+}
+
+/**
+ * Writes the invitation to join a school's team.
+ *
+ * @param email What the email says.
+ * @returns Subject and bodies, without the recipient.
+ * @example
+ * await team.inviteMember(input, (token) => composeTeamInviteEmail({ locale, url: inviteUrl(token), school, inviter, role, days: 7 }));
+ */
+export function composeTeamInviteEmail(email: TeamInvite): Promise<ComposedEmail> {
+  return compose(emailIntl(email.locale).t("TeamInvite.subject", { school: email.school }), createElement(TeamInviteEmail, email));
 }
 
 /**

@@ -1,20 +1,15 @@
 import { CouponCodeTakenError, CouponNotFoundError } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import { TEST_SCHOOL, useStaffApp } from "../test/session";
+import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const COUPON_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1d";
 const COUPON = { code: "SAVE20", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: null } as const;
 const staff = useStaffApp();
 
-/** Makes the signed-in staff member an owner, who manages coupons. */
-function asOwner() {
-  staff.clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
-}
-
 describe("POST /coupons", () => {
   it("creates the coupon in the caller's school, with its expiry as an ISO date", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     const expiresAt = new Date("2026-12-31T00:00:00Z");
     staff.clients.commerce.createCoupon.mockResolvedValue({ ...COUPON, id: COUPON_ID, expiresAt, redemptions: 0 });
 
@@ -42,7 +37,7 @@ describe("POST /coupons", () => {
     ["100 percent off", { ...COUPON, percentOff: 100 }],
     ["a fixed coupon without a currency", { code: "TEN", kind: "fixed", amountOff: 1000 }],
   ])("answers 400 for %s", async (_case, coupon) => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
 
     const response = await staff.app.inject({ method: "POST", url: "/coupons", headers: staff.headers, payload: { coupon } });
 
@@ -50,7 +45,7 @@ describe("POST /coupons", () => {
   });
 
   it("answers 409 coupon-code-taken for a code the school already has", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.createCoupon.mockRejectedValue(new CouponCodeTakenError());
 
     const response = await staff.app.inject({ method: "POST", url: "/coupons", headers: staff.headers, payload: { coupon: COUPON } });
@@ -62,7 +57,7 @@ describe("POST /coupons", () => {
 
 describe("GET /coupons", () => {
   it("lists the school's coupons with their uses", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.listCoupons.mockResolvedValue([{ ...COUPON, id: COUPON_ID, redemptions: 3 }]);
 
     const response = await staff.app.inject({ method: "GET", url: "/coupons", headers: staff.headers });
@@ -73,7 +68,7 @@ describe("GET /coupons", () => {
 
 describe("DELETE /coupons/:id", () => {
   it("deletes the coupon and answers 204", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.deleteCoupon.mockResolvedValue(undefined);
 
     const response = await staff.app.inject({ method: "DELETE", url: `/coupons/${COUPON_ID}`, headers: staff.headers });
@@ -83,7 +78,7 @@ describe("DELETE /coupons/:id", () => {
   });
 
   it("answers 404 for another school's or a missing coupon", async () => {
-    asOwner();
+    setStaffRole(staff.clients, "owner");
     staff.clients.commerce.deleteCoupon.mockRejectedValue(new CouponNotFoundError());
 
     const response = await staff.app.inject({ method: "DELETE", url: `/coupons/${COUPON_ID}`, headers: staff.headers });

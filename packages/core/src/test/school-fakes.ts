@@ -1,5 +1,11 @@
 // In-memory fakes of the schools ports, for unit tests of the school and domain services.
 import type {
+  InviteRecord,
+  InviteRole,
+  InviteStore,
+  TeamInvite,
+  TeamMember,
+  TeamStore,
   DnsLookup,
   DomainCertificates,
   DomainChanges,
@@ -235,5 +241,119 @@ export class FakeDomainCertificates implements DomainCertificates {
   async remove(id: string) {
     this.statuses.delete(id);
     this.removed.push(id);
+  }
+}
+
+/**
+ * Drops a stored invite's token hash, as the store's readers never see it.
+ *
+ * @param invite The stored invite.
+ * @returns The invite.
+ */
+function publicInvite(invite: TeamInvite): TeamInvite {
+  return { id: invite.id, email: invite.email, role: invite.role, expiresAt: invite.expiresAt, createdAt: invite.createdAt };
+}
+
+/** In-memory `TeamStore` of one school, whose members and invites (with their token hashes) tests can inspect. */
+export class FakeTeamStore implements TeamStore {
+  members: TeamMember[] = [];
+  invites: (TeamInvite & { tokenHash: string })[] = [];
+
+  /**
+   * Lists the members.
+   *
+   * @returns `members`.
+   */
+  async listMembers() {
+    return this.members;
+  }
+
+  /**
+   * Lists the invites without their hashes.
+   *
+   * @returns The invites.
+   */
+  async listInvites() {
+    return this.invites.map(publicInvite);
+  }
+
+  /**
+   * Finds a member.
+   *
+   * @param userId The member.
+   * @returns The member, or null.
+   */
+  async findMember(userId: string) {
+    return this.members.find(({ id }) => id === userId) ?? null;
+  }
+
+  /**
+   * Checks whether a member has the email.
+   *
+   * @param email The email.
+   * @returns Whether one does.
+   */
+  async isStaffEmail(email: string) {
+    return this.members.some((member) => member.email === email);
+  }
+
+  /**
+   * Saves an invite, replacing an earlier one to the same email.
+   *
+   * @param invite The invite.
+   * @returns The saved invite.
+   */
+  async saveInvite(invite: Parameters<TeamStore["saveInvite"]>[0]) {
+    const saved = { id: `invite-${this.invites.length + 1}`, createdAt: new Date(0), ...invite };
+    this.invites = [...this.invites.filter(({ email }) => email !== invite.email), saved];
+    return publicInvite(saved);
+  }
+
+  /**
+   * Changes a member's role.
+   *
+   * @param userId The member.
+   * @param role The new role.
+   */
+  async changeRole(userId: string, role: InviteRole) {
+    this.members = this.members.map((member) => (member.id === userId ? { ...member, role } : member));
+  }
+
+  /**
+   * Removes a member.
+   *
+   * @param userId The member.
+   */
+  async removeMember(userId: string) {
+    this.members = this.members.filter(({ id }) => id !== userId);
+  }
+}
+
+/** In-memory `InviteStore` keyed by token hash; records who accepted which invite. */
+export class FakeInviteStore implements InviteStore {
+  readonly invites = new Map<string, InviteRecord>();
+  readonly accepted: { inviteId: string; userId: string }[] = [];
+
+  /**
+   * Finds an invite by its token's hash.
+   *
+   * @param tokenHash The hash.
+   * @returns The invite, or null.
+   */
+  async findInvite(tokenHash: string) {
+    return this.invites.get(tokenHash) ?? null;
+  }
+
+  /**
+   * Accepts an invite once: records it and forgets the invite.
+   *
+   * @param invite The invite.
+   * @param userId Who accepted it.
+   * @returns False when it was already accepted.
+   */
+  async acceptInvite(invite: InviteRecord, userId: string) {
+    if (this.accepted.some(({ inviteId }) => inviteId === invite.id)) return false;
+    this.accepted.push({ inviteId: invite.id, userId });
+    return true;
   }
 }

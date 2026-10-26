@@ -1,11 +1,16 @@
 import { uploadRequestSchema } from "@reanit/core/media";
 import {
+  changeRoleSchema,
   createSchoolSchema,
   customDomainSchema,
+  INVITE_ROLES,
+  inviteSchema,
   domainHostnameSchema,
   schoolSettingsSchema,
   studentSearchSchema,
   subdomainSchema,
+  type TeamInvite,
+  type TeamMember,
 } from "@reanit/core/schools";
 import { z } from "zod";
 
@@ -85,3 +90,71 @@ export class CustomDomainSettingsResponse extends createZodDto(
 
 /** The subdomain of the school a verified custom domain serves. */
 export class DomainSiteResponse extends createZodDto(z.object({ subdomain: z.string() })) {}
+
+/** Longest invite token accepted in a path; real ones are 43 characters. */
+const INVITE_TOKEN_MAX_LENGTH = 128;
+
+/** `POST /team/invites` body. */
+export class InviteBody extends createZodDto(inviteSchema) {}
+
+/** `PATCH /team/members/:id` body. */
+export class ChangeRoleBody extends createZodDto(changeRoleSchema) {}
+
+/** `/team/members/:id` path: the member's user id. */
+export class MemberParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
+/** `/invites/:token` path: the token from the emailed link. */
+export class InviteTokenParams extends createZodDto(z.object({ token: z.string().min(1).max(INVITE_TOKEN_MAX_LENGTH) })) {}
+
+const inviteRoleSchema = z.enum(INVITE_ROLES);
+
+const teamMemberSchema = z.object({
+  id: z.uuid(),
+  name: z.string().nullable(),
+  email: z.string(),
+  role: z.enum(["owner", ...INVITE_ROLES]),
+  joinedAt: z.iso.datetime(),
+});
+
+const teamInviteSchema = z.object({ id: z.uuid(), email: z.string(), role: inviteRoleSchema, expiresAt: z.iso.datetime(), createdAt: z.iso.datetime() });
+
+/** The school's staff, owner first, and its invites waiting for an answer. */
+export class TeamResponse extends createZodDto(z.object({ members: z.array(teamMemberSchema), invites: z.array(teamInviteSchema) })) {}
+
+/** A staff member. */
+export class TeamMemberResponse extends createZodDto(z.object({ member: teamMemberSchema })) {}
+
+/** The invite just sent. */
+export class TeamInviteResponse extends createZodDto(z.object({ invite: teamInviteSchema })) {}
+
+/** What an invite link is for. */
+export class InvitePreviewResponse extends createZodDto(
+  z.object({
+    invite: z.object({ email: z.string(), role: inviteRoleSchema, expiresAt: z.iso.datetime(), school: z.object({ name: z.string(), subdomain: z.string() }) }),
+  }),
+) {}
+
+/** The school the invitee joined and their role in it. */
+export class AcceptedInviteResponse extends createZodDto(
+  z.object({ school: z.object({ id: z.uuid(), name: z.string(), subdomain: z.string() }), role: inviteRoleSchema }),
+) {}
+
+/**
+ * Shapes a staff member for a response.
+ *
+ * @param member The member.
+ * @returns The member with their join time as an ISO string.
+ */
+export function toTeamMemberResponse(member: TeamMember): TeamMemberResponse["member"] {
+  return { ...member, joinedAt: member.joinedAt.toISOString() };
+}
+
+/**
+ * Shapes an invite for a response.
+ *
+ * @param invite The invite.
+ * @returns The invite with its times as ISO strings.
+ */
+export function toTeamInviteResponse(invite: TeamInvite): TeamInviteResponse["invite"] {
+  return { ...invite, expiresAt: invite.expiresAt.toISOString(), createdAt: invite.createdAt.toISOString() };
+}
