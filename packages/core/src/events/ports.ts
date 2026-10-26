@@ -12,8 +12,15 @@ export interface CourseCompleted {
   payload: { enrollmentId: string; courseId: string };
 }
 
+/** Someone wrote a comment or reply under a lesson. */
+export interface CommentPosted {
+  type: "CommentPosted";
+  schoolId: string;
+  payload: { commentId: string; lessonId: string; authorId: string };
+}
+
 /** Something that happened in a school, written to the outbox in the same transaction as the change itself. */
-export type DomainEvent = OrderPaid | CourseCompleted;
+export type DomainEvent = OrderPaid | CourseCompleted | CommentPosted;
 
 /** A domain event as the outbox stores and relays it. */
 export type OutboxEvent = DomainEvent & {
@@ -34,7 +41,14 @@ export interface OutboxStore {
   publishPending(limit: number, publish: (events: OutboxEvent[]) => Promise<void>): Promise<number>;
 }
 
-/** What the worker runs for each event type; a type without a handler needs no background work yet. */
+/** One piece of background work for an event. */
+export type EventHandler<Type extends DomainEvent["type"]> = (event: Extract<OutboxEvent, { type: Type }>) => Promise<void>;
+
+/**
+ * What the worker runs for each event type, by handler name. Each handler runs as its own job and
+ * is retried on its own, so one failing never repeats another's work (a receipt is not resent
+ * because a staff email failed). A type without handlers needs no background work yet.
+ */
 export type EventHandlers = {
-  [Type in DomainEvent["type"]]?: (event: Extract<OutboxEvent, { type: Type }>) => Promise<void>;
+  [Type in DomainEvent["type"]]?: Record<string, EventHandler<Type>>;
 };

@@ -23,6 +23,12 @@ describe("createSmtpMailer", () => {
     expect(sendMail).toHaveBeenCalledWith({ from: "Reanit <no-reply@reanit.test>", ...MESSAGE });
   });
 
+  it("adds a List-Unsubscribe header for a message that can be turned off", async () => {
+    await createSmtpMailer(SMTP).send({ ...MESSAGE, unsubscribeUrl: "https://reanit.test/unsubscribe?token=t" });
+
+    expect(sendMail).toHaveBeenCalledWith({ from: "Reanit <no-reply@reanit.test>", ...MESSAGE, list: { unsubscribe: "https://reanit.test/unsubscribe?token=t" } });
+  });
+
   it("rejects when the SMTP server refuses the message", async () => {
     sendMail.mockRejectedValueOnce(new Error("550 rejected"));
 

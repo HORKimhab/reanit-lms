@@ -70,12 +70,13 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  memberships Membership[]
-  orders      Order[]
-  enrollments Enrollment[]
-  sessions    Session[]
-  auditEvents AuditEvent[]
-  comments    LessonComment[]
+  memberships             Membership[]
+  orders                  Order[]
+  enrollments             Enrollment[]
+  sessions                Session[]
+  auditEvents             AuditEvent[]
+  comments                LessonComment[]
+  notificationPreferences NotificationPreference[]
 
   @@map("users")
 }
@@ -116,28 +117,29 @@ model School {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  memberships         Membership[]
-  courses             Course[]
-  sections            Section[]
-  lessons             Lesson[]
-  prices              Price[]
-  orders              Order[]
-  orderItems          OrderItem[]
-  enrollments         Enrollment[]
-  lessonProgress      LessonProgress[]
-  dailySales          DailySales[]
-  dailyCompletions    DailyCompletions[]
-  outboxEvents        OutboxEvent[]
-  auditEvents         AuditEvent[]
-  coupons             Coupon[]
-  bundles             Bundle[]
-  bundleCourses       BundleCourse[]
-  quizzes             Quiz[]
-  quizAttempts        QuizAttempt[]
-  lessonComments      LessonComment[]
-  certificates        Certificate[]
-  certificateTemplate CertificateTemplate?
-  domain              Domain?
+  memberships             Membership[]
+  courses                 Course[]
+  sections                Section[]
+  lessons                 Lesson[]
+  prices                  Price[]
+  orders                  Order[]
+  orderItems              OrderItem[]
+  enrollments             Enrollment[]
+  lessonProgress          LessonProgress[]
+  dailySales              DailySales[]
+  dailyCompletions        DailyCompletions[]
+  outboxEvents            OutboxEvent[]
+  auditEvents             AuditEvent[]
+  coupons                 Coupon[]
+  bundles                 Bundle[]
+  bundleCourses           BundleCourse[]
+  quizzes                 Quiz[]
+  quizAttempts            QuizAttempt[]
+  lessonComments          LessonComment[]
+  certificates            Certificate[]
+  certificateTemplate     CertificateTemplate?
+  domain                  Domain?
+  notificationPreferences NotificationPreference[]
 
   @@map("schools")
 }
@@ -338,10 +340,10 @@ model Coupon {
 }
 
 model OrderItem {
-  id       String @id @default(uuid()) @db.Uuid
-  schoolId String @map("school_id") @db.Uuid
-  orderId  String @map("order_id") @db.Uuid
-  courseId String @map("course_id") @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
+  schoolId String  @map("school_id") @db.Uuid
+  orderId  String  @map("order_id") @db.Uuid
+  courseId String  @map("course_id") @db.Uuid
   priceId  String  @map("price_id") @db.Uuid
   /// The bundle this course was bought in; null for a course bought alone.
   bundleId String? @map("bundle_id") @db.Uuid
@@ -595,4 +597,26 @@ model Domain {
 
   @@index([hostname])
   @@map("domains")
+}
+
+/// A staff member's email settings for one school (WRK-04); made with the defaults when their first staff email is sent.
+model NotificationPreference {
+  id               String   @id @default(uuid()) @db.Uuid
+  schoolId         String   @map("school_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  newSale          Boolean  @default(true) @map("new_sale")
+  newComment       Boolean  @default(true) @map("new_comment")
+  courseCompleted  Boolean  @default(true) @map("course_completed")
+  /// The language staff emails are written in: `en` or `km`.
+  locale           String   @default("en")
+  /// Secret in the unsubscribe links of this staff member's emails about this school.
+  unsubscribeToken String   @unique @default(uuid()) @map("unsubscribe_token") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, userId])
+  @@map("notification_preferences")
 }

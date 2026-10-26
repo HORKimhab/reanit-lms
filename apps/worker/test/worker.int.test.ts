@@ -1,7 +1,7 @@
 import { getSharedConfigToken } from "@nestjs/bullmq";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { MailMessage } from "@reanit/core/auth";
-import type { EventHandlers } from "@reanit/core/events";
+import type { EventHandler, EventHandlers } from "@reanit/core/events";
 import type { ObjectStorage } from "@reanit/core/media";
 import {
   createCatalogStore,
@@ -123,8 +123,8 @@ describe("worker", () => {
   });
 
   it("relays an outbox event to its handler and marks it published", async () => {
-    const completed = vi.fn<NonNullable<EventHandlers["CourseCompleted"]>>().mockResolvedValue(undefined);
-    await bootWorker({ CourseCompleted: completed });
+    const completed = vi.fn<EventHandler<"CourseCompleted">>().mockResolvedValue(undefined);
+    await bootWorker({ CourseCompleted: { certificate: completed } });
 
     await completeCourse("relayed");
 
@@ -136,8 +136,8 @@ describe("worker", () => {
   });
 
   it("dead-letters a job whose handler fails every attempt", async () => {
-    const failing = vi.fn<NonNullable<EventHandlers["CourseCompleted"]>>().mockRejectedValue(new Error("certificate service down"));
-    await bootWorker({ CourseCompleted: failing });
+    const failing = vi.fn<EventHandler<"CourseCompleted">>().mockRejectedValue(new Error("certificate service down"));
+    await bootWorker({ CourseCompleted: { certificate: failing } });
     const deadLetters = new Queue<DeadLetter>(EVENTS_DEAD_LETTER_QUEUE, { connection: { url: inject("redisUrl") } });
 
     await completeCourse("doomed");
@@ -158,7 +158,7 @@ describe("worker", () => {
     }
   });
 
-  it("emails a paid order's buyer a receipt and a welcome to the course, in the language they bought in", async () => {
+  it("emails a paid order's buyer a receipt and a welcome in the language they bought in, and the owner about the sale", async () => {
     const { sent } = await bootWorker();
     const catalog = createCatalogStore(db, schoolId);
     const courseId = (await catalog.createCourse({ title: "Brand", slug: "brand" })).id;
@@ -172,12 +172,13 @@ describe("worker", () => {
 
     await createPaymentConfirmationStore(db).confirm("stripe", `cs_worker_${id}`);
 
-    await vi.waitFor(() => expect(sent).toHaveLength(2), { timeout: EVENT_TIMEOUT_MS });
-    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      { to: "worker-buyer@example.com", subject: "បង្កាន់ដៃរបស់អ្នកពី Worker" },
-      { to: "worker-buyer@example.com", subject: "សូមស្វាគមន៍មកកាន់ Brand" },
-    ]);
-    expect(sent[1]?.html).toContain('href="https://reanit.test/km/s/worker-school/learn/brand"');
+    await vi.waitFor(() => expect(sent).toHaveLength(3), { timeout: EVENT_TIMEOUT_MS });
+    const toBuyer = sent.filter(({ to }) => to === "worker-buyer@example.com");
+    expect(toBuyer.map(({ subject }) => subject)).toEqual(["បង្កាន់ដៃរបស់អ្នកពី Worker", "សូមស្វាគមន៍មកកាន់ Brand"]);
+    expect(toBuyer[1]?.html).toContain('href="https://reanit.test/km/s/worker-school/learn/brand"');
+    const toOwner = sent.find(({ to }) => to === "worker-owner@example.com");
+    expect(toOwner?.subject).toBe("New sale: Brand");
+    expect(toOwner?.unsubscribeUrl).toMatch(/^https:\/\/reanit\.test\/unsubscribe\?token=[0-9a-f-]{36}&kind=newSale$/);
   });
 
   it("issues a completed course's certificate and stores its PDF, with a verify link in the student's language", async () => {

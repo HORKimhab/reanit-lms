@@ -127,7 +127,8 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
       ├──< LessonProgress  (enrollment, lesson, completed_at, video_position)
       ├──< QuizAttempt
       ├──< Certificate     (one per completed enrollment: name + title as issued, pdf_key; its id is the verify code)
-      └──< Comment         (lesson, parent_id)
+      ├──< Comment         (lesson, parent_id)
+      └──< NotificationPreference  (per school: which staff emails, their language, the unsubscribe token)
 ```
 
 - Every tenant-owned table has a `school_id` column with an RLS policy on it.
@@ -145,7 +146,7 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
 
 **Reliability**
 - Payment and enrollment operations use idempotency keys.
-- Events are published through the outbox pattern, with retries and a dead-letter queue for failed jobs.
+- Events are published through the outbox pattern, with retries and a dead-letter queue for failed jobs. Each handler of an event runs as its own job, so one failing never repeats another (a staff email never resends a receipt).
 
 **Observability**
 - Sentry gets the errors nobody expected: API 500s, dead-lettered worker jobs, and server and browser errors in the web app. Each is tagged with its OpenTelemetry trace id.

@@ -1,6 +1,7 @@
 "use server";
 
 import { certificateTemplateSchema } from "@reanit/core/learning";
+import { NOTIFICATION_KINDS, notificationPreferencesSchema } from "@reanit/core/notifications";
 import { customDomainSchema, schoolSettingsSchema, type SchoolSettingsInput } from "@reanit/core/schools";
 import { revalidatePath } from "next/cache";
 
@@ -158,4 +159,28 @@ export async function removeCustomDomain(): Promise<void> {
   const { response } = await (await getApi()).DELETE("/schools/current/domain");
   if (response.status !== 404) checkStaffResponse(response);
   revalidatePath(SETTINGS_PATH);
+}
+
+/** Result of the last email settings save, shown by its form. */
+export type NotificationPreferencesState = { status: "idle" | "saved" | "invalid" };
+
+/** What a checked checkbox submits. */
+const CHECKED = "on";
+
+/**
+ * Saves which staff emails the signed-in staff member gets from their school, and in which language.
+ *
+ * @param _previous - The form's last state; unused, but `useActionState` passes it first.
+ * @param formData - The submitted form: a checkbox per kind of email (absent when unchecked) and the language; untrusted until parsed.
+ * @returns `saved`, or `invalid` when the language is not one emails are written in.
+ * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
+ */
+export async function saveNotificationPreferences(_previous: NotificationPreferencesState, formData: FormData): Promise<NotificationPreferencesState> {
+  const kinds = Object.fromEntries(NOTIFICATION_KINDS.map((kind) => [kind, formData.get(kind) === CHECKED]));
+  const parsed = notificationPreferencesSchema.safeParse({ ...kinds, locale: formData.get("locale") });
+  if (!parsed.success) return { status: "invalid" };
+  const { response } = await (await getApi()).PUT("/notifications/preferences", { body: parsed.data });
+  checkStaffResponse(response);
+  revalidatePath(SETTINGS_PATH);
+  return { status: "saved" };
 }

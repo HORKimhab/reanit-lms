@@ -23,7 +23,8 @@ type MailEnv = z.infer<typeof mailEnvSchema>;
  * Sends email over SMTP (Mailpit locally).
  *
  * @param env Validated environment with the SMTP server and sender.
- * @returns A `Mailer` that sends from `MAIL_FROM`, with an HTML body when the message has one.
+ * @returns A `Mailer` that sends from `MAIL_FROM`, with an HTML body when the message has one and a
+ * `List-Unsubscribe` header when it can be turned off.
  */
 export function createSmtpMailer(env: MailEnv): Mailer {
   const transport = createTransport(env.SMTP_URL);
@@ -31,10 +32,11 @@ export function createSmtpMailer(env: MailEnv): Mailer {
     /**
      * Sends one message.
      *
-     * @param message Recipient, subject and bodies.
+     * @param message Recipient, subject, bodies and unsubscribe link.
+     * @param message.unsubscribeUrl Where the reader stops this kind of email, if they can.
      */
-    async send(message) {
-      await transport.sendMail({ from: env.MAIL_FROM, ...message });
+    async send({ unsubscribeUrl, ...message }) {
+      await transport.sendMail({ from: env.MAIL_FROM, ...message, ...(unsubscribeUrl && { list: { unsubscribe: unsubscribeUrl } }) });
     },
   };
 }

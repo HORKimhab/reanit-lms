@@ -9,6 +9,7 @@ import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
+import type { NotificationPreferenceService } from "@reanit/core/notifications";
 import type { DomainService, SchoolService, StudentService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
@@ -29,6 +30,7 @@ import { DB_CLIENT } from "@reanit/nest";
 import { loggerOptions } from "@reanit/nest";
 import { CERTIFICATES_FOR_SCHOOL, COMMENT_MODERATION_FOR_SCHOOL, LEARNING_FOR_SCHOOL } from "../learning/learning.tokens";
 import { MEDIA_FOR_SCHOOL } from "../media/media.tokens";
+import { NOTIFICATION_PREFERENCES } from "../notifications/notifications.tokens";
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { DOMAIN_SERVICE, SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL } from "../schools/schools.tokens";
@@ -98,6 +100,8 @@ export type FakeClients = {
   /** Stands in for every school's audit log; `auditFor` records which school was asked for. */
   audit: Record<keyof AuditLog, Mock>;
   auditFor: Mock<(schoolId: string) => AuditLog>;
+  /** Stands in for the staff email settings. */
+  notificationPreferences: Record<keyof NotificationPreferenceService, Mock>;
 };
 
 /** Extras a test can boot the app with. */
@@ -175,6 +179,7 @@ const MODERATION_METHODS = ["listInbox", "listLessonComments", "reply", "setHidd
 const CERTIFICATE_METHODS = ["verifyCertificate", "getDownloadUrl", "getTemplate", "saveTemplate"] as const satisfies readonly (keyof CertificateService)[];
 const ANALYTICS_METHODS = ["getCourseStats", "getSalesReport"] as const satisfies readonly (keyof AnalyticsService)[];
 const AUDIT_METHODS = ["record", "listEntries"] as const satisfies readonly (keyof AuditLog)[];
+const NOTIFICATION_PREFERENCE_METHODS = ["getPreferences", "savePreferences", "unsubscribe"] as const satisfies readonly (keyof NotificationPreferenceService)[];
 
 /**
  * Creates a fake of a core service with one spy per use case.
@@ -189,7 +194,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats and audit services.
+ * @returns A fake Prisma client, Redis connection, and auth, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats, audit and email settings services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -228,6 +233,7 @@ export function createFakeClients(): FakeClients {
     analyticsFor: vi.fn(() => analytics as unknown as AnalyticsService),
     audit,
     auditFor: vi.fn(() => audit as unknown as AuditLog),
+    notificationPreferences: fakeService(NOTIFICATION_PREFERENCE_METHODS),
   };
 }
 
@@ -276,7 +282,9 @@ export async function createTestApp(
     .overrideProvider(ANALYTICS_FOR_SCHOOL)
     .useValue(clients.analyticsFor)
     .overrideProvider(AUDIT_FOR_SCHOOL)
-    .useValue(clients.auditFor);
+    .useValue(clients.auditFor)
+    .overrideProvider(NOTIFICATION_PREFERENCES)
+    .useValue(clients.notificationPreferences);
   for (const { provide, useValue } of options.overrides ?? []) builder = builder.overrideProvider(provide).useValue(useValue);
   if (options.logStream) {
     const logged = loggerOptions({ ...TEST_ENV, LOG_LEVEL: "info" });

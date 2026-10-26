@@ -32,3 +32,15 @@ export function SubmitRow({
     </div>
   );
 }
+
+/**
+ * Builds a save form's `SubmitRow` props from the form's own `save`, `saving` and `saved` messages.
+ *
+ * @param t - The form's translator; its namespace must have `save`, `saving` and `saved`.
+ * @param isPending - Whether a save is in flight.
+ * @param isSaved - Whether the last save succeeded.
+ * @returns The props.
+ */
+export function saveButtonProps(t: (key: "save" | "saving" | "saved") => string, isPending: boolean, isSaved: boolean) {
+  return { label: t("save"), pendingLabel: t("saving"), isPending, savedMessage: isSaved ? t("saved") : undefined };
+}

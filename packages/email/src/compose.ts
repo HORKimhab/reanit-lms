@@ -1,11 +1,12 @@
 import { render } from "@react-email/render";
-import type { ComposedEmail, EmailLocale, PurchaseEmailComposer } from "@reanit/core/notifications";
+import type { ComposedEmail, EmailLocale, PurchaseEmailComposer, StaffEmailComposer } from "@reanit/core/notifications";
 import { createElement, type ReactElement } from "react";
 
 import { CourseWelcomeEmail } from "./course-welcome-email";
 import { emailIntl } from "./intl";
 import { MagicLinkEmail } from "./magic-link-email";
 import { PurchaseReceiptEmail } from "./purchase-receipt-email";
+import { CourseCompletedEmail, NewCommentEmail, NewSaleEmail } from "./staff-emails";
 
 /**
  * Renders an email to the HTML and plain-text bodies every message carries.
@@ -60,5 +61,45 @@ export const purchaseEmailComposer: PurchaseEmailComposer = {
    */
   courseWelcome(email) {
     return compose(emailIntl(email.locale).t("Welcome.subject", { course: email.courseTitle }), createElement(CourseWelcomeEmail, email));
+  },
+};
+
+/**
+ * Writes the emails a school's staff get about it, as `createStaffNotifications` in `@reanit/core/notifications` sends them.
+ *
+ * @example
+ * createStaffNotifications({ noticesFor, receiptsFor, mailer, composer: staffEmailComposer, appUrl });
+ */
+export const staffEmailComposer: StaffEmailComposer = {
+  /**
+   * Writes the email about a sale.
+   *
+   * @param email The sale, the reader's language and the links.
+   * @returns Subject and bodies.
+   */
+  newSale(email) {
+    const { t, format } = emailIntl(email.locale);
+    return compose(t("NewSale.subject", { courses: format.list(email.courseTitles) }), createElement(NewSaleEmail, email));
+  },
+
+  /**
+   * Writes the email about a student's comment.
+   *
+   * @param email The comment, the reader's language and the links.
+   * @returns Subject and bodies.
+   */
+  newComment(email) {
+    return compose(emailIntl(email.locale).t("NewComment.subject", { lesson: email.lessonTitle }), createElement(NewCommentEmail, email));
+  },
+
+  /**
+   * Writes the email about a completed course.
+   *
+   * @param email The completion, the reader's language and the links.
+   * @returns Subject and bodies.
+   */
+  courseCompleted(email) {
+    const subject = emailIntl(email.locale).t("CourseCompleted.subject", { student: email.studentName ?? email.studentEmail, course: email.courseTitle });
+    return compose(subject, createElement(CourseCompletedEmail, email));
   },
 };

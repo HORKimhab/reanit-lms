@@ -52,6 +52,8 @@ describe("comment store", () => {
     await studentSays("Follow-up", 3, first.id);
 
     const threads = await store.listThreads(LESSON, { includeHidden: false });
+    const events = await db.outboxEvent.findMany({ where: { type: "CommentPosted", schoolId: alphaId }, select: { payload: true } });
+    expect(events).toContainEqual({ payload: { commentId: first.id, lessonId: LESSON, authorId: studentId } });
 
     expect(threads.map(({ body }) => body)).toEqual(["Second question", "First question"]);
     expect(threads[1]?.replies.map(({ body, author }) => [body, author?.isStaff])).toEqual([

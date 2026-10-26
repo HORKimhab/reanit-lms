@@ -27,6 +27,8 @@ export interface MailMessage {
   text: string;
   /** HTML body; plain text only when left out. */
   html?: string;
+  /** Where the reader stops this kind of email; sent as the `List-Unsubscribe` header, so mail apps offer it too. */
+  unsubscribeUrl?: string;
 }
 
 /** Sends email. The app provides SMTP (Mailpit locally); tests use a fake. */

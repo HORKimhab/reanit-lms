@@ -2422,6 +2422,87 @@
           "Audit"
         ]
       }
+    },
+    "/notifications/preferences": {
+      "get": {
+        "operationId": "NotificationsController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationsController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferencesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/notifications/unsubscribe": {
+      "post": {
+        "operationId": "NotificationsController_unsubscribe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsubscribeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsubscribeResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
     }
   },
   "info": {
@@ -5650,6 +5731,101 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "NotificationPreferencesResponse": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "newSale": {
+                "type": "boolean"
+              },
+              "newComment": {
+                "type": "boolean"
+              },
+              "courseCompleted": {
+                "type": "boolean"
+              },
+              "locale": {
+                "type": "string",
+                "enum": [
+                  "en",
+                  "km"
+                ]
+              }
+            },
+            "required": [
+              "newSale",
+              "newComment",
+              "courseCompleted",
+              "locale"
+            ]
+          }
+        },
+        "required": [
+          "preferences"
+        ]
+      },
+      "NotificationPreferencesBody": {
+        "type": "object",
+        "properties": {
+          "newSale": {
+            "type": "boolean"
+          },
+          "newComment": {
+            "type": "boolean"
+          },
+          "courseCompleted": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "km"
+            ]
+          }
+        },
+        "required": [
+          "newSale",
+          "newComment",
+          "courseCompleted",
+          "locale"
+        ]
+      },
+      "UnsubscribeBody": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "newSale",
+              "newComment",
+              "courseCompleted"
+            ]
+          }
+        },
+        "required": [
+          "token",
+          "kind"
+        ]
+      },
+      "UnsubscribeResponse": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schoolName"
         ]
       }
     }

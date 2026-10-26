@@ -32,6 +32,7 @@ import {
   NotEnrolledError,
   QuizNotFoundError,
 } from "@reanit/core/learning";
+import { InvalidUnsubscribeLinkError } from "@reanit/core/notifications";
 import {
   CustomDomainsUnavailableError,
   DomainNotAllowedError,
@@ -108,6 +109,7 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: NotCommentAuthorError, status: HttpStatus.FORBIDDEN, code: "not-comment-author", detail: "Only its author can delete this comment." },
   { error: LessonLockedError, status: HttpStatus.FORBIDDEN, code: "lesson-locked", detail: "This lesson has not opened yet." },
   { error: NotEnrolledError, status: HttpStatus.FORBIDDEN, code: "not-enrolled", detail: "You are not enrolled in this course." },
+  { error: InvalidUnsubscribeLinkError, status: HttpStatus.NOT_FOUND, code: "invalid-unsubscribe-link", detail: "This unsubscribe link is not valid." },
   { error: InvalidStatsRangeError, status: HttpStatus.BAD_REQUEST, code: "invalid-stats-range", detail: "Pick a range of up to a year that ends after it starts." },
   { error: ThrottlerException, status: HttpStatus.TOO_MANY_REQUESTS, code: "rate-limited", detail: "Too many attempts. Wait a few minutes, then try again." },
 ];

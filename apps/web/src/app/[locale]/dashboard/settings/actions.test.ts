@@ -12,6 +12,7 @@ import {
   addCustomDomain,
   removeCustomDomain,
   saveCertificateTemplate,
+  saveNotificationPreferences,
   saveSchoolSettings,
   startLogoUpload,
   verifyCustomDomain,
@@ -192,5 +193,23 @@ describe("removeCustomDomain", () => {
     onApi(REMOVE, problem(401));
 
     await expect(removeCustomDomain()).rejects.toThrow(RedirectError);
+  });
+});
+
+describe("saveNotificationPreferences", () => {
+  const SAVE = "PUT /notifications/preferences";
+  const IDLE_PREFERENCES = { status: "idle" } as const;
+
+  it("saves checked emails as on, missing ones as off, with the language", async () => {
+    onApi(SAVE, Response.json({ preferences: {} }));
+
+    expect(await saveNotificationPreferences(IDLE_PREFERENCES, form({ newComment: "on", locale: "km" }))).toEqual({ status: "saved" });
+    expect(await requestTo(SAVE)?.json()).toEqual({ newSale: false, newComment: true, courseCompleted: false, locale: "km" });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
+  });
+
+  it("refuses a language emails are not written in without calling the API", async () => {
+    expect(await saveNotificationPreferences(IDLE_PREFERENCES, form({ newSale: "on", locale: "fr" }))).toEqual({ status: "invalid" });
+    expect(requestTo(SAVE)).toBeUndefined();
   });
 });

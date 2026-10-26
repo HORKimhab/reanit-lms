@@ -245,6 +245,49 @@
       "unavailable": "Custom domains are not available on this platform yet."
     }
   },
+  "NotificationPreferences": {
+    "title": "Email notifications",
+    "intro": "Choose which emails you get about this school. Every email also has a link to stop it.",
+    "kinds": "Email me when",
+    "kind": {
+      "newSale": {
+        "label": "A sale is made",
+        "hint": "Who bought which course, and for how much."
+      },
+      "newComment": {
+        "label": "A student comments",
+        "hint": "The comment, with a link to the comments inbox."
+      },
+      "courseCompleted": {
+        "label": "A student completes a course",
+        "hint": "Who finished which course."
+      }
+    },
+    "locale": "Email language",
+    "localeName": {
+      "en": "English",
+      "km": "ខ្មែរ (Khmer)"
+    },
+    "invalid": "Pick a language.",
+    "save": "Save email settings",
+    "saving": "Saving…",
+    "saved": "Email settings saved"
+  },
+  "Unsubscribe": {
+    "title": "Stop emails about {kind}?",
+    "intro": "You can turn them back on any time in your dashboard's settings.",
+    "stop": "Stop these emails",
+    "stopping": "Stopping…",
+    "doneTitle": "You're unsubscribed",
+    "done": "You won't get emails about {kind} from {school} anymore.",
+    "invalidTitle": "This link doesn't work",
+    "invalid": "The unsubscribe link is not valid. Change which emails you get in your dashboard's settings instead.",
+    "kind": {
+      "newSale": "new sales",
+      "newComment": "new comments",
+      "courseCompleted": "completed courses"
+    }
+  },
   "Coupons": {
     "newTitle": "New coupon",
     "code": "Code",

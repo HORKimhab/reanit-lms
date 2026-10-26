@@ -30,6 +30,31 @@
     "body": "You now have {course} from {school}. Start whenever you're ready: your progress is saved as you go.",
     "button": "Start learning"
   },
+  "Staff": {
+    "footer": "You get this email because you help run {school} on Reanit.",
+    "unsubscribe": "Stop these emails",
+    "preferences": "Email settings",
+    "buyerNamed": "{name} ({email})",
+    "someone": "A student"
+  },
+  "NewSale": {
+    "subject": "New sale: {courses}",
+    "heading": "You made a sale",
+    "body": "{buyer} bought {courses} from {school} for {total}.",
+    "button": "See your sales"
+  },
+  "NewComment": {
+    "subject": "New comment on {lesson}",
+    "heading": "A student left a comment",
+    "body": "{author} commented on {lesson} in {course}:",
+    "button": "Open the comments inbox"
+  },
+  "CourseCompleted": {
+    "subject": "{student} completed {course}",
+    "heading": "A student completed a course",
+    "body": "{student} completed {course} at {school}.",
+    "button": "See your students"
+  },
   "Certificate": {
     "title": "Certificate of Completion",
     "presentedTo": "This certifies that",

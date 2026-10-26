@@ -5,7 +5,7 @@ import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
 
 import { Field, INPUT_CLASS } from "@/components/form/field";
-import { SubmitRow } from "@/components/form/submit-row";
+import { saveButtonProps, SubmitRow } from "@/components/form/submit-row";
 
 import { useCourseForm, type CourseFormAction } from "./use-course-form";
 
@@ -56,7 +56,7 @@ export function CourseSettingsForm({ course, action }: { course: Course; action:
           </select>
         )}
       </Field>
-      <SubmitRow label={t("save")} pendingLabel={t("saving")} isPending={isPending} savedMessage={state.status === "saved" ? t("saved") : undefined} />
+      <SubmitRow {...saveButtonProps(t, isPending, state.status === "saved")} />
     </form>
   );
 }

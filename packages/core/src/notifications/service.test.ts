@@ -2,23 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { OrderPaid } from "../events";
 import { FakeMailer } from "../test/auth-fakes";
-import { FakeComposer, FakeReceiptStore } from "../test/notification-fakes";
+import { FakeComposer, FakeReceiptStore, TEST_RECEIPT } from "../test/notification-fakes";
 import { ReceiptNotFoundError } from "./errors";
-import type { OrderReceipt } from "./ports";
 import { createPurchaseEmails, type PurchaseEmails } from "./service";
 
-const RECEIPT: OrderReceipt = {
-  orderId: "order-1",
-  locale: "km",
-  paidAt: new Date("2026-10-19T08:00:00Z"),
-  buyer: { email: "sokha@example.com", name: "Sokha" },
-  school: { name: "Angkor Academy", subdomain: "angkor" },
-  items: [
-    { title: "Brand", slug: "brand", amount: 4900, currency: "USD" },
-    { title: "Social", slug: "social", amount: 2500, currency: "USD" },
-  ],
-  total: { amount: 7400, currency: "USD" },
-};
 const EVENT: OrderPaid = { type: "OrderPaid", schoolId: "school-1", payload: { orderId: "order-1", userId: "user-1", courseIds: ["c-1", "c-2"] } };
 
 let receipts: FakeReceiptStore;
@@ -51,7 +38,7 @@ beforeEach(() => {
 
 describe("sendForOrder", () => {
   it("emails the buyer the receipt, then a welcome to each course, in their language with links to the school", async () => {
-    receipts.receipts.set("order-1", RECEIPT);
+    receipts.receipts.set("order-1", TEST_RECEIPT);
 
     await emails.sendForOrder(EVENT);
 

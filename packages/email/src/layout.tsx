@@ -1,4 +1,4 @@
-import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Text } from "@react-email/components";
+import { Body, Button, Container, Head, Heading, Hr, Html, Link, Preview, Text } from "@react-email/components";
 import type * as React from "react";
 
 /** The platform's green, shown on buttons; matches the web app's default brand color. */
@@ -6,7 +6,8 @@ const BUTTON_COLOR = "#008b52";
 const FONT = "'Kantumruy Pro', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 /**
- * The frame every email shares: a centered card with a heading, the body, one button and a footer.
+ * The frame every email shares: a centered card with a heading, the body, one button and a footer,
+ * with links under it when the email can be turned off.
  *
  * @param props - Layout props.
  * @param props.lang - The email's language, for screen readers and fonts.
@@ -16,6 +17,7 @@ const FONT = "'Kantumruy Pro', -apple-system, 'Segoe UI', Roboto, Helvetica, Ari
  * @param props.action.label - What the button says.
  * @param props.action.href - Where it goes.
  * @param props.footer - Who sent the email.
+ * @param props.footerLinks - Links under the footer, such as unsubscribe.
  * @param props.children - The body, above the button.
  * @returns The email document.
  */
@@ -25,6 +27,7 @@ export function EmailLayout({
   heading,
   action,
   footer,
+  footerLinks = [],
   children,
 }: {
   lang: string;
@@ -32,6 +35,7 @@ export function EmailLayout({
   heading: string;
   action: { label: string; href: string };
   footer: string;
+  footerLinks?: { label: string; href: string }[];
   children: React.ReactNode;
 }) {
   return (
@@ -52,6 +56,13 @@ export function EmailLayout({
           </Button>
           <Hr style={{ borderColor: "#e4e4e7", margin: "32px 0 16px" }} />
           <Text style={{ color: "#71717a", fontSize: 12, margin: 0 }}>{footer}</Text>
+          {footerLinks.map((link) => (
+            <Text key={link.href} style={{ fontSize: 12, margin: "8px 0 0" }}>
+              <Link href={link.href} style={{ color: "#71717a", textDecoration: "underline" }}>
+                {link.label}
+              </Link>
+            </Text>
+          ))}
         </Container>
       </Body>
     </Html>

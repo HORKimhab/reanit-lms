@@ -1,4 +1,4 @@
-import type { OutboxEvent, OutboxStore } from "@reanit/core/events";
+import type { EventHandlers, OutboxEvent, OutboxStore } from "@reanit/core/events";
 import { Logger } from "@nestjs/common";
 import type { Queue } from "bullmq";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ORDER_PAID, orderPaidEvents } from "../test/events";
 import { DEFAULT_EVENT_JOB_OPTIONS } from "./events.tokens";
 import { OutboxRelay, RELAY_BATCH_SIZE, RELAY_INTERVAL_MS } from "./outbox-relay";
+
+/** Two handlers for paid orders and none for completed courses, so each paid order becomes two jobs. */
+const HANDLERS: EventHandlers = { OrderPaid: { receipt: vi.fn(), saleNotice: vi.fn() } };
 
 /**
  * Builds an outbox that hands over the given batches in turn, then nothing.
@@ -48,20 +51,30 @@ function manualRun() {
 }
 
 describe("relayPending", () => {
-  it("queues each event as a job named after its type, with the event id as job id and the retry options", async () => {
+  it("queues one job per handler of each event, identified by the event and the handler, with the retry options", async () => {
     const { queue, addBulk } = fakeQueue();
-    const relay = new OutboxRelay(outboxHanding([ORDER_PAID]), queue, DEFAULT_EVENT_JOB_OPTIONS);
+    const relay = new OutboxRelay(outboxHanding([ORDER_PAID]), queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS);
 
     expect(await relay.relayPending()).toBe(1);
 
+    const data = { ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z" };
     expect(addBulk).toHaveBeenCalledWith([
-      { name: "OrderPaid", data: { ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z" }, opts: { ...DEFAULT_EVENT_JOB_OPTIONS, jobId: ORDER_PAID.id } },
+      { name: "OrderPaid.receipt", data: { ...data, handler: "receipt" }, opts: { ...DEFAULT_EVENT_JOB_OPTIONS, jobId: `${ORDER_PAID.id}.receipt` } },
+      { name: "OrderPaid.saleNotice", data: { ...data, handler: "saleNotice" }, opts: { ...DEFAULT_EVENT_JOB_OPTIONS, jobId: `${ORDER_PAID.id}.saleNotice` } },
     ]);
+  });
+
+  it("marks an event without handlers published without queueing anything", async () => {
+    const { queue, addBulk } = fakeQueue();
+    const completed: OutboxEvent = { ...ORDER_PAID, type: "CourseCompleted", payload: { enrollmentId: "e-1", courseId: "c-1" } };
+
+    expect(await new OutboxRelay(outboxHanding([completed]), queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS).relayPending()).toBe(1);
+    expect(addBulk).not.toHaveBeenCalled();
   });
 
   it("keeps claiming batches until one comes back short", async () => {
     const outbox = outboxHanding(orderPaidEvents(RELAY_BATCH_SIZE), orderPaidEvents(3));
-    const relay = new OutboxRelay(outbox, fakeQueue().queue, DEFAULT_EVENT_JOB_OPTIONS);
+    const relay = new OutboxRelay(outbox, fakeQueue().queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS);
 
     expect(await relay.relayPending()).toBe(RELAY_BATCH_SIZE + 3);
     expect(outbox.publishPending).toHaveBeenCalledTimes(2);
@@ -72,7 +85,7 @@ describe("relayPending", () => {
     const { queue, addBulk } = fakeQueue();
     addBulk.mockRejectedValue(new Error("redis down"));
 
-    await expect(new OutboxRelay(outboxHanding([ORDER_PAID]), queue, DEFAULT_EVENT_JOB_OPTIONS).relayPending()).rejects.toThrow("redis down");
+    await expect(new OutboxRelay(outboxHanding([ORDER_PAID]), queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS).relayPending()).rejects.toThrow("redis down");
   });
 });
 
@@ -89,7 +102,7 @@ describe("relay timer", () => {
     // Each run lasts until the test resolves it, to see whether a tick starts another meanwhile.
     let run = manualRun();
     const publishPending = vi.fn<OutboxStore["publishPending"]>(() => run.promise);
-    const relay = new OutboxRelay({ publishPending }, fakeQueue().queue, DEFAULT_EVENT_JOB_OPTIONS);
+    const relay = new OutboxRelay({ publishPending }, fakeQueue().queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS);
     relay.onApplicationBootstrap();
 
     await vi.advanceTimersByTimeAsync(RELAY_INTERVAL_MS * 3);
@@ -111,7 +124,7 @@ describe("relay timer", () => {
   it("logs a failed run and tries again on the next tick", async () => {
     const logError = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
     const publishPending = vi.fn<OutboxStore["publishPending"]>().mockRejectedValueOnce(new Error("db down")).mockResolvedValue(0);
-    const relay = new OutboxRelay({ publishPending }, fakeQueue().queue, DEFAULT_EVENT_JOB_OPTIONS);
+    const relay = new OutboxRelay({ publishPending }, fakeQueue().queue, HANDLERS, DEFAULT_EVENT_JOB_OPTIONS);
     relay.onApplicationBootstrap();
 
     await vi.advanceTimersByTimeAsync(RELAY_INTERVAL_MS * 2);

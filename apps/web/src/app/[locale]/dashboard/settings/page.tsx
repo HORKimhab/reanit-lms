@@ -1,9 +1,12 @@
+import { NOTIFICATION_KINDS, NOTIFICATION_ROLES } from "@reanit/core/notifications";
 import { getTranslations } from "next-intl/server";
 
 import { CertificateTemplateForm } from "@/components/settings/certificate-template-form";
 import { CustomDomainSection } from "@/components/settings/custom-domain-section";
+import { NotificationPreferencesForm } from "@/components/settings/notification-preferences-form";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { getCertificateTemplate } from "@/server/learning/certificates";
+import { getNotificationPreferences } from "@/server/notifications/preferences";
 import { getCustomDomainSettings } from "@/server/schools/domain-settings";
 import { canManageSchool, getStaffSchool } from "@/server/schools/staff";
 
@@ -11,6 +14,7 @@ import {
   addCustomDomain,
   removeCustomDomain,
   saveCertificateTemplate,
+  saveNotificationPreferences,
   saveSchoolSettings,
   startLogoUpload,
   verifyCustomDomain,
@@ -18,9 +22,9 @@ import {
 
 /**
  * School settings: name, brand color and logo with a live preview, who signs certificates, and the
- * custom domain. Instructors see why they cannot edit them.
+ * custom domain, which instructors see why they cannot edit; then every staff member's own email settings.
  *
- * @returns The page heading and the settings forms, or a notice for instructors.
+ * @returns The page heading, the settings forms (or a notice for instructors) and the email settings.
  */
 export default async function DashboardSettings() {
   const [t, nav, { school, role }] = await Promise.all([getTranslations("Settings"), getTranslations("DashboardNav"), getStaffSchool()]);
@@ -39,6 +43,11 @@ export default async function DashboardSettings() {
       ) : (
         <p className="text-sm text-muted-foreground">{t("staffOnly")}</p>
       )}
+      <NotificationPreferencesForm
+        preferences={await getNotificationPreferences()}
+        kinds={NOTIFICATION_KINDS.filter((kind) => NOTIFICATION_ROLES[kind].includes(role))}
+        save={saveNotificationPreferences}
+      />
     </div>
   );
 }

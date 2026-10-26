@@ -4,9 +4,9 @@ import type { Mailer } from "@reanit/core/auth";
 import type { EventHandlers } from "@reanit/core/events";
 import { createCertificateIssuer } from "@reanit/core/learning";
 import type { ObjectStorage } from "@reanit/core/media";
-import { createPurchaseEmails } from "@reanit/core/notifications";
-import { createCertificateStore, createOutboxStore, createReceiptStore, type DbClient } from "@reanit/db";
-import { purchaseEmailComposer } from "@reanit/email";
+import { createPurchaseEmails, createStaffNotifications } from "@reanit/core/notifications";
+import { createCertificateStore, createOutboxStore, createReceiptStore, createStaffNoticeStore, type DbClient } from "@reanit/db";
+import { purchaseEmailComposer, staffEmailComposer } from "@reanit/email";
 import { DB_CLIENT, ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 
 import { pdfCertificateRenderer } from "../certificates/pdf-renderer";
@@ -27,7 +27,8 @@ function provideOutboxStore(db: DbClient) {
 
 /**
  * Wires each event type's background work: a paid order emails its buyer a receipt and a welcome
- * to each course; a completed course gets its certificate, with the PDF in object storage.
+ * to each course; a completed course gets its certificate, with the PDF in object storage; and each
+ * of these, and a new comment, tells the school's staff by email. Each handler is its own job.
  *
  * @param db The shared database client; each event's data is read through its school's tenant client.
  * @param mailer Sends the emails.
@@ -61,7 +62,21 @@ function provideEventHandlers(db: DbClient, mailer: Mailer, storage: ObjectStora
     return createCertificateStore(db, schoolId);
   }
   const certificates = createCertificateIssuer({ certificatesFor, renderer: pdfCertificateRenderer, storage, appUrl: env.APP_URL });
-  return { OrderPaid: purchaseEmails.sendForOrder, CourseCompleted: certificates.issueForCompletion };
+  /**
+   * Opens the staff and news of the school an event belongs to.
+   *
+   * @param schoolId The event's school.
+   * @returns Its staff notice store on the tenant client.
+   */
+  function noticesFor(schoolId: string) {
+    return createStaffNoticeStore(db, schoolId);
+  }
+  const staff = createStaffNotifications({ noticesFor, receiptsFor, mailer, composer: staffEmailComposer, appUrl: env.APP_URL });
+  return {
+    OrderPaid: { purchaseEmails: purchaseEmails.sendForOrder, saleNotice: staff.notifySale },
+    CourseCompleted: { certificate: certificates.issueForCompletion, completionNotice: staff.notifyCompletion },
+    CommentPosted: { commentNotice: staff.notifyComment },
+  };
 }
 
 /** The domain events pipeline: the outbox relay, the events queue with retries, and its dead-letter queue. */

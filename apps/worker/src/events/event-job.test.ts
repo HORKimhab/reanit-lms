@@ -2,41 +2,56 @@ import type { OutboxEvent } from "@reanit/core/events";
 import { describe, expect, it, vi } from "vitest";
 
 import { ORDER_PAID } from "../test/events";
-import { dispatchEvent, toEventJob } from "./event-job";
+import { dispatchEvent, toEventJobs } from "./event-job";
 
-describe("toEventJob", () => {
-  it("keeps the event and writes its time as an ISO string", () => {
-    expect(toEventJob(ORDER_PAID)).toEqual({ ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z" });
+const COMPLETED: OutboxEvent = { ...ORDER_PAID, type: "CourseCompleted", payload: { enrollmentId: "e-1", courseId: "c-1" } };
+
+describe("toEventJobs", () => {
+  it("makes one job per handler of the event's type, named and identified by the event and the handler", () => {
+    const handlers = { OrderPaid: { receipt: vi.fn(), saleNotice: vi.fn() }, CourseCompleted: { certificate: vi.fn() } };
+
+    expect(toEventJobs(handlers, ORDER_PAID)).toEqual([
+      { name: "OrderPaid.receipt", data: { ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z", handler: "receipt" }, jobId: `${ORDER_PAID.id}.receipt` },
+      { name: "OrderPaid.saleNotice", data: { ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z", handler: "saleNotice" }, jobId: `${ORDER_PAID.id}.saleNotice` },
+    ]);
+  });
+
+  it("makes no job for a type without handlers", () => {
+    expect(toEventJobs({ CourseCompleted: { certificate: vi.fn() } }, ORDER_PAID)).toEqual([]);
   });
 });
 
 describe("dispatchEvent", () => {
-  it("runs the handler of the event's type with the time as a date", async () => {
-    const handlers = { OrderPaid: vi.fn().mockResolvedValue(undefined), CourseCompleted: vi.fn() };
+  it("runs only the handler the job names, with the event's time as a date", async () => {
+    const handlers = { OrderPaid: { receipt: vi.fn(), saleNotice: vi.fn().mockResolvedValue(undefined) } };
+    const [, saleNoticeJob] = toEventJobs(handlers, ORDER_PAID);
 
-    await dispatchEvent(handlers, toEventJob(ORDER_PAID));
+    await dispatchEvent(handlers, saleNoticeJob!.data); // OrderPaid has two handlers, so there are two jobs
 
-    expect(handlers.OrderPaid).toHaveBeenCalledWith(ORDER_PAID);
-    expect(handlers.CourseCompleted).not.toHaveBeenCalled();
+    expect(handlers.OrderPaid.saleNotice).toHaveBeenCalledWith(ORDER_PAID);
+    expect(handlers.OrderPaid.receipt).not.toHaveBeenCalled();
   });
 
-  it("routes CourseCompleted to its own handler", async () => {
-    const completed: OutboxEvent = { ...ORDER_PAID, type: "CourseCompleted", payload: { enrollmentId: "e-1", courseId: "c-1" } };
-    const handlers = { OrderPaid: vi.fn(), CourseCompleted: vi.fn().mockResolvedValue(undefined) };
+  it("routes CourseCompleted to its own handlers", async () => {
+    const handlers = { OrderPaid: { receipt: vi.fn() }, CourseCompleted: { certificate: vi.fn().mockResolvedValue(undefined) } };
+    const [job] = toEventJobs(handlers, COMPLETED);
 
-    await dispatchEvent(handlers, toEventJob(completed));
+    await dispatchEvent(handlers, job!.data); // CourseCompleted has a handler, so there is a job
 
-    expect(handlers.CourseCompleted).toHaveBeenCalledWith(completed);
-    expect(handlers.OrderPaid).not.toHaveBeenCalled();
+    expect(handlers.CourseCompleted.certificate).toHaveBeenCalledWith(COMPLETED);
+    expect(handlers.OrderPaid.receipt).not.toHaveBeenCalled();
   });
 
-  it("does nothing for a type without a handler", async () => {
-    await expect(dispatchEvent({}, toEventJob(ORDER_PAID))).resolves.toBeUndefined();
+  it("does nothing for a handler that is no longer registered", async () => {
+    const job = { ...ORDER_PAID, occurredAt: "2026-10-19T08:00:00.000Z", handler: "retired" };
+
+    await expect(dispatchEvent({ OrderPaid: { receipt: vi.fn() } }, job)).resolves.toBeUndefined();
   });
 
   it("passes a handler's failure on, so the queue retries", async () => {
-    await expect(dispatchEvent({ OrderPaid: vi.fn().mockRejectedValue(new Error("mail down")) }, toEventJob(ORDER_PAID))).rejects.toThrow(
-      "mail down",
-    );
+    const handlers = { OrderPaid: { receipt: vi.fn().mockRejectedValue(new Error("mail down")) } };
+    const [job] = toEventJobs(handlers, ORDER_PAID);
+
+    await expect(dispatchEvent(handlers, job!.data)).rejects.toThrow("mail down"); // OrderPaid has a handler, so there is a job
   });
 });

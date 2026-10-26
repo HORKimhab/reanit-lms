@@ -1,9 +1,10 @@
 import type { DbClient } from "./client";
 import type { MembershipRole, Prisma } from "./generated/prisma/client";
-import { forSchool } from "./tenant";
+import { appendEvent } from "./outbox";
+import { forSchool, inSchoolTransaction } from "./tenant";
 
 /** Roles whose comments read as answers; matches staff in `@reanit/core/schools`. */
-const STAFF_ROLES: MembershipRole[] = ["owner", "admin", "instructor"];
+export const STAFF_ROLES: MembershipRole[] = ["owner", "admin", "instructor"];
 const OLDEST_FIRST = { createdAt: "asc" } as const;
 const NEWEST_FIRST = { createdAt: "desc" } as const;
 
@@ -100,7 +101,7 @@ export function createCommentStore(db: DbClient, schoolId: string) {
     },
 
     /**
-     * Writes a comment or reply.
+     * Writes a comment or reply and records `CommentPosted` in the outbox with it, so the staff hear about it.
      *
      * @param comment The comment.
      * @param comment.lessonId Its lesson.
@@ -111,7 +112,11 @@ export function createCommentStore(db: DbClient, schoolId: string) {
      * @returns The comment.
      */
     async createComment({ lessonId, authorId, parentId, body, at }: { lessonId: string; authorId: string; parentId: string | null; body: string; at: Date }) {
-      return toComment(await tenant.lessonComment.create({ data: { schoolId, lessonId, authorId, parentId, body, createdAt: at }, select: COMMENT_FIELDS }));
+      return inSchoolTransaction(db, schoolId, async (tx) => {
+        const comment = await tx.lessonComment.create({ data: { schoolId, lessonId, authorId, parentId, body, createdAt: at }, select: COMMENT_FIELDS });
+        await appendEvent(tx, { type: "CommentPosted", schoolId, payload: { commentId: comment.id, lessonId, authorId } });
+        return toComment(comment);
+      });
     },
 
     /**

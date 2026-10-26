@@ -30,6 +30,31 @@
     "body": "ឥឡូវនេះ អ្នកមានវគ្គសិក្សា {course} ពី {school} ហើយ។ ចាប់ផ្តើមនៅពេលណាក៏បាន៖ វឌ្ឍនភាពរបស់អ្នកត្រូវបានរក្សាទុកជានិច្ច។",
     "button": "ចាប់ផ្តើមរៀន"
   },
+  "Staff": {
+    "footer": "អ្នកទទួលបានអ៊ីមែលនេះ ព្រោះអ្នកជួយគ្រប់គ្រង {school} នៅលើ Reanit។",
+    "unsubscribe": "ឈប់ទទួលអ៊ីមែលទាំងនេះ",
+    "preferences": "ការកំណត់អ៊ីមែល",
+    "buyerNamed": "{name} ({email})",
+    "someone": "សិស្សម្នាក់"
+  },
+  "NewSale": {
+    "subject": "ការលក់ថ្មី៖ {courses}",
+    "heading": "អ្នកបានលក់បាន",
+    "body": "{buyer} បានទិញ {courses} ពី {school} តម្លៃ {total}។",
+    "button": "មើលការលក់របស់អ្នក"
+  },
+  "NewComment": {
+    "subject": "មតិថ្មីលើ {lesson}",
+    "heading": "សិស្សម្នាក់បានបញ្ចេញមតិ",
+    "body": "{author} បានបញ្ចេញមតិលើ {lesson} ក្នុង {course}៖",
+    "button": "បើកប្រអប់មតិ"
+  },
+  "CourseCompleted": {
+    "subject": "{student} បានបញ្ចប់ {course}",
+    "heading": "សិស្សម្នាក់បានបញ្ចប់វគ្គសិក្សា",
+    "body": "{student} បានបញ្ចប់ {course} នៅ {school}។",
+    "button": "មើលសិស្សរបស់អ្នក"
+  },
   "Certificate": {
     "title": "វិញ្ញាបនបត្របញ្ចប់វគ្គសិក្សា",
     "presentedTo": "វិញ្ញាបនបត្រនេះបញ្ជាក់ថា",

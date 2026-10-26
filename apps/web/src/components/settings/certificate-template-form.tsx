@@ -6,7 +6,9 @@ import { useActionState } from "react";
 
 import type { CertificateTemplateState } from "@/app/[locale]/dashboard/settings/actions";
 import { Field, INPUT_CLASS } from "@/components/form/field";
-import { SubmitRow } from "@/components/form/submit-row";
+import { saveButtonProps, SubmitRow } from "@/components/form/submit-row";
+
+import { SettingsSection } from "./settings-section";
 
 const INITIAL_STATE: CertificateTemplateState = { status: "idle" };
 
@@ -31,13 +33,7 @@ export function CertificateTemplateForm({
   const error = state.status === "invalid" ? t("tooLong", { max: SIGNER_MAX_LENGTH }) : undefined;
 
   return (
-    <section aria-labelledby="certificate-template" className="flex max-w-xl flex-col gap-4 border-t pt-8">
-      <div className="flex flex-col gap-1">
-        <h2 id="certificate-template" className="text-lg font-semibold">
-          {t("title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("intro")}</p>
-      </div>
+    <SettingsSection id="certificate-template" title={t("title")} intro={t("intro")}>
       <form action={formAction} className="flex flex-col gap-4">
         <Field label={t("signerName")} error={error}>
           {(control) => (
@@ -49,8 +45,8 @@ export function CertificateTemplateForm({
             <input {...control} name="signerTitle" maxLength={SIGNER_MAX_LENGTH} defaultValue={template.signerTitle ?? ""} className={INPUT_CLASS} />
           )}
         </Field>
-        <SubmitRow label={t("save")} pendingLabel={t("saving")} isPending={isPending} savedMessage={state.status === "saved" ? t("saved") : undefined} />
+        <SubmitRow {...saveButtonProps(t, isPending, state.status === "saved")} />
       </form>
-    </section>
+    </SettingsSection>
   );
 }

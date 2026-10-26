@@ -1,6 +1,7 @@
 import type { MailMessage } from "../auth";
 import type { Currency } from "../commerce";
-import type { EmailLocale } from "./rules";
+import type { MembershipRole } from "../schools";
+import type { EmailLocale, NotificationKind, NotificationPreferences } from "./rules";
 
 /** A paid order as its receipt and welcome emails show it. */
 export interface OrderReceipt {
@@ -28,4 +29,77 @@ export type ComposedEmail = Omit<MailMessage, "to">;
 export interface PurchaseEmailComposer {
   purchaseReceipt(email: { receipt: OrderReceipt; myCoursesUrl: string }): Promise<ComposedEmail>;
   courseWelcome(email: { locale: EmailLocale; buyerName: string | null; schoolName: string; courseTitle: string; courseUrl: string }): Promise<ComposedEmail>;
+}
+
+/** A staff member a staff email goes to. */
+export interface StaffRecipient {
+  email: string;
+  name: string | null;
+  /** The language their emails are written in. */
+  locale: EmailLocale;
+  /** Their secret for this school's unsubscribe links. */
+  unsubscribeToken: string;
+}
+
+/** A comment as the staff email about it describes it. */
+export interface CommentNotice {
+  /** Null when the author gave no name. */
+  authorName: string | null;
+  /** Whether the author runs the school; staff replies send no email. */
+  isStaffAuthor: boolean;
+  body: string;
+  lessonTitle: string;
+  courseTitle: string;
+  schoolName: string;
+}
+
+/** A completed course as the staff email about it describes it. */
+export interface CompletionNotice {
+  studentName: string | null;
+  studentEmail: string;
+  courseTitle: string;
+  schoolName: string;
+}
+
+/** One school's staff and what happened in it, for staff emails. `@reanit/db` implements it with `createStaffNoticeStore`. */
+export interface StaffNoticeStore {
+  /** Staff with one of `roles` who have not turned `kind` off; staff who never saved settings get the defaults first. */
+  findRecipients(kind: NotificationKind, roles: readonly MembershipRole[]): Promise<StaffRecipient[]>;
+  /** The comment, or null when the school no longer has it. */
+  findComment(commentId: string): Promise<CommentNotice | null>;
+  /** The completed enrollment, or null when the school no longer has it. */
+  findCompletion(enrollmentId: string): Promise<CompletionNotice | null>;
+}
+
+/** Staff members' email settings. `@reanit/db` implements it with `createNotificationPreferenceStore`. */
+export interface NotificationPreferenceStore {
+  /** The staff member's settings in the school, or null when they never saved any. */
+  findPreferences(schoolId: string, userId: string): Promise<NotificationPreferences | null>;
+  savePreferences(schoolId: string, userId: string, preferences: NotificationPreferences): Promise<NotificationPreferences>;
+  /** Turns one kind off for whoever the token belongs to, in any school; that school's name, or null for an unknown token. */
+  unsubscribe(token: string, kind: NotificationKind): Promise<{ schoolName: string } | null>;
+}
+
+/** What every staff email carries besides its news. */
+export interface StaffEmailBase {
+  locale: EmailLocale;
+  schoolName: string;
+  /** Stops this kind of email. */
+  unsubscribeUrl: string;
+  /** The dashboard's email settings. */
+  preferencesUrl: string;
+}
+
+/** Writes the emails staff get about their school, in each reader's language. `@reanit/email` implements it with React Email templates. */
+export interface StaffEmailComposer {
+  newSale(
+    email: StaffEmailBase & {
+      buyer: { name: string | null; email: string };
+      courseTitles: string[];
+      total: { amount: number; currency: Currency };
+      salesUrl: string;
+    },
+  ): Promise<ComposedEmail>;
+  newComment(email: StaffEmailBase & Omit<CommentNotice, "isStaffAuthor" | "schoolName"> & { inboxUrl: string }): Promise<ComposedEmail>;
+  courseCompleted(email: StaffEmailBase & Omit<CompletionNotice, "schoolName"> & { studentsUrl: string }): Promise<ComposedEmail>;
 }

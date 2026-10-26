@@ -10,6 +10,8 @@ import { Field, INPUT_CLASS } from "@/components/form/field";
 import { SubmitRow } from "@/components/form/submit-row";
 import type { CustomDomainSettings } from "@/server/schools/domain-settings";
 
+import { SettingsSection } from "./settings-section";
+
 const INITIAL_STATE: CustomDomainState = { status: "idle" };
 
 /** A step of the custom domain setup, as a form action. */
@@ -127,13 +129,7 @@ export function CustomDomainSection({ settings, actions }: { settings: CustomDom
   const t = useTranslations("CustomDomain");
 
   return (
-    <section aria-labelledby="custom-domain" className="flex max-w-xl flex-col gap-4 border-t pt-8">
-      <div className="flex flex-col gap-1">
-        <h2 id="custom-domain" className="text-lg font-semibold">
-          {t("title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("intro")}</p>
-      </div>
+    <SettingsSection id="custom-domain" title={t("title")} intro={t("intro")}>
       {!settings.isAvailable ? (
         <p className="text-sm text-muted-foreground">{t("errors.unavailable")}</p>
       ) : settings.domain ? (
@@ -141,6 +137,6 @@ export function CustomDomainSection({ settings, actions }: { settings: CustomDom
       ) : (
         <AddDomainForm add={actions.add} />
       )}
-    </section>
+    </SettingsSection>
   );
 }
