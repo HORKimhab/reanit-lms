@@ -13,6 +13,7 @@ describe("DashboardNav", () => {
     expect(screen.getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
       ["Overview", "/dashboard"],
       ["Analytics", "/dashboard/analytics"],
+      ["Orders", "/dashboard/orders"],
       ["Courses", "/dashboard/courses"],
       ["Bundles", "/dashboard/bundles"],
       ["Students", "/dashboard/students"],

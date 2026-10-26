@@ -1,12 +1,9 @@
 import { Column, Row, Section, Text } from "@react-email/components";
-import { moneyFormat } from "@reanit/core/commerce";
+import { moneyFormat, orderReference } from "@reanit/core/commerce";
 import type { OrderReceipt } from "@reanit/core/notifications";
 
 import { emailIntl } from "./intl";
 import { EmailLayout } from "./layout";
-
-/** Characters of the order id shown: enough to quote to support, short enough to read. */
-const ORDER_REF_LENGTH = 8;
 
 /**
  * The receipt for a paid order: what was bought, at what price, and when.
@@ -44,7 +41,7 @@ export function PurchaseReceiptEmail({ receipt, myCoursesUrl }: { receipt: Order
       <Text>{buyer.name ? t("Common.greeting", { name: buyer.name }) : t("Common.greetingNoName")}</Text>
       <Text>{t("Receipt.intro", { school: school.name })}</Text>
       <Text style={{ color: "#71717a", fontSize: 13 }}>
-        {t("Receipt.order", { id: receipt.orderId.slice(0, ORDER_REF_LENGTH).toUpperCase() })}
+        {t("Receipt.order", { id: orderReference(receipt.orderId) })}
         {" · "}
         {t("Receipt.paidAt", { date: format.dateTime(receipt.paidAt, { dateStyle: "medium", timeStyle: "short" }) })}
       </Text>

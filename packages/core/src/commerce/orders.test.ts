@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { FakeOrderHistoryStore } from "../test/commerce-fakes";
 import { OrderNotFoundError } from "./errors";
-import { createOrderHistory, orderListQuerySchema, ORDERS_PAGE_SIZE } from "./orders";
+import { createOrderHistory, orderListQuerySchema, orderReference, ORDERS_PAGE_SIZE } from "./orders";
 import type { OrderDetail } from "./ports";
 
 const ORDER: OrderDetail = {
@@ -73,5 +73,11 @@ describe("getOrder", () => {
 
   it("throws OrderNotFoundError for an order the school does not have", async () => {
     await expect(createOrderHistory(new FakeOrderHistoryStore()).getOrder("order-404")).rejects.toThrow(OrderNotFoundError);
+  });
+});
+
+describe("orderReference", () => {
+  it("shows the first eight characters of the id, upper-cased", () => {
+    expect(orderReference("6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a40")).toBe("6F1C1F3E");
   });
 });

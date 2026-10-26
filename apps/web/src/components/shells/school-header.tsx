@@ -19,6 +19,7 @@ const NAV = {
   ],
   student: [
     { path: "/my-courses", key: "myCourses", exact: false },
+    { path: "/purchases", key: "purchases", exact: false },
     { path: "", key: "allCourses", exact: true },
   ],
 } as const;

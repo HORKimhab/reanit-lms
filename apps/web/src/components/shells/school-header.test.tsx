@@ -26,7 +26,7 @@ describe("SchoolHeader", () => {
   it("shows the student's links and avatar in the student area", async () => {
     renderWithIntl(<SchoolHeader school={SCHOOL} variant="student" />);
     const nav = await screen.findByRole("navigation");
-    expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual(["My courses", "All courses"]);
+    expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual(["My courses", "Purchases", "All courses"]);
     expect(screen.getByRole("img", { name: "Sokha Chan" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
   });

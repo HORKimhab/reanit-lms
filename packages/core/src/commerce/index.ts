@@ -17,6 +17,7 @@ export {
   createOrderHistory,
   myOrdersQuerySchema,
   orderListQuerySchema,
+  orderReference,
   ORDERS_PAGE_SIZE,
   type MyOrdersQuery,
   type OrderHistory,

@@ -1,5 +1,8 @@
 // The creator's school and students as the API returns them, for dashboard tests.
-import type { School, StudentSummary } from "@reanit/core/schools";
+import type { MembershipRole, School, StudentSummary } from "@reanit/core/schools";
+
+import { onApi } from "./api";
+import { signIn } from "./session";
 
 /** A school whose owner picked a brand color but uploaded no logo. */
 export const STAFF_SCHOOL: School = {
@@ -29,3 +32,13 @@ export const STUDENTS: StudentSummary[] = [
     completedCourses: 1,
   },
 ];
+
+/**
+ * Signs a staff member of `STAFF_SCHOOL` in, with the given role, as dashboard pages see them.
+ *
+ * @param role Their role in the school.
+ */
+export function signInAsStaff(role: MembershipRole) {
+  signIn();
+  onApi("GET /schools/current", Response.json({ school: STAFF_SCHOOL, role }));
+}

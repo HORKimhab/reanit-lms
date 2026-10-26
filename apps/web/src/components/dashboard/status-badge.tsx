@@ -1,6 +1,7 @@
 import type { CourseStatus } from "@reanit/core/catalog";
-import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
+
+import { Pill } from "@/components/shells/pill";
 
 /**
  * A course's or bundle's publishing status as a small colored label.
@@ -11,14 +12,5 @@ import { useTranslations } from "next-intl";
  */
 export function StatusBadge({ status }: { status: CourseStatus }) {
   const t = useTranslations("Dashboard.courseStatus");
-  return (
-    <span
-      className={cn(
-        "rounded-full px-2 py-0.5 text-xs font-medium",
-        status === "published" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
-      )}
-    >
-      {t(status)}
-    </span>
-  );
+  return <Pill tone={status === "published" ? "success" : "muted"}>{t(status)}</Pill>;
 }

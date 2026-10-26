@@ -5,6 +5,21 @@ import { OrderNotFoundError } from "./errors";
 import type { OrderDetail, OrderFilter, OrderHistoryStore } from "./ports";
 import { CURRENCIES, ORDER_STATUSES } from "./rules";
 
+/** Characters of an order's id people quote: enough to find it, short enough to read out. */
+const ORDER_REFERENCE_LENGTH = 8;
+
+/**
+ * Gives the short reference receipts and order lists show for an order.
+ *
+ * @param orderId The order's id.
+ * @returns Its first characters, upper-cased.
+ * @example
+ * orderReference("6f1c1f3e-1c5a-4a8e-9a39-2c1f1d9e0a40"); // "6F1C1F3E"
+ */
+export function orderReference(orderId: string): string {
+  return orderId.slice(0, ORDER_REFERENCE_LENGTH).toUpperCase();
+}
+
 /** Orders shown per page, for students and staff alike. */
 export const ORDERS_PAGE_SIZE = 50;
 
