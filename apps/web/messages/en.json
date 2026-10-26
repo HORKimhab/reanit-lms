@@ -632,6 +632,15 @@
     "emptyText": "Courses you buy from this school, and their receipts, show up here.",
     "pages": "Purchases pages"
   },
+  "Refund": {
+    "trigger": "Refund order",
+    "gatewayWarning": "This refunds {amount} to the student's card and removes their access to the order's courses. It cannot be undone.",
+    "byHandWarning": "{method} can't refund automatically. Pay the student back {amount} yourself first, then confirm here. Their access to the order's courses is removed. It cannot be undone.",
+    "confirmGateway": "Refund {amount}",
+    "confirmByHand": "I paid them back: mark refunded",
+    "refunding": "Refunding…",
+    "cancel": "Cancel"
+  },
   "Order": {
     "title": "Your order",
     "pending": "Waiting for your payment…",

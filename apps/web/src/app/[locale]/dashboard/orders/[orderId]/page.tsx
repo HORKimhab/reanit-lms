@@ -2,17 +2,21 @@ import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { OrderBuyer } from "@/components/dashboard/order-buyer";
+import { RefundButton } from "@/components/dashboard/refund-button";
 import { ReceiptCard } from "@/components/orders/receipt-card";
 import { Link } from "@/i18n/navigation";
 import { getSchoolOrder } from "@/server/commerce/orders";
 import { canManageSchool, getStaffSchool } from "@/server/schools/staff";
 
+import { refundOrder } from "../actions";
+
 /**
- * One of the school's orders: who bought it, and its receipt. Instructors see why they cannot see it.
+ * One of the school's orders: who bought it, its receipt, and a refund button while it is paid.
+ * Instructors see why they cannot see it.
  *
  * @param props - Page props.
  * @param props.params - Route params with the order's id.
- * @returns A link back to the orders, the buyer and the receipt, or a notice for instructors.
+ * @returns A link back to the orders, the buyer, the receipt and the refund button, or a notice for instructors.
  * @throws {Error} Next's not-found signal when the school has no such order.
  */
 export default async function DashboardOrder({ params }: PageProps<"/[locale]/dashboard/orders/[orderId]">) {
@@ -29,6 +33,7 @@ export default async function DashboardOrder({ params }: PageProps<"/[locale]/da
         <>
           <OrderBuyer buyer={order.buyer} />
           <ReceiptCard order={order} />
+          {order.status === "paid" ? <RefundButton order={order} refund={refundOrder.bind(null, order.id)} /> : null}
         </>
       ) : (
         <p className="text-sm text-muted-foreground">{t("staffOnly")}</p>

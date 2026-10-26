@@ -21,7 +21,7 @@ async function visit() {
   return DashboardOrder({ params: Promise.resolve({ locale: "en", orderId: ORDER.id }), searchParams: Promise.resolve({}) });
 }
 
-// The page only composes OrderBuyer and ReceiptCard; its role branch and not-found branch are tested here.
+// The page only composes OrderBuyer, ReceiptCard and RefundButton; its role, not-found and refundable branches are tested here.
 describe("DashboardOrder", () => {
   it("shows an owner the order's buyer and receipt", async () => {
     signInAsStaff("owner");
@@ -31,6 +31,17 @@ describe("DashboardOrder", () => {
 
     expect(await screen.findByRole("region", { name: "Buyer" })).toHaveTextContent("sokha@example.com");
     expect(screen.getByRole("article", { name: "Order 6F1C1F3E" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refund order" })).toBeInTheDocument();
+  });
+
+  it("offers no refund for an order already refunded", async () => {
+    signInAsStaff("owner");
+    onApi(`GET /orders/${ORDER.id}`, Response.json({ order: { ...ORDER_JSON, status: "refunded", refundedAt: "2026-10-21T09:00:00.000Z" } }));
+
+    renderWithIntl(await visit());
+
+    expect(await screen.findByRole("article", { name: "Order 6F1C1F3E" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refund order" })).not.toBeInTheDocument();
   });
 
   it("is not found for an order the school does not have", async () => {

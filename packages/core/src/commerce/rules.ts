@@ -10,6 +10,12 @@ export const CURRENCIES = ["USD", "KHR"] as const;
 /** Ways a student can pay; each has a gateway in apps/api. */
 export const PAYMENT_METHODS = ["stripe", "aba_payway", "bakong_khqr"] as const;
 
+/**
+ * Methods whose gateway refunds through its API (Stripe). KHQR has no refund API and PayWay's needs a
+ * key we do not hold, so staff pay those students back by hand and then confirm the refund.
+ */
+export const GATEWAY_REFUND_METHODS: readonly PaymentMethod[] = ["stripe"];
+
 /** Where an order can be: waiting for payment, paid, never paid, or paid and given back. */
 export const ORDER_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 
