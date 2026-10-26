@@ -1,5 +1,5 @@
 import { Column, Row, Section, Text } from "@react-email/components";
-import { moneyFormat, orderReference } from "@reanit/core/commerce";
+import { orderReference } from "@reanit/core/commerce";
 import type { OrderReceipt } from "@reanit/core/notifications";
 
 import { emailIntl } from "./intl";
@@ -14,21 +14,8 @@ import { EmailLayout } from "./layout";
  * @returns The email document.
  */
 export function PurchaseReceiptEmail({ receipt, myCoursesUrl }: { receipt: OrderReceipt; myCoursesUrl: string }) {
-  const { t, format } = emailIntl(receipt.locale);
+  const { t, format, money } = emailIntl(receipt.locale);
   const { buyer, school, items, total } = receipt;
-
-  /**
-   * Formats stored money in the reader's language.
-   *
-   * @param money - The amount.
-   * @param money.amount - Integer minor units.
-   * @param money.currency - ISO code.
-   * @returns The displayed amount.
-   */
-  function money({ amount, currency }: { amount: number; currency: string }) {
-    const { value, options } = moneyFormat(amount, currency);
-    return format.number(value, options);
-  }
 
   return (
     <EmailLayout

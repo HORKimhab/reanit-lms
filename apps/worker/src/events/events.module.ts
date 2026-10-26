@@ -4,9 +4,9 @@ import { createErasureCleanup, type Mailer } from "@reanit/core/auth";
 import type { EventHandlers } from "@reanit/core/events";
 import { createCertificateIssuer } from "@reanit/core/learning";
 import type { ObjectStorage } from "@reanit/core/media";
-import { createPurchaseEmails, createStaffNotifications } from "@reanit/core/notifications";
-import { createCertificateStore, createOutboxStore, createReceiptStore, createStaffNoticeStore, type DbClient } from "@reanit/db";
-import { purchaseEmailComposer, staffEmailComposer } from "@reanit/email";
+import { createPurchaseEmails, createRenewalEmails, createStaffNotifications } from "@reanit/core/notifications";
+import { createCertificateStore, createOutboxStore, createReceiptStore, createRenewalNoticeStore, createStaffNoticeStore, type DbClient } from "@reanit/db";
+import { purchaseEmailComposer, renewalEmailComposer, staffEmailComposer } from "@reanit/email";
 import { DB_CLIENT, ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 
 import { pdfCertificateRenderer } from "../certificates/pdf-renderer";
@@ -27,7 +27,7 @@ function provideOutboxStore(db: DbClient) {
 
 /**
  * Wires each event type's background work: a paid order emails its buyer a receipt and a welcome
- * to each course; a completed course gets its certificate, with the PDF in object storage; and each
+ * to each course; a subscription due for renewal emails its student a link to pay; a completed course gets its certificate, with the PDF in object storage; and each
  * of these, and a new comment, tells the school's staff by email; an erased student's certificate
  * PDFs are deleted. Each handler is its own job.
  *
@@ -73,8 +73,19 @@ function provideEventHandlers(db: DbClient, mailer: Mailer, storage: ObjectStora
     return createStaffNoticeStore(db, schoolId);
   }
   const staff = createStaffNotifications({ noticesFor, receiptsFor, mailer, composer: staffEmailComposer, appUrl: env.APP_URL });
+  /**
+   * Builds one school's renewal notice store.
+   *
+   * @param schoolId The school.
+   * @returns Its subscriptions as renewal emails describe them.
+   */
+  function renewalsFor(schoolId: string) {
+    return createRenewalNoticeStore(db, schoolId);
+  }
+  const renewals = createRenewalEmails({ renewalsFor, mailer, composer: renewalEmailComposer, appUrl: env.APP_URL });
   return {
     OrderPaid: { purchaseEmails: purchaseEmails.sendForOrder, saleNotice: staff.notifySale },
+    SubscriptionRenewalDue: { renewalNotice: renewals.sendRenewalNotice },
     CourseCompleted: { certificate: certificates.issueForCompletion, completionNotice: staff.notifyCompletion },
     CommentPosted: { commentNotice: staff.notifyComment },
     StudentErased: { certificateFiles: createErasureCleanup(storage).removeFiles },

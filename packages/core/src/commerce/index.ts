@@ -98,6 +98,13 @@ export {
   type PaymentConfirmation,
 } from "./service";
 export {
+  createRenewalSweep,
+  RENEWAL_NOTICE_DAYS,
+  type RenewalSweep,
+  type RenewalSweepResult,
+  type RenewalSweepStore,
+} from "./renewals";
+export {
   currentStatus,
   renewSubscription,
   SUBSCRIPTION_GRACE_DAYS,

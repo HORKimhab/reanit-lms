@@ -1,5 +1,5 @@
 import type { MailMessage } from "../auth";
-import type { Currency } from "../commerce";
+import type { Billing, Currency, SubscriptionStatus } from "../commerce";
 import type { MembershipRole } from "../schools";
 import type { EmailLocale, NotificationKind, NotificationPreferences } from "./rules";
 
@@ -102,4 +102,35 @@ export interface StaffEmailComposer {
   ): Promise<ComposedEmail>;
   newComment(email: StaffEmailBase & Omit<CommentNotice, "isStaffAuthor" | "schoolName"> & { inboxUrl: string }): Promise<ComposedEmail>;
   courseCompleted(email: StaffEmailBase & Omit<CompletionNotice, "schoolName"> & { studentsUrl: string }): Promise<ComposedEmail>;
+}
+
+/** A subscription or payment plan as its renewal email describes it. */
+export interface RenewalNotice {
+  /** The language of the student's last order for it. */
+  locale: EmailLocale;
+  student: { email: string; name: string | null };
+  school: { name: string; subdomain: string };
+  /** The course's or bundle's title. */
+  title: string;
+  /** What the next period or instalment costs, in integer minor units. */
+  price: { amount: number; currency: Currency };
+  /** How it bills; never one-time. */
+  billing: Exclude<Billing, { kind: "one_time" }>;
+  /** Periods (or instalments) paid so far. */
+  paidPeriods: number;
+  status: SubscriptionStatus;
+  /** The end of the last paid period. */
+  currentPeriodEnd: Date;
+}
+
+/** One school's subscriptions, for renewal emails. `@reanit/db` implements it with `createRenewalNoticeStore`. */
+export interface RenewalNoticeStore {
+  /** The subscription as its email describes it, or null when the school no longer has it or it was never paid. */
+  findRenewalNotice(subscriptionId: string): Promise<RenewalNotice | null>;
+}
+
+/** Writes renewal emails in the student's language. `@reanit/email` implements it with React Email templates. */
+export interface RenewalEmailComposer {
+  /** The email asking the student to pay the next period: the coming one, or on the grace period's last day. */
+  renewalDue(email: { notice: RenewalNotice; isLastDay: boolean; accessUntil: Date; payUrl: string }): Promise<ComposedEmail>;
 }

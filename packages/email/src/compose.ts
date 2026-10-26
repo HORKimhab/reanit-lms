@@ -1,13 +1,14 @@
 import { render } from "@react-email/render";
-import type { ComposedEmail, EmailLocale, PurchaseEmailComposer, StaffEmailComposer } from "@reanit/core/notifications";
+import type { ComposedEmail, EmailLocale, PurchaseEmailComposer, RenewalEmailComposer, StaffEmailComposer } from "@reanit/core/notifications";
 import { createElement, type ReactElement } from "react";
 
 import { CourseWelcomeEmail } from "./course-welcome-email";
 import { emailIntl } from "./intl";
 import { MagicLinkEmail } from "./magic-link-email";
 import { PurchaseReceiptEmail } from "./purchase-receipt-email";
-import { TeamInviteEmail, type TeamInvite } from "./team-invite-email";
+import { RenewalDueEmail } from "./renewal-due-email";
 import { CourseCompletedEmail, NewCommentEmail, NewSaleEmail } from "./staff-emails";
+import { TeamInviteEmail, type TeamInvite } from "./team-invite-email";
 
 /**
  * Renders an email to the HTML and plain-text bodies every message carries.
@@ -114,5 +115,24 @@ export const staffEmailComposer: StaffEmailComposer = {
   courseCompleted(email) {
     const subject = emailIntl(email.locale).t("CourseCompleted.subject", { student: email.studentName ?? email.studentEmail, course: email.courseTitle });
     return compose(subject, createElement(CourseCompletedEmail, email));
+  },
+};
+
+/**
+ * Writes the renewal emails, as `createRenewalEmails` in `@reanit/core/notifications` sends them.
+ *
+ * @example
+ * createRenewalEmails({ renewalsFor, mailer, composer: renewalEmailComposer, appUrl });
+ */
+export const renewalEmailComposer: RenewalEmailComposer = {
+  /**
+   * Writes the email asking the student to pay their next period or instalment.
+   *
+   * @param email The subscription, whether it is the grace period's last day, when access ends and where to pay.
+   * @returns Subject and bodies.
+   */
+  renewalDue(email) {
+    const { t } = emailIntl(email.notice.locale);
+    return compose(t(email.isLastDay ? "Renewal.lastDaySubject" : "Renewal.subject", { title: email.notice.title }), createElement(RenewalDueEmail, email));
   },
 };

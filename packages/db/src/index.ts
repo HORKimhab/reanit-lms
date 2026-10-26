@@ -15,6 +15,7 @@ export { createOrderHistoryStore } from "./order-history-store";
 export { createOutboxStore } from "./outbox";
 export { createQuizStore } from "./quiz-store";
 export { createReceiptStore } from "./receipt-store";
+export { createRenewalNoticeStore, createRenewalSweepStore } from "./renewal-store";
 export { createSchoolStore } from "./school-store";
 export { createStaffNoticeStore } from "./staff-notice-store";
 export { createStatsStore } from "./stats-store";

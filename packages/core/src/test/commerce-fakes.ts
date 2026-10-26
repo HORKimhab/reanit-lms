@@ -19,6 +19,7 @@ import type {
   PaymentMethod,
   PaymentRequest,
   PriceInput,
+  RenewalSweepStore,
   RenewSubscription,
   SellableCourse,
   SubscriptionRecord,
@@ -597,5 +598,45 @@ export class FakeOrderExpiryStore implements OrderExpiryStore {
   async failPendingOrders(placedBefore: Record<PaymentMethod, Date>) {
     this.lastCutoffs = placedBefore;
     return this.failed;
+  }
+}
+
+/** `RenewalSweepStore` that records the cutoffs it was given and answers with set counts. */
+export class FakeRenewalSweepStore implements RenewalSweepStore {
+  counts = { lapsed: 0, noticed: 0, reminded: 0 };
+  /** Each call, in order, with its cutoff. */
+  readonly calls: [string, Date][] = [];
+
+  /**
+   * Records a lapse cutoff.
+   *
+   * @param periodEndBefore The cutoff.
+   * @returns `counts.lapsed`.
+   */
+  async lapseSubscriptions(periodEndBefore: Date) {
+    this.calls.push(["lapse", periodEndBefore]);
+    return this.counts.lapsed;
+  }
+
+  /**
+   * Records a renewal notice cutoff.
+   *
+   * @param periodEndBefore The cutoff.
+   * @returns `counts.noticed`.
+   */
+  async noticeRenewals(periodEndBefore: Date) {
+    this.calls.push(["notice", periodEndBefore]);
+    return this.counts.noticed;
+  }
+
+  /**
+   * Records a last-day reminder cutoff.
+   *
+   * @param periodEndBefore The cutoff.
+   * @returns `counts.reminded`.
+   */
+  async noticeLastGraceDays(periodEndBefore: Date) {
+    this.calls.push(["lastDay", periodEndBefore]);
+    return this.counts.reminded;
   }
 }

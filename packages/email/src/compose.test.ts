@@ -1,7 +1,7 @@
-import type { OrderReceipt } from "@reanit/core/notifications";
+import type { OrderReceipt, RenewalNotice } from "@reanit/core/notifications";
 import { describe, expect, it } from "vitest";
 
-import { composeMagicLinkEmail, composeTeamInviteEmail, purchaseEmailComposer } from "./compose";
+import { composeMagicLinkEmail, composeTeamInviteEmail, purchaseEmailComposer, renewalEmailComposer } from "./compose";
 
 const LINK = "https://reanit.com/api/auth/magic-link/verify?token=abc&next=%2F";
 const RECEIPT: OrderReceipt = {
@@ -116,5 +116,54 @@ describe("courseWelcome", () => {
 
     expect(email.subject).toBe("សូមស្វាគមន៍មកកាន់ Brand Design Basics");
     expect(email.text).toContain("ចាប់ផ្តើមរៀន");
+  });
+});
+
+describe("renewalDue", () => {
+  const NOTICE: RenewalNotice = {
+    locale: "en",
+    student: { email: "dara@example.com", name: null },
+    school: { name: "Bayon School", subdomain: "bayon" },
+    title: "Brand Studio",
+    price: { amount: 40_000_000, currency: "KHR" },
+    billing: { kind: "recurring", interval: "year" },
+    paidPeriods: 1,
+    status: "active",
+    currentPeriodEnd: new Date("2027-03-15T02:00:00Z"),
+  };
+  const PAY_URL = "https://reanit.com/s/bayon/purchases";
+  const ACCESS_UNTIL = new Date("2027-03-22T02:00:00Z");
+
+  it("asks to pay the next year before the period ends, in riel, with a link to pay", async () => {
+    const email = await renewalEmailComposer.renewalDue({ notice: NOTICE, isLastDay: false, accessUntil: ACCESS_UNTIL, payUrl: PAY_URL });
+
+    expect(email.subject).toBe("Time to renew Brand Studio");
+    expect(email.text).toContain("Your yearly subscription to Brand Studio at Bayon School runs until March 15, 2027. Pay KHR\u00a0400,000 for the next year");
+    expect(email.text).toContain("your access to Brand Studio ends on March 22, 2027.");
+    expect(email.html).toContain(`href="${PAY_URL}"`);
+  });
+
+  it("names the instalment of a payment plan", async () => {
+    const email = await renewalEmailComposer.renewalDue({
+      notice: { ...NOTICE, billing: { kind: "payment_plan", installments: 4 } },
+      isLastDay: false,
+      accessUntil: ACCESS_UNTIL,
+      payUrl: PAY_URL,
+    });
+
+    expect(email.text).toContain("Instalment 2 of 4 for Brand Studio at Bayon School is due by March 15, 2027");
+  });
+
+  it("says it is the last day", async () => {
+    const email = await renewalEmailComposer.renewalDue({ notice: NOTICE, isLastDay: true, accessUntil: ACCESS_UNTIL, payUrl: PAY_URL });
+
+    expect(email.subject).toBe("Last day to keep Brand Studio");
+  });
+
+  it("is written in Khmer for km", async () => {
+    const email = await renewalEmailComposer.renewalDue({ notice: { ...NOTICE, locale: "km" }, isLastDay: false, accessUntil: ACCESS_UNTIL, payUrl: PAY_URL });
+
+    expect(email.subject).toBe("ដល់ពេលបន្តការជាវ Brand Studio");
+    expect(email.html).toContain('lang="km"');
   });
 });

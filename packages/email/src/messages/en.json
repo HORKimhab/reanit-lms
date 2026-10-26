@@ -43,6 +43,17 @@
     "body": "You now have {course} from {school}. Start whenever you're ready: your progress is saved as you go.",
     "button": "Start learning"
   },
+  "Renewal": {
+    "subject": "Time to renew {title}",
+    "lastDaySubject": "Last day to keep {title}",
+    "heading": "Time to renew {title}",
+    "lastDayHeading": "Last day to keep {title}",
+    "month": "Your monthly subscription to {title} at {school} runs until {date}. Pay {amount} for the next month to keep learning.",
+    "year": "Your yearly subscription to {title} at {school} runs until {date}. Pay {amount} for the next year to keep learning.",
+    "installment": "Instalment {next} of {total} for {title} at {school} is due by {date}: {amount}.",
+    "accessEnds": "If it stays unpaid, your access to {title} ends on {date}.",
+    "button": "Pay {amount}"
+  },
   "Staff": {
     "footer": "You get this email because you help run {school} on Reanit.",
     "unsubscribe": "Stop these emails",

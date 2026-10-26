@@ -7,6 +7,9 @@ export type {
   OrderReceipt,
   PurchaseEmailComposer,
   ReceiptStore,
+  RenewalEmailComposer,
+  RenewalNotice,
+  RenewalNoticeStore,
   StaffEmailBase,
   StaffEmailComposer,
   StaffNoticeStore,
@@ -26,5 +29,6 @@ export {
   type NotificationPreferences,
   type UnsubscribeInput,
 } from "./rules";
+export { createRenewalEmails, type RenewalEmails } from "./renewals";
 export { createPurchaseEmails, type PurchaseEmails } from "./service";
 export { createStaffNotifications, type StaffNotifications } from "./staff";

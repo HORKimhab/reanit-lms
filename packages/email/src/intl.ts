@@ -1,3 +1,4 @@
+import { moneyFormat } from "@reanit/core/commerce";
 import type { EmailLocale } from "@reanit/core/notifications";
 import { createFormatter, createTranslator } from "use-intl";
 
@@ -11,14 +12,26 @@ const MESSAGES: Record<EmailLocale, typeof en> = { en, km };
 const EMAIL_TIME_ZONE = "Asia/Phnom_Penh";
 
 /**
- * Gives an email's translator and formatter for its reader's language.
+ * Gives an email's translator and formatters for its reader's language.
  *
  * @param locale The reader's language.
- * @returns `t` for the messages and `format` for dates and numbers.
+ * @returns `t` for the messages, `format` for dates and numbers, and `money` for stored amounts.
  */
 export function emailIntl(locale: EmailLocale) {
-  return {
-    t: createTranslator({ locale, messages: MESSAGES[locale] }),
-    format: createFormatter({ locale, timeZone: EMAIL_TIME_ZONE }),
-  };
+  const format = createFormatter({ locale, timeZone: EMAIL_TIME_ZONE });
+
+  /**
+   * Formats stored money in the reader's language.
+   *
+   * @param money The amount.
+   * @param money.amount Integer minor units.
+   * @param money.currency ISO code.
+   * @returns The displayed amount.
+   */
+  function money({ amount, currency }: { amount: number; currency: string }) {
+    const { value, options } = moneyFormat(amount, currency);
+    return format.number(value, options);
+  }
+
+  return { t: createTranslator({ locale, messages: MESSAGES[locale] }), format, money };
 }

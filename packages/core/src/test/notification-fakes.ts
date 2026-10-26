@@ -1,4 +1,4 @@
-// Fakes of the notifications ports, for unit tests of the purchase emails, staff emails and email settings.
+// Fakes of the notifications ports, for unit tests of the purchase, renewal and staff emails and email settings.
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "../notifications";
 import type { MembershipRole } from "../schools";
 import type {
@@ -11,6 +11,9 @@ import type {
   OrderReceipt,
   PurchaseEmailComposer,
   ReceiptStore,
+  RenewalEmailComposer,
+  RenewalNotice,
+  RenewalNoticeStore,
   StaffEmailBase,
   StaffEmailComposer,
   StaffNoticeStore,
@@ -210,5 +213,50 @@ export class FakePreferenceStore implements NotificationPreferenceStore {
     const current = this.preferences.get(key) ?? DEFAULT_NOTIFICATION_PREFERENCES;
     this.preferences.set(key, { ...current, [kind]: false });
     return { schoolName: owner.schoolName };
+  }
+}
+
+/** A monthly subscription in Khmer whose period ends on 1 November 2026, for tests of renewal emails. */
+export const TEST_RENEWAL: RenewalNotice = {
+  locale: "km",
+  student: { email: "sokha@example.com", name: "Sokha" },
+  school: { name: "Angkor Academy", subdomain: "angkor" },
+  title: "Design Club",
+  price: { amount: 1500, currency: "USD" },
+  billing: { kind: "recurring", interval: "month" },
+  paidPeriods: 2,
+  status: "active",
+  currentPeriodEnd: new Date("2026-11-01T09:00:00Z"),
+};
+
+/** In-memory `RenewalNoticeStore` keyed by subscription id. */
+export class FakeRenewalNoticeStore implements RenewalNoticeStore {
+  readonly notices = new Map<string, RenewalNotice>();
+
+  /**
+   * Finds a stored notice.
+   *
+   * @param subscriptionId The subscription.
+   * @returns The notice, or null.
+   */
+  async findRenewalNotice(subscriptionId: string) {
+    return this.notices.get(subscriptionId) ?? null;
+  }
+}
+
+/** Composer whose renewal emails name what they were written from. */
+export class FakeRenewalComposer implements RenewalEmailComposer {
+  /**
+   * Writes an email naming the subscription, its language, whether it is the last day, the access end and the link.
+   *
+   * @param email What the email says.
+   * @param email.notice The subscription.
+   * @param email.isLastDay Whether it is the grace period's last day.
+   * @param email.accessUntil When access ends unpaid.
+   * @param email.payUrl Where to pay.
+   * @returns The email.
+   */
+  async renewalDue({ notice, isLastDay, accessUntil, payUrl }: { notice: RenewalNotice; isLastDay: boolean; accessUntil: Date; payUrl: string }): Promise<ComposedEmail> {
+    return { subject: `${isLastDay ? "Last day" : "Renew"} ${notice.title} (${notice.locale})`, text: `${accessUntil.toISOString()} ${payUrl}` };
   }
 }

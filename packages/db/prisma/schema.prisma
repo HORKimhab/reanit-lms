@@ -701,6 +701,10 @@ model Subscription {
   paidPeriods      Int                @default(0) @map("paid_periods")
   /// The end of the last paid period; null until the first payment.
   currentPeriodEnd DateTime?          @map("current_period_end")
+  /// The period end the "renewal due" email was sent for (WRK-06), so each period gets it once.
+  renewalNoticeFor DateTime?          @map("renewal_notice_for")
+  /// The period end the last-grace-day reminder was sent for, so each period gets it once.
+  lastDayNoticeFor DateTime?          @map("last_day_notice_for")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
@@ -711,5 +715,6 @@ model Subscription {
 
   @@index([schoolId])
   @@index([userId])
+  @@index([status, currentPeriodEnd])
   @@map("subscriptions")
 }

@@ -15,6 +15,24 @@ export interface SubscriptionRenewed {
   payload: { subscriptionId: string; orderId: string; userId: string; courseIds: string[]; accessUntil: string | null };
 }
 
+/**
+ * A subscription's or payment plan's current period is about to end unpaid (3 days before), or its
+ * grace period is on its last day: the student is emailed a link to pay.
+ */
+export interface SubscriptionRenewalDue {
+  type: "SubscriptionRenewalDue";
+  schoolId: string;
+  /** `periodEnd` is the period it is about; a renewal paid meanwhile makes it stale. */
+  payload: { subscriptionId: string; periodEnd: string; isLastDay: boolean };
+}
+
+/** A subscription's grace period passed unpaid: it lapsed, and its courses' access ended. */
+export interface SubscriptionLapsed {
+  type: "SubscriptionLapsed";
+  schoolId: string;
+  payload: { subscriptionId: string; userId: string; courseIds: string[] };
+}
+
 /** A student completed every lesson of a course. */
 export interface CourseCompleted {
   type: "CourseCompleted";
@@ -45,7 +63,15 @@ export interface StudentErased {
 }
 
 /** Something that happened in a school, written to the outbox in the same transaction as the change itself. */
-export type DomainEvent = OrderPaid | OrderRefunded | SubscriptionRenewed | CourseCompleted | CommentPosted | StudentErased;
+export type DomainEvent =
+  | OrderPaid
+  | OrderRefunded
+  | SubscriptionRenewed
+  | SubscriptionRenewalDue
+  | SubscriptionLapsed
+  | CourseCompleted
+  | CommentPosted
+  | StudentErased;
 
 /** A domain event as the outbox stores and relays it. */
 export type OutboxEvent = DomainEvent & {
