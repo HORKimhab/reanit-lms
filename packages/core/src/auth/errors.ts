@@ -12,3 +12,13 @@ export class InvalidCredentialsError extends Error {
 export class InvalidMagicLinkError extends Error {
   override readonly name = "InvalidMagicLinkError";
 }
+
+/** The account helps run a school, so deleting it would leave the school without them; they leave its team first. */
+export class AccountRunsSchoolError extends Error {
+  override readonly name = "AccountRunsSchoolError";
+}
+
+/** The email typed to confirm deleting the account is not the account's. */
+export class DeletionNotConfirmedError extends Error {
+  override readonly name = "DeletionNotConfirmedError";
+}

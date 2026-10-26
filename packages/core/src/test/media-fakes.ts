@@ -82,4 +82,14 @@ export class FakeObjectStorage implements ObjectStorage {
     this.uploaded.add(key);
     this.stored.set(key, { contentType, body });
   }
+
+  /**
+   * Forgets a file.
+   *
+   * @param key Its key.
+   */
+  async remove(key: string) {
+    this.uploaded.delete(key);
+    this.stored.delete(key);
+  }
 }

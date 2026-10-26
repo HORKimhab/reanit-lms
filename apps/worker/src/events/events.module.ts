@@ -1,6 +1,6 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
-import type { Mailer } from "@reanit/core/auth";
+import { createErasureCleanup, type Mailer } from "@reanit/core/auth";
 import type { EventHandlers } from "@reanit/core/events";
 import { createCertificateIssuer } from "@reanit/core/learning";
 import type { ObjectStorage } from "@reanit/core/media";
@@ -28,7 +28,8 @@ function provideOutboxStore(db: DbClient) {
 /**
  * Wires each event type's background work: a paid order emails its buyer a receipt and a welcome
  * to each course; a completed course gets its certificate, with the PDF in object storage; and each
- * of these, and a new comment, tells the school's staff by email. Each handler is its own job.
+ * of these, and a new comment, tells the school's staff by email; an erased student's certificate
+ * PDFs are deleted. Each handler is its own job.
  *
  * @param db The shared database client; each event's data is read through its school's tenant client.
  * @param mailer Sends the emails.
@@ -76,6 +77,7 @@ function provideEventHandlers(db: DbClient, mailer: Mailer, storage: ObjectStora
     OrderPaid: { purchaseEmails: purchaseEmails.sendForOrder, saleNotice: staff.notifySale },
     CourseCompleted: { certificate: certificates.issueForCompletion, completionNotice: staff.notifyCompletion },
     CommentPosted: { commentNotice: staff.notifyComment },
+    StudentErased: { certificateFiles: createErasureCleanup(storage).removeFiles },
   };
 }
 

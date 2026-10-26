@@ -157,7 +157,7 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
 **Security**
 - Row-Level Security on all tenant tables, signed video URLs, and rate limiting on auth and checkout.
 - An audit log of admin and instructor actions.
-- GDPR data export and deletion.
+- GDPR data export (`GET /me/data-export`) and deletion (`DELETE /me`). Deleting erases the person (learning, comments' authorship, settings, sessions, certificate PDFs) but keeps the account's id on paid orders, which schools need for their accounts; staff leave their schools' teams first.
 - A custom domain is served only after its DNS ownership is verified.
 
 **Testing**

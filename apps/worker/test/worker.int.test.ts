@@ -54,7 +54,7 @@ let worker: TestingModule | undefined;
 async function bootWorker(handlers?: EventHandlers) {
   const sent: MailMessage[] = [];
   const stored = new Map<string, { contentType: string; body: Uint8Array }>();
-  const storage: Pick<ObjectStorage, "put"> = {
+  const storage: Pick<ObjectStorage, "put" | "remove"> = {
     /**
      * Records a file instead of uploading it.
      *
@@ -65,6 +65,14 @@ async function bootWorker(handlers?: EventHandlers) {
      */
     async put({ key, contentType, body }) {
       stored.set(key, { contentType, body });
+    },
+    /**
+     * Forgets a recorded file.
+     *
+     * @param key Its key.
+     */
+    async remove(key) {
+      stored.delete(key);
     },
   };
   const mailer = {
@@ -202,6 +210,15 @@ describe("worker", () => {
     const pdf = Buffer.from(stored.get(certificate.pdfKey ?? "")?.body ?? []).toString("latin1");
     expect(pdf).toContain(`/URI (https://reanit.test/s/worker-school/certificates/${certificate.id})`);
     expect(await createCertificateStore(db, schoolId).findCertificate(certificate.id)).toMatchObject({ studentName: "Dara", schoolName: "Worker" });
+  });
+
+  it("deletes an erased student's certificate PDF", async () => {
+    const { stored } = await bootWorker();
+    stored.set("schools/erased/certificates/c1.pdf", { contentType: "application/pdf", body: new Uint8Array() });
+
+    await db.outboxEvent.create({ data: { schoolId, type: "StudentErased", payload: { fileKeys: ["schools/erased/certificates/c1.pdf"] } } });
+
+    await vi.waitFor(() => expect(stored.has("schools/erased/certificates/c1.pdf")).toBe(false), { timeout: EVENT_TIMEOUT_MS });
   });
 
   it("closes the database pool on shutdown", async () => {

@@ -1,5 +1,5 @@
-// In-memory fakes of the auth ports, for unit tests of the auth service.
-import type { AuthStore, AuthUser, Clock, Mailer, MailMessage } from "../auth";
+// In-memory fakes of the auth ports, for unit tests of the auth and account services.
+import type { AccountStore, AuthStore, AuthUser, Clock, Mailer, MailMessage, UserDataExport } from "../auth";
 
 type StoredUser = AuthUser & { passwordHash: string | null };
 
@@ -131,5 +131,41 @@ export class FakeClock implements Clock {
    */
   advance(milliseconds: number) {
     this.current = new Date(this.current.getTime() + milliseconds);
+  }
+}
+
+/** In-memory `AccountStore`: one export per user, which users are staff, and who was erased. */
+export class FakeAccountStore implements AccountStore {
+  readonly exports = new Map<string, UserDataExport>();
+  readonly staffIds = new Set<string>();
+  readonly erased: string[] = [];
+
+  /**
+   * Returns the stored export.
+   *
+   * @param userId The user.
+   * @returns Their data, or null.
+   */
+  async exportUserData(userId: string) {
+    return this.exports.get(userId) ?? null;
+  }
+
+  /**
+   * Tells whether the user is in `staffIds`.
+   *
+   * @param userId The user.
+   * @returns True for staff.
+   */
+  async isSchoolStaff(userId: string) {
+    return this.staffIds.has(userId);
+  }
+
+  /**
+   * Records the erasure.
+   *
+   * @param userId The user.
+   */
+  async eraseUser(userId: string) {
+    this.erased.push(userId);
   }
 }

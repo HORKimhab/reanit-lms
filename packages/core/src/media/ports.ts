@@ -27,4 +27,6 @@ export interface ObjectStorage {
   exists(key: string): Promise<boolean>;
   /** Stores a file the server made itself, such as a certificate PDF, replacing any file at that key. */
   put(object: { key: string; contentType: string; body: Uint8Array }): Promise<void>;
+  /** Deletes a file; resolves when it is already gone. */
+  remove(key: string): Promise<void>;
 }

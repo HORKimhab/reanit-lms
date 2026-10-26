@@ -1,1 +1,1 @@
-export type { CommentPosted, CourseCompleted, DomainEvent, EventHandler, EventHandlers, OrderPaid, OutboxEvent, OutboxStore } from "./ports";
+export type { CommentPosted, CourseCompleted, DomainEvent, EventHandler, EventHandlers, OrderPaid, OutboxEvent, OutboxStore, StudentErased } from "./ports";

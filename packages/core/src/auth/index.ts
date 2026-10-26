@@ -1,6 +1,7 @@
 export { safeRedirectPath } from "./redirect";
-export { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "./errors";
-export type { AuthStore, AuthUser, Clock, MailMessage, Mailer } from "./ports";
+export { createAccountService, createErasureCleanup, deleteAccountSchema, type AccountService, type DeleteAccountInput } from "./account";
+export { AccountRunsSchoolError, DeletionNotConfirmedError, EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "./errors";
+export type { AccountStore, AuthStore, AuthUser, Clock, MailMessage, Mailer, UserDataExport } from "./ports";
 export {
   emailSchema,
   logInSchema,

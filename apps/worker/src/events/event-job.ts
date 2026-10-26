@@ -54,5 +54,7 @@ export async function dispatchEvent(handlers: EventHandlers, job: EventJob): Pro
       return handlers.CourseCompleted?.[job.handler]?.(toEvent(job));
     case "CommentPosted":
       return handlers.CommentPosted?.[job.handler]?.(toEvent(job));
+    case "StudentErased":
+      return handlers.StudentErased?.[job.handler]?.(toEvent(job));
   }
 }

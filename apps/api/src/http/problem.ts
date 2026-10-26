@@ -3,7 +3,7 @@ import { STATUS_CODES } from "node:http";
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { ThrottlerException } from "@nestjs/throttler";
 import { InvalidStatsRangeError } from "@reanit/core/analytics";
-import { EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
+import { AccountRunsSchoolError, DeletionNotConfirmedError, EmailTakenError, InvalidCredentialsError, InvalidMagicLinkError } from "@reanit/core/auth";
 import { CourseNotFoundError } from "@reanit/core/catalog";
 import {
   AlreadyEnrolledError,
@@ -78,6 +78,8 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: EmailTakenError, status: HttpStatus.CONFLICT, code: "email-taken", detail: "An account with this email already exists." },
   { error: InvalidCredentialsError, status: HttpStatus.UNAUTHORIZED, code: "invalid-credentials", detail: "The email or password is wrong." },
   { error: InvalidMagicLinkError, status: HttpStatus.BAD_REQUEST, code: "invalid-magic-link", detail: "The sign-in link is invalid, used or expired." },
+  { error: DeletionNotConfirmedError, status: HttpStatus.BAD_REQUEST, code: "deletion-not-confirmed", detail: "Type your account's email to confirm deleting it." },
+  { error: AccountRunsSchoolError, status: HttpStatus.CONFLICT, code: "account-runs-school", detail: "You help run a school. Leave its team before deleting your account." },
   { error: SubdomainTakenError, status: HttpStatus.CONFLICT, code: "subdomain-taken", detail: "Another school already uses this subdomain." },
   { error: NotSchoolStaffError, status: HttpStatus.FORBIDDEN, code: "not-school-staff", detail: "You do not run a school." },
   { error: SchoolNotFoundError, status: HttpStatus.NOT_FOUND, code: "school-not-found", detail: "No school uses this subdomain." },

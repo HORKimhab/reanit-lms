@@ -1,4 +1,4 @@
-import { NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 
 import { createS3Storage } from "./storage";
@@ -72,5 +72,15 @@ describe("createS3Storage", () => {
     vi.spyOn(S3Client.prototype, "send").mockRejectedValueOnce(new Error("quota exceeded") as never);
 
     await expect(createS3Storage(ENV).put({ key: "k", contentType: "application/pdf", body: new Uint8Array() })).rejects.toThrow("quota exceeded");
+  });
+
+  it("deletes a file from the bucket", async () => {
+    const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValueOnce({} as never);
+
+    await createS3Storage(ENV).remove("schools/s1/certificates/c1.pdf");
+
+    const command = send.mock.calls[0]?.[0];
+    expect(command).toBeInstanceOf(DeleteObjectCommand);
+    expect((command as DeleteObjectCommand).input).toEqual({ Bucket: "reanit-media", Key: "schools/s1/certificates/c1.pdf" });
   });
 });

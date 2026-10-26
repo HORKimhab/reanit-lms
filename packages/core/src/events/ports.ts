@@ -19,8 +19,16 @@ export interface CommentPosted {
   payload: { commentId: string; lessonId: string; authorId: string };
 }
 
+/** A student's account was erased; the school's files that named them must go too. */
+export interface StudentErased {
+  type: "StudentErased";
+  schoolId: string;
+  /** Object-storage keys of the school's files about the student, such as certificate PDFs. */
+  payload: { fileKeys: string[] };
+}
+
 /** Something that happened in a school, written to the outbox in the same transaction as the change itself. */
-export type DomainEvent = OrderPaid | CourseCompleted | CommentPosted;
+export type DomainEvent = OrderPaid | CourseCompleted | CommentPosted | StudentErased;
 
 /** A domain event as the outbox stores and relays it. */
 export type OutboxEvent = DomainEvent & {

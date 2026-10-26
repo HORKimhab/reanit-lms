@@ -185,6 +185,14 @@ function createMemoryStorage(): MemoryStorage {
     async put({ key }) {
       uploaded.add(key);
     },
+    /**
+     * Forgets a file.
+     *
+     * @param key The file's key.
+     */
+    async remove(key) {
+      uploaded.delete(key);
+    },
   };
 }
 

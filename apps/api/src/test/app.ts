@@ -4,7 +4,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test, type TestingModuleBuilder } from "@nestjs/testing";
 import type { AnalyticsService } from "@reanit/core/analytics";
 import type { AuditLog } from "@reanit/core/audit";
-import type { AuthService } from "@reanit/core/auth";
+import type { AccountService, AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
 import type { CommerceService } from "@reanit/core/commerce";
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
@@ -18,7 +18,7 @@ import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import { ANALYTICS_FOR_SCHOOL } from "../analytics/analytics.tokens";
 import { AppModule } from "../app.module";
 import { AUDIT_FOR_SCHOOL } from "../audit/audit.tokens";
-import { AUTH_SERVICE } from "../auth/auth.tokens";
+import { ACCOUNT_SERVICE, AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
 import { COMMERCE_FOR_SCHOOL, PAYMENT_CONFIRMATION } from "../commerce/commerce.tokens";
 import { setupApp } from "../app.setup";
@@ -67,6 +67,8 @@ export type FakeClients = {
   redis: { status: string; ping: Mock; quit: Mock; disconnect: Mock };
   /** Stands in for `@reanit/core/auth`; every session is unknown until a test says otherwise. */
   auth: Record<keyof AuthService, Mock>;
+  /** Stands in for the account data rights. */
+  account: Record<keyof AccountService, Mock>;
   /** Stands in for `@reanit/core/schools`. */
   schools: Record<keyof SchoolService, Mock>;
   /** Stands in for the custom domain use cases. */
@@ -118,6 +120,7 @@ type TestAppOptions = {
 
 /** Every use case of each core service; the `FakeClients` type fails the build when a service gains one missing here. */
 const AUTH_METHODS = ["signUp", "logIn", "requestMagicLink", "verifyMagicLink", "getSessionUser", "logOut"] as const satisfies readonly (keyof AuthService)[];
+const ACCOUNT_METHODS = ["exportData", "deleteAccount"] as const satisfies readonly (keyof AccountService)[];
 const SCHOOL_METHODS = [
   "createSchool",
   "getSchoolBySubdomain",
@@ -194,7 +197,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats, audit and email settings services.
+ * @returns A fake Prisma client, Redis connection, and auth, account, school, domain, students, catalog, media, commerce, learning, moderation, certificate, stats, audit and email settings services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -212,6 +215,7 @@ export function createFakeClients(): FakeClients {
     db: { $queryRaw: vi.fn().mockResolvedValue([{ "?column?": 1 }]), $disconnect: vi.fn() },
     redis: { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), quit: vi.fn(), disconnect: vi.fn() },
     auth,
+    account: fakeService(ACCOUNT_METHODS),
     schools: fakeService(SCHOOL_METHODS),
     domains: fakeService(DOMAIN_METHODS),
     students,
@@ -259,6 +263,8 @@ export async function createTestApp(
     .useValue(UNLIMITED_RATE)
     .overrideProvider(AUTH_SERVICE)
     .useValue(clients.auth)
+    .overrideProvider(ACCOUNT_SERVICE)
+    .useValue(clients.account)
     .overrideProvider(SCHOOL_SERVICE)
     .useValue(clients.schools)
     .overrideProvider(DOMAIN_SERVICE)

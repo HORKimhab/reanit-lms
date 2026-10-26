@@ -1,4 +1,4 @@
-import { GetObjectCommand, HeadObjectCommand, NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Global, Module } from "@nestjs/common";
 import type { ObjectStorage } from "@reanit/core/media";
@@ -120,6 +120,16 @@ export function createS3Storage(env: S3Env): ObjectStorage {
      */
     async put({ key, contentType, body }) {
       await client.send(new PutObjectCommand({ Bucket, Key: key, ContentType: contentType, Body: body }));
+    },
+
+    /**
+     * Deletes a file; S3 answers a delete of a missing key with success, so repeating it is harmless.
+     *
+     * @param key The file's key.
+     * @throws {Error} When storage refuses the delete.
+     */
+    async remove(key) {
+      await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
     },
   };
 }
