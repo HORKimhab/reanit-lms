@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 
 import { getApi } from "@/server/api";
+import { PLAN_LIMIT } from "@/server/plan-limit";
 import { checkStaffResponse, getStaffSchool } from "@/server/schools/staff";
 
 /** A settings field that can fail validation. */
@@ -103,7 +104,7 @@ export async function saveCertificateTemplate(_previous: CertificateTemplateStat
 }
 
 /** Result of the last custom domain step, shown by its section; anything but `idle` is why it failed. */
-export type CustomDomainState = { status: "idle" | "invalid" | "notAllowed" | "taken" | "hasDomain" | "notVerified" | "unavailable" };
+export type CustomDomainState = { status: "idle" | "invalid" | "notAllowed" | "taken" | "hasDomain" | "notVerified" | "unavailable" | "planLimit" };
 
 /** API problems a custom domain step can answer with, and what the section shows for each. */
 const DOMAIN_PROBLEMS: Record<string, CustomDomainState["status"]> = {
@@ -112,6 +113,7 @@ const DOMAIN_PROBLEMS: Record<string, CustomDomainState["status"]> = {
   "urn:reanit:problem:school-has-domain": "hasDomain",
   "urn:reanit:problem:domain-not-verified": "notVerified",
   "urn:reanit:problem:custom-domains-unavailable": "unavailable",
+  [PLAN_LIMIT]: "planLimit",
 };
 
 /**
@@ -191,8 +193,8 @@ export async function saveNotificationPreferences(_previous: NotificationPrefere
   return { status: "saved" };
 }
 
-/** Result of the last invite, shown by the invite form: sent, a malformed email, or someone already on the team. */
-export type TeamInviteState = { status: "idle" | "sent" | "invalid" | "member" };
+/** Result of the last invite, shown by the invite form: sent, a malformed email, someone already on the team, or a team as large as the plan allows. */
+export type TeamInviteState = { status: "idle" | "sent" | "invalid" | "member" | "planLimit" };
 
 /** Problem type of an email that already belongs to the team. */
 const ALREADY_MEMBER = "urn:reanit:problem:already-team-member";
@@ -202,14 +204,16 @@ const ALREADY_MEMBER = "urn:reanit:problem:already-team-member";
  *
  * @param _previous - The form's last state; unused, but `useActionState` passes it first.
  * @param formData - The submitted form: `email` and `role`; untrusted until parsed.
- * @returns `sent`, `invalid` for a malformed email or role, or `member` for someone already on the team.
+ * @returns `sent`, `invalid` for a malformed email or role, `member` for someone already on the team, or `planLimit` when the plan allows no more team members.
  * @throws {Error} Next's redirect signal (to log in or to onboarding), or an unexpected-response error.
  */
 export async function inviteTeamMember(_previous: TeamInviteState, formData: FormData): Promise<TeamInviteState> {
   const parsed = inviteSchema.safeParse({ email: formData.get("email"), role: formData.get("role"), locale: await getLocale() });
   if (!parsed.success) return { status: "invalid" };
   const { error, response } = await (await getApi()).POST("/team/invites", { body: parsed.data });
-  if ((error as { type?: string } | undefined)?.type === ALREADY_MEMBER) return { status: "member" };
+  const problemType = (error as { type?: string } | undefined)?.type;
+  if (problemType === ALREADY_MEMBER) return { status: "member" };
+  if (problemType === PLAN_LIMIT) return { status: "planLimit" };
   checkStaffResponse(response);
   revalidatePath(SETTINGS_PATH);
   return { status: "sent" };

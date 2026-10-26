@@ -21,7 +21,7 @@ async function sellTo(email: string) {
   const price = (await store.findCourse("sold"))?.price;
   if (!price) throw new Error("The course has no price.");
   const userId = (await db.user.create({ data: { email } })).id;
-  const { id } = await store.createOrder({ userId, price, lines: [{ courseId: soldId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null });
+  const { id } = await store.createOrder({ userId, price, lines: [{ courseId: soldId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null, platformFee: 0 });
   await store.setProviderRef(id, `cs_stats_${id}`);
   await payAtGateway(db, "stripe", `cs_stats_${id}`);
   await payAtGateway(db, "stripe", `cs_stats_${id}`);

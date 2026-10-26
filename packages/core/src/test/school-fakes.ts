@@ -298,6 +298,16 @@ export class FakeTeamStore implements TeamStore {
   }
 
   /**
+   * Counts team members besides the owner and the invites to other emails.
+   *
+   * @param exceptEmail The invite not to count.
+   * @returns How many seats are taken.
+   */
+  async countSeats(exceptEmail: string) {
+    return this.members.filter(({ role }) => role !== "owner").length + this.invites.filter(({ email }) => email !== exceptEmail).length;
+  }
+
+  /**
    * Saves an invite, replacing an earlier one to the same email.
    *
    * @param invite The invite.

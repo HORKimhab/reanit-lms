@@ -34,6 +34,7 @@ async function pendingOrder(userId: string, coupon?: { id: string; amount: numbe
     method: "stripe",
     locale: "en",
     subscriptionId: null,
+    platformFee: 0,
   });
   const providerRef = `cs_${randomUUID()}`;
   await store.setProviderRef(id, providerRef);
@@ -264,6 +265,7 @@ describe("bundles", () => {
       method: "stripe",
       locale: "en",
       subscriptionId: null,
+      platformFee: 0,
     });
     await store.setProviderRef(id, `cs_bundle_${id}`);
     await payAtGateway(db, "stripe", `cs_bundle_${id}`);

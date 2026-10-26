@@ -1,3 +1,4 @@
+import type { PlanGuard } from "../schools/plans";
 import { CourseNotFoundError } from "./errors";
 import type { CatalogStore, Course, CourseWithOutline } from "./ports";
 import { uniqueCourseSlug, type CreateCourseInput, type Outline, type UpdateCourseInput } from "./rules";
@@ -15,13 +16,14 @@ function isPublished(course: Course): boolean {
 /**
  * Builds one school's catalog use cases over a store scoped to that school.
  *
- * @param dependencies Store for the school's catalog.
+ * @param dependencies Store for the school's catalog, and its plan.
  * @param dependencies.store The school's courses, sections and lessons.
+ * @param dependencies.plan The school's plan, which limits how many courses are published at once.
  * @returns Course and outline operations.
  * @example
- * const catalog = createCatalogService({ store: createCatalogStore(db, school.id) });
+ * const catalog = createCatalogService({ store: createCatalogStore(db, school.id), plan: createPlanGuard({ store: createSchoolPlanStore(db, school.id), clock }) });
  */
-export function createCatalogService({ store }: { store: CatalogStore }) {
+export function createCatalogService({ store, plan }: { store: CatalogStore; plan: Pick<PlanGuard, "assertWithin"> }) {
   return {
     /**
      * Lists the school's courses, newest first.
@@ -84,9 +86,11 @@ export function createCatalogService({ store }: { store: CatalogStore }) {
      * @param id The course's id.
      * @param changes Parsed course-details form.
      * @returns The updated course.
+     * @throws {PlanLimitError} When publishing would pass the plan's number of published courses.
      * @throws {CourseNotFoundError} When the school has no course with that id.
      */
     async updateCourse(id: string, changes: UpdateCourseInput): Promise<Course> {
+      if (changes.status === "published") await plan.assertWithin("publishedCourses", await store.countPublishedCourses(id));
       const course = await store.updateCourse(id, changes);
       if (!course) throw new CourseNotFoundError();
       return course;

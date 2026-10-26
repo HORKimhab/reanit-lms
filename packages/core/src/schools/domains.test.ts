@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { FakeClock } from "../test/auth-fakes";
+import { planGuardOn } from "../test/plan-fakes";
 import { FakeDnsLookup, FakeDomainCertificates, FakeDomainStore } from "../test/school-fakes";
 import { createDomainService, customDomainSchema, domainHostnameSchema } from "./domains";
 import {
@@ -9,6 +10,7 @@ import {
   DomainNotFoundError,
   DomainNotVerifiedError,
   DomainTakenError,
+  PlanLimitError,
   SchoolHasDomainError,
 } from "./errors";
 
@@ -40,6 +42,24 @@ function fakes() {
 }
 
 /**
+ * Gives every school the Free plan, which leaves out a custom domain.
+ *
+ * @returns The plan guard.
+ */
+function freePlan() {
+  return planGuardOn("free");
+}
+
+/**
+ * Gives every school the Business plan, which includes a custom domain.
+ *
+ * @returns The plan guard.
+ */
+function businessPlan() {
+  return planGuardOn("business");
+}
+
+/**
  * Builds the domain service over fakes, with a fixed clock and token, offering custom domains.
  *
  * @param deps The fakes.
@@ -56,6 +76,7 @@ function domainService({ store, dns, certificates } = fakes()) {
     newToken,
     rootDomain: "reanit.com",
     edge: { certificates, cnameTarget: CNAME_TARGET },
+    planFor: businessPlan,
   });
 }
 
@@ -96,6 +117,14 @@ describe("domainHostnameSchema", () => {
 });
 
 describe("addDomain", () => {
+  it("refuses a custom domain on the Free plan, storing nothing", async () => {
+    const deps = fakes();
+    const domains = createDomainService({ ...deps, clock: new FakeClock(NOW), newToken, rootDomain: "reanit.com", edge: { certificates: deps.certificates, cnameTarget: CNAME_TARGET }, planFor: freePlan });
+
+    await expect(domains.addDomain("school-1", { hostname: HOSTNAME })).rejects.toThrow(new PlanLimitError("customDomain"));
+    expect(await deps.store.findDomain("school-1")).toBeNull();
+  });
+
   it("stores the domain awaiting DNS, with the TXT and CNAME records to add", async () => {
     const deps = fakes();
 
@@ -147,7 +176,7 @@ describe("addDomain", () => {
   });
 
   it("throws CustomDomainsUnavailableError when the deployment has no certificate provider", async () => {
-    const domains = createDomainService({ ...fakes(), clock: new FakeClock(NOW), newToken, rootDomain: "reanit.com", edge: null });
+    const domains = createDomainService({ ...fakes(), clock: new FakeClock(NOW), newToken, rootDomain: "reanit.com", edge: null, planFor: businessPlan });
 
     await expect(domains.addDomain("school-1", { hostname: HOSTNAME })).rejects.toThrow(CustomDomainsUnavailableError);
     expect(domains.isAvailable()).toBe(false);
@@ -250,7 +279,7 @@ describe("getDomain", () => {
   it("returns null when the deployment has no certificate provider", async () => {
     const deps = fakes();
     await domainService(deps).addDomain("school-1", { hostname: HOSTNAME });
-    const unavailable = createDomainService({ ...deps, clock: new FakeClock(NOW), newToken, rootDomain: "reanit.com", edge: null });
+    const unavailable = createDomainService({ ...deps, clock: new FakeClock(NOW), newToken, rootDomain: "reanit.com", edge: null, planFor: businessPlan });
 
     expect(await unavailable.getDomain("school-1")).toBeNull();
   });

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CourseNotFoundError } from "../catalog";
+import type { CreatorPlan } from "../schools";
 import { FakeClock } from "../test/auth-fakes";
 import { AskableFakeGateway, FakeCommerceStore, FakeConfirmationStore, FakeGateway, RefundingFakeGateway } from "../test/commerce-fakes";
+import { FakePlanConfirmationStore, planGuardOn } from "../test/plan-fakes";
 import {
   AlreadyEnrolledError,
   BundleNotFoundError,
@@ -21,6 +23,7 @@ import {
   UnknownPaymentError,
 } from "./errors";
 import { createCommerceService, createPaymentConfirmation, type CommerceService } from "./service";
+import type { PaymentGateway } from "./ports";
 import { renewSubscription } from "./subscriptions";
 
 const BUYER = { userId: "user-1", email: "dara@example.com" };
@@ -38,6 +41,25 @@ function urls(orderId: string) {
   return { successUrl: `https://app.test/orders/${orderId}`, cancelUrl: `https://app.test/orders/${orderId}?cancelled` };
 }
 
+/**
+ * Builds the school's selling use cases over the test store, with confirmation through the fakes.
+ *
+ * @param gateways The configured gateways.
+ * @param options What to vary.
+ * @param options.plan The school's plan; Business by default, which limits nothing.
+ * @param options.clock The clock; fixed at `NOW` by default.
+ * @returns The service.
+ */
+function commerceWith(gateways: PaymentGateway[], { plan = "business", clock = new FakeClock(NOW) }: { plan?: CreatorPlan; clock?: FakeClock } = {}) {
+  return createCommerceService({
+    store,
+    gateways,
+    confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), plans: new FakePlanConfirmationStore(), clock }),
+    clock,
+    plan: planGuardOn(plan),
+  });
+}
+
 let store: FakeCommerceStore;
 let stripe: FakeGateway;
 let khqr: AskableFakeGateway;
@@ -51,12 +73,7 @@ beforeEach(() => {
   store.courses.set("c4", { id: "c4", slug: "draft", title: "Draft", isPublished: false, price: { id: "p4", amount: 100, currency: "USD", billing: ONE_TIME } });
   stripe = new FakeGateway("stripe", ["USD"]);
   khqr = new AskableFakeGateway("bakong_khqr", ["USD", "KHR"]);
-  commerce = createCommerceService({
-    store,
-    gateways: [stripe, khqr],
-    confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
-    clock: new FakeClock(NOW),
-  });
+  commerce = commerceWith([stripe, khqr]);
 });
 
 describe("getOffer", () => {
@@ -164,7 +181,7 @@ describe("checkout with a coupon", () => {
     await commerce.createCoupon({ ...SAVE20, maxRedemptions: 1 });
     await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
     await commerce.checkout({ userId: "user-2", email: "b@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
-    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }).confirm("stripe", "ref-order-1");
+    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), plans: new FakePlanConfirmationStore(), clock: new FakeClock(NOW) }).confirm("stripe", "ref-order-1");
 
     await expect(
       commerce.checkout({ userId: "user-3", email: "c@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls),
@@ -271,7 +288,7 @@ describe("bundles", () => {
 
     expect(stripe.requests[0]).toMatchObject({ amount: 10_001, description: "Design Kit" });
     expect(store.orders[0]).toMatchObject({ bundleId: id, amount: 10_001, lines: [{ courseId: "c1", amount: 5001 }, { courseId: "c5", amount: 5000 }] });
-    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }).confirm("stripe", `ref-${orderId}`);
+    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), plans: new FakePlanConfirmationStore(), clock: new FakeClock(NOW) }).confirm("stripe", `ref-${orderId}`);
     expect(store.enrollments).toEqual(new Map([["user-1:c1", null], ["user-1:c5", null]]));
   });
 
@@ -348,7 +365,7 @@ describe("getOrder with a gateway that can be asked", () => {
 describe("payment confirmation", () => {
   it("marks the order paid and enrolls the buyer exactly once", async () => {
     await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
-    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) });
+    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), plans: new FakePlanConfirmationStore(), clock: new FakeClock(NOW) });
 
     expect(await confirmation.confirm("stripe", "ref-order-1")).toEqual({ orderId: "order-1", isNewlyPaid: true });
     expect(await confirmation.confirm("stripe", "ref-order-1")).toEqual({ orderId: "order-1", isNewlyPaid: false });
@@ -356,7 +373,7 @@ describe("payment confirmation", () => {
   });
 
   it("throws UnknownPaymentError for a reference no order has", async () => {
-    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) });
+    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), plans: new FakePlanConfirmationStore(), clock: new FakeClock(NOW) });
 
     await expect(confirmation.confirm("stripe", "ref-nope")).rejects.toThrow(UnknownPaymentError);
   });
@@ -368,12 +385,7 @@ describe("refundOrder", () => {
 
   beforeEach(() => {
     refundingStripe = new RefundingFakeGateway("stripe", ["USD"]);
-    refunds = createCommerceService({
-      store,
-      gateways: [refundingStripe, khqr],
-      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
-      clock: new FakeClock(NOW),
-    });
+    refunds = commerceWith([refundingStripe, khqr]);
   });
 
   /**
@@ -457,12 +469,7 @@ describe("subscriptions and payment plans", () => {
     store.hasQr = true;
     payway = new AskableFakeGateway("aba_payway", ["USD", "KHR"]);
     clock = new FakeClock(NOW);
-    plans = createCommerceService({
-      store,
-      gateways: [stripe, payway],
-      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock }),
-      clock,
-    });
+    plans = commerceWith([stripe, payway], { clock });
   });
 
   /**
@@ -566,12 +573,7 @@ describe("offline QR payments", () => {
   beforeEach(() => {
     store.courses.set("c6", { id: "c6", slug: "club", title: "Design Club", isPublished: true, price: { id: "p6", amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } } });
     store.hasQr = true;
-    offline = createCommerceService({
-      store,
-      gateways: [stripe],
-      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
-      clock: new FakeClock(NOW),
-    });
+    offline = commerceWith([stripe]);
   });
 
   /**
@@ -648,6 +650,32 @@ describe("offline QR payments", () => {
     await offline.refundOrder(orderId, { isRefundedByHand: true });
 
     expect(store.orders[0]).toMatchObject({ status: "refunded", refund: { isRefundedByHand: true } });
+  });
+});
+
+describe("plans", () => {
+  /**
+   * Builds the school's selling use cases on a plan, with the payment QR uploaded.
+   *
+   * @param plan The school's plan.
+   * @returns The service.
+   */
+  function onPlan(plan: "free" | "pro") {
+    store.courses.set("c6", { id: "c6", slug: "club", title: "Design Club", isPublished: true, price: { id: "p6", amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } } });
+    store.hasQr = true;
+    return commerceWith([stripe, khqr], { plan });
+  }
+
+  it("records the platform's fee at the school's plan on each order", async () => {
+    await onPlan("pro").checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
+    await onPlan("free").checkout(BUYER, { courseSlug: "riel", method: "bakong_khqr", locale: "en" }, urls);
+
+    expect(store.orders.map(({ platformFee }) => platformFee)).toEqual([245, 2000]);
+  });
+
+  it("offers the school's payment QR only on a plan that includes it", async () => {
+    expect((await onPlan("free").getOffer("club")).methods).toEqual(["bakong_khqr"]);
+    expect((await onPlan("pro").getOffer("club")).methods).toEqual(["offline_qr", "bakong_khqr"]);
   });
 });
 

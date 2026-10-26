@@ -38,6 +38,12 @@ describe("InviteForm", () => {
     expect(await screen.findByRole("textbox", { name: "Email" })).toHaveAccessibleDescription("This person is already on the team.");
   });
 
+  it("says when the plan has room for no more team members", async () => {
+    await invite({ status: "planLimit" });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your plan has room for no more team members.");
+  });
+
   it("is written in Khmer for km", async () => {
     await invite({ status: "sent" }, "km");
 

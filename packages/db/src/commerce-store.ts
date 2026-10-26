@@ -239,6 +239,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * @param order.method The payment method chosen.
      * @param order.locale The language the buyer checked out in.
      * @param order.subscriptionId The subscription it pays a period of, or null.
+     * @param order.platformFee The platform's fee on the sale, in minor units.
      * @returns The order's id.
      */
     createOrder({
@@ -250,6 +251,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
       method,
       locale,
       subscriptionId,
+      platformFee,
     }: {
       userId: string;
       price: { id: string; currency: Currency };
@@ -259,6 +261,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
       method: PaymentMethod;
       locale: string;
       subscriptionId: string | null;
+      platformFee: number;
     }) {
       return inSchoolTransaction(db, schoolId, (tx) =>
         tx.order.create({
@@ -271,6 +274,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
             locale,
             couponId,
             subscriptionId,
+            platformFee,
             // Items carry what was charged for each course, so sales stats count discounts and bundle shares.
             items: {
               create: lines.map(({ courseId, amount }) => ({ schoolId, courseId, bundleId, priceId: price.id, amount, currency: price.currency })),

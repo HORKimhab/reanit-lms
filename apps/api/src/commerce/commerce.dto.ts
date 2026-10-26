@@ -1,4 +1,5 @@
 import {
+  BILLING_INTERVALS,
   billingSchema,
   bundleCheckoutSchema,
   checkoutSchema,
@@ -15,12 +16,13 @@ import {
   refundSchema,
   renewSchema,
   updateBundleSchema,
+  type GatewayPaymentStart,
   type OrderDetail,
   type PaymentMethod,
   type Price,
   type SubscriptionRecord,
 } from "@reanit/core/commerce";
-import { subdomainSchema } from "@reanit/core/schools";
+import { CREATOR_PLANS, PAID_PLANS, planCheckoutSchema, subdomainSchema, type PlanTerms } from "@reanit/core/schools";
 import { z } from "zod";
 
 import { courseSchema } from "../catalog/catalog.dto";
@@ -147,21 +149,33 @@ export class CouponResponse extends createZodDto(z.object({ coupon: couponRespon
 /** A school's coupons, newest first. */
 export class CouponsResponse extends createZodDto(z.object({ coupons: z.array(couponResponseSchema) })) {}
 
+/** What the browser does next to pay: go to the gateway, post a form to it, show a KHQR code, or show the school's own payment QR image and then say the student paid. */
+const paymentStepSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("redirect"), url: z.url() }),
+  z.object({ kind: z.literal("form"), action: z.url(), fields: z.record(z.string(), z.string()) }),
+  z.object({ kind: z.literal("qr"), qr: z.string(), expiresAt: z.iso.datetime() }),
+  z.object({ kind: z.literal("offline"), qrImageUrl: z.url() }),
+]);
+
 /**
- * The new order and what the browser does next: go to the gateway, post a form to it, show a KHQR
- * code, or show the school's own payment QR image and then say the student paid.
+ * Describes a gateway's next step for the browser, without the gateway's reference, which stays on the server.
+ *
+ * @param payment What the gateway returned.
+ * @returns The step for the response.
  */
-export class CheckoutResponse extends createZodDto(
-  z.object({
-    orderId: z.uuid(),
-    payment: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("redirect"), url: z.url() }),
-      z.object({ kind: z.literal("form"), action: z.url(), fields: z.record(z.string(), z.string()) }),
-      z.object({ kind: z.literal("qr"), qr: z.string(), expiresAt: z.iso.datetime() }),
-      z.object({ kind: z.literal("offline"), qrImageUrl: z.url() }),
-    ]),
-  }),
-) {}
+export function toGatewayStep(payment: GatewayPaymentStart): z.infer<typeof paymentStepSchema> {
+  switch (payment.kind) {
+    case "redirect":
+      return { kind: "redirect", url: payment.url };
+    case "form":
+      return { kind: "form", action: payment.action, fields: payment.fields };
+    case "qr":
+      return { kind: "qr", qr: payment.qr, expiresAt: payment.expiresAt.toISOString() };
+  }
+}
+
+/** The new order and what the browser does next. */
+export class CheckoutResponse extends createZodDto(z.object({ orderId: z.uuid(), payment: paymentStepSchema })) {}
 
 /** An order as its buyer sees it. */
 export class OrderResponse extends createZodDto(
@@ -250,4 +264,56 @@ export function toSubscriptionResponse(subscription: SubscriptionRecord & { meth
   const { id, status, title, price, methods, paidPeriods, currentPeriodEnd } = subscription;
   // Only paid subscriptions are listed: never pending, always with a period end.
   return { id, status: status as Exclude<typeof status, "pending">, title, price: toPriceResponse(price), methods, paidPeriods, currentPeriodEnd: currentPeriodEnd!.toISOString() };
+}
+
+/** `POST /schools/current/plan/checkout` body. */
+export class PlanCheckoutBody extends createZodDto(planCheckoutSchema) {}
+
+/** What a plan costs and allows. */
+const planTermsSchema = z.object({
+  /** USD cents a month and a year; null for Free. */
+  prices: z.object({ month: z.number().int(), year: z.number().int() }).nullable(),
+  /** The platform's fee on each sale, in hundredths of a percent. */
+  feeBasisPoints: z.number().int(),
+  limits: z.object({
+    /** Null: no limit. */
+    publishedCourses: z.number().int().nullable(),
+    teamMembers: z.number().int().nullable(),
+    customDomain: z.boolean(),
+    offlineQr: z.boolean(),
+  }),
+});
+
+/** Every plan with its terms, cheapest first. */
+export class PlansResponse extends createZodDto(z.object({ plans: z.array(planTermsSchema.extend({ plan: z.enum(CREATOR_PLANS) })) })) {}
+
+/** The school's plan in force, its terms, what was last paid for, and how a plan can be paid. */
+export class SchoolPlanResponse extends createZodDto(
+  z.object({
+    plan: z.enum(CREATOR_PLANS),
+    terms: planTermsSchema,
+    paid: z.object({ plan: z.enum(PAID_PLANS), interval: z.enum(BILLING_INTERVALS), periodEnd: z.iso.datetime() }).nullable(),
+    methods: z.array(z.enum(PAYMENT_METHODS)),
+  }),
+) {}
+
+/** The new plan payment and what the browser does next. */
+export class PlanCheckoutResponse extends createZodDto(
+  z.object({ paymentId: z.uuid(), payment: paymentStepSchema }),
+) {}
+
+/** `/schools/current/plan/payments/:id` path. */
+export class PlanPaymentParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
+/** Where a plan payment stands, up to date with the gateway. */
+export class PlanPaymentResponse extends createZodDto(z.object({ status: z.enum(["pending", "paid", "failed"]) })) {}
+
+/**
+ * Shapes a plan's terms for a response.
+ *
+ * @param terms The terms.
+ * @returns The prices, fee and limits.
+ */
+export function toPlanTermsResponse(terms: PlanTerms): z.infer<typeof planTermsSchema> {
+  return { prices: terms.prices, feeBasisPoints: terms.feeBasisPoints, limits: terms.limits };
 }

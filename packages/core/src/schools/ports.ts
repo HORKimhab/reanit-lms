@@ -141,6 +141,8 @@ export interface TeamStore {
   findMember(userId: string): Promise<TeamMember | null>;
   /** Whether the email belongs to one of the school's staff. */
   isStaffEmail(email: string): Promise<boolean>;
+  /** Team members besides the owner, plus invites waiting for an answer other than the one to `exceptEmail`. */
+  countSeats(exceptEmail: string): Promise<number>;
   /** Saves the invite, replacing any earlier one to the same email (and so its link). */
   saveInvite(invite: { email: string; role: InviteRole; tokenHash: string; expiresAt: Date }): Promise<TeamInvite>;
   /** Gives a staff member another role. */

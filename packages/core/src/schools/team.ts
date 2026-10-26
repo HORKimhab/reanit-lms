@@ -10,6 +10,7 @@ import {
   OwnerLockedError,
   TeamMemberNotFoundError,
 } from "./errors";
+import type { PlanGuard } from "./plans";
 import type { InviteRecord, InviteStore, TeamInvite, TeamMember, TeamStore } from "./ports";
 
 /** Roles staff can invite to or give: everything but owner, which stays with the school's creator. */
@@ -57,16 +58,17 @@ export type ComposeInvite = (token: string) => Promise<Omit<MailMessage, "to">>;
  * Builds one school's team use cases: list the staff and invites, invite by email, change a
  * member's role and remove a member. The owner can't be removed or given another role.
  *
- * @param dependencies The school's team, the mailer and the clock.
+ * @param dependencies The school's team, the mailer, the clock and the school's plan.
  * @param dependencies.store The school's staff and invites.
  * @param dependencies.mailer Sends invite emails.
  * @param dependencies.clock Sets when invites expire.
+ * @param dependencies.plan The school's plan, which limits how many team members it has.
  * @returns The team operations.
  * @example
  * const team = createTeamService({ store: createTeamStore(db, schoolId), mailer, clock });
  * await team.inviteMember({ email: "dara@example.com", role: "instructor", locale: "en" }, compose);
  */
-export function createTeamService({ store, mailer, clock }: { store: TeamStore; mailer: Mailer; clock: Clock }) {
+export function createTeamService({ store, mailer, clock, plan }: { store: TeamStore; mailer: Mailer; clock: Clock; plan: Pick<PlanGuard, "assertWithin"> }) {
   /**
    * Finds a member whose role can change: staff, but not the owner.
    *
@@ -103,9 +105,11 @@ export function createTeamService({ store, mailer, clock }: { store: TeamStore; 
      * @param compose Writes the email for the link's token.
      * @returns The invite.
      * @throws {AlreadyTeamMemberError} When the email already belongs to the school's staff.
+     * @throws {PlanLimitError} When another team member would pass the plan's limit.
      */
     async inviteMember({ email, role }: InviteInput, compose: ComposeInvite): Promise<TeamInvite> {
       if (await store.isStaffEmail(email)) throw new AlreadyTeamMemberError();
+      await plan.assertWithin("teamMembers", await store.countSeats(email));
       const token = generateToken();
       const expiresAt = new Date(clock.now().getTime() + INVITE_DAYS * DAY_MS);
       const invite = await store.saveInvite({ email, role, tokenHash: hashToken(token), expiresAt });

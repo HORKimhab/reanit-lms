@@ -39,7 +39,7 @@ async function orderCourse({ schoolId, courseId }: { schoolId: string; courseId:
   const commerce = createCommerceStore(db, schoolId);
   const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD", billing: ONE_TIME });
   // setPrice found the course the test created.
-  return (await commerce.createOrder({ userId, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null })).id;
+  return (await commerce.createOrder({ userId, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null, platformFee: 0 })).id;
 }
 
 let alpha: Awaited<ReturnType<typeof openSchoolWithCourse>>;

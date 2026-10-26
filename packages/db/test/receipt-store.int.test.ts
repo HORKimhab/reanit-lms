@@ -21,7 +21,7 @@ async function order(email: string, isPaid: boolean) {
   const price = (await store.findCourse("receipted"))?.price;
   if (!price) throw new Error("The course has no price.");
   const userId = (await db.user.create({ data: { email, name: "Sokha" } })).id;
-  const { id } = await store.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null });
+  const { id } = await store.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null, platformFee: 0 });
   await store.setProviderRef(id, `cs_receipt_${id}`);
   if (isPaid) await payAtGateway(db, "stripe", `cs_receipt_${id}`);
   return id;

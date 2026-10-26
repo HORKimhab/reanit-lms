@@ -90,6 +90,20 @@ export function createTeamStore(db: DbClient, schoolId: string) {
     },
 
     /**
+     * Counts the seats the plan limits: team members besides the owner, and waiting invites other than one.
+     *
+     * @param exceptEmail The invite not to count, being sent again.
+     * @returns How many seats are taken.
+     */
+    async countSeats(exceptEmail: string) {
+      const [members, invites] = await Promise.all([
+        tenant.membership.count({ where: { role: { in: ["admin", "instructor"] } } }),
+        tenant.teamInvite.count({ where: { email: { not: exceptEmail } } }),
+      ]);
+      return members + invites;
+    },
+
+    /**
      * Saves an invite, replacing any earlier one to the same email so only the newest link works.
      *
      * @param invite The invite.

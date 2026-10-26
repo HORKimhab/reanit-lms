@@ -34,6 +34,8 @@ export interface CatalogStore {
   findCourseBySlug(slug: string): Promise<CourseWithOutline | null>;
   listCourseSlugs(): Promise<string[]>;
   createCourse(course: { title: string; slug: string }): Promise<Course>;
+  /** How many of the school's courses are published, not counting `exceptCourseId`. */
+  countPublishedCourses(exceptCourseId: string): Promise<number>;
   /** Returns null when the school has no such course. */
   updateCourse(id: string, changes: Partial<Pick<Course, "title" | "description" | "status">>): Promise<Course | null>;
   /** Returns whether a course was deleted. */

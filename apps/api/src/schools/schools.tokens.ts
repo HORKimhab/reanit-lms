@@ -1,4 +1,4 @@
-import type { StudentService, TeamService } from "@reanit/core/schools";
+import type { PlanGuard, StudentService, TeamService } from "@reanit/core/schools";
 
 /** Injection token for the `SchoolService` from `@reanit/core/schools`. */
 export const SCHOOL_SERVICE = Symbol("SCHOOL_SERVICE");
@@ -26,3 +26,9 @@ export type TeamForSchool = (schoolId: string) => TeamService;
 
 /** Injection token for the `InviteAcceptance` from `@reanit/core/schools`. */
 export const INVITE_ACCEPTANCE = Symbol("INVITE_ACCEPTANCE");
+
+/** Injection token for `PlanGuardFor`. */
+export const PLAN_GUARD_FOR = Symbol("PLAN_GUARD_FOR");
+
+/** Builds one school's plan guard, for the limits its plan sets. */
+export type PlanGuardFor = (schoolId: string) => PlanGuard;

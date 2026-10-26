@@ -27,7 +27,7 @@ async function order(courseId: string, userId: string, placedAt: Date, status: "
   const course = await db.course.findUniqueOrThrow({ where: { id: courseId }, select: { slug: true } });
   const price = (await commerce.findCourse(course.slug))?.price;
   if (!price) throw new Error("The course has no price.");
-  const { id } = await commerce.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null });
+  const { id } = await commerce.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null, platformFee: 0 });
   await db.order.update({ where: { id }, data: { status, createdAt: placedAt, paidAt: status === "pending" ? null : placedAt } });
   return id;
 }

@@ -2283,6 +2283,111 @@
         ]
       }
     },
+    "/plans": {
+      "get": {
+        "operationId": "PlanController_plans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlansResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plan"
+        ]
+      }
+    },
+    "/schools/current/plan": {
+      "get": {
+        "operationId": "PlanController_plan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolPlanResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plan"
+        ]
+      }
+    },
+    "/schools/current/plan/checkout": {
+      "post": {
+        "operationId": "PlanController_checkout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCheckoutBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanCheckoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plan"
+        ]
+      }
+    },
+    "/schools/current/plan/payments/{id}": {
+      "get": {
+        "operationId": "PlanController_payment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanPaymentResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Plan"
+        ]
+      }
+    },
     "/schools/by-subdomain/{subdomain}/learn/{slug}": {
       "get": {
         "operationId": "LearningController_course",
@@ -6617,6 +6722,378 @@
             "type": "boolean"
           }
         }
+      },
+      "PlansResponse": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "prices": {
+                  "nullable": true,
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "month",
+                    "year"
+                  ]
+                },
+                "feeBasisPoints": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "publishedCourses": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "teamMembers": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "customDomain": {
+                      "type": "boolean"
+                    },
+                    "offlineQr": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "publishedCourses",
+                    "teamMembers",
+                    "customDomain",
+                    "offlineQr"
+                  ]
+                },
+                "plan": {
+                  "type": "string",
+                  "enum": [
+                    "free",
+                    "pro",
+                    "business"
+                  ]
+                }
+              },
+              "required": [
+                "prices",
+                "feeBasisPoints",
+                "limits",
+                "plan"
+              ]
+            }
+          }
+        },
+        "required": [
+          "plans"
+        ]
+      },
+      "SchoolPlanResponse": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "free",
+              "pro",
+              "business"
+            ]
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "prices": {
+                "nullable": true,
+                "type": "object",
+                "properties": {
+                  "month": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "month",
+                  "year"
+                ]
+              },
+              "feeBasisPoints": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "publishedCourses": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "teamMembers": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "customDomain": {
+                    "type": "boolean"
+                  },
+                  "offlineQr": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "publishedCourses",
+                  "teamMembers",
+                  "customDomain",
+                  "offlineQr"
+                ]
+              }
+            },
+            "required": [
+              "prices",
+              "feeBasisPoints",
+              "limits"
+            ]
+          },
+          "paid": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "plan": {
+                "type": "string",
+                "enum": [
+                  "pro",
+                  "business"
+                ]
+              },
+              "interval": {
+                "type": "string",
+                "enum": [
+                  "month",
+                  "year"
+                ]
+              },
+              "periodEnd": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              }
+            },
+            "required": [
+              "plan",
+              "interval",
+              "periodEnd"
+            ]
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "stripe",
+                "aba_payway",
+                "bakong_khqr",
+                "offline_qr"
+              ]
+            }
+          }
+        },
+        "required": [
+          "plan",
+          "terms",
+          "paid",
+          "methods"
+        ]
+      },
+      "PlanCheckoutBody": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "business"
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "month",
+              "year"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "stripe",
+              "aba_payway",
+              "bakong_khqr",
+              "offline_qr"
+            ]
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en",
+              "km"
+            ]
+          }
+        },
+        "required": [
+          "plan",
+          "interval",
+          "method"
+        ]
+      },
+      "PlanCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "payment": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "redirect"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "url"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "form"
+                    ]
+                  },
+                  "action": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "action",
+                  "fields"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "qr"
+                    ]
+                  },
+                  "qr": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "qr",
+                  "expiresAt"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "offline"
+                    ]
+                  },
+                  "qrImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "qrImageUrl"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "paymentId",
+          "payment"
+        ]
+      },
+      "PlanPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "PlayerCourseResponse": {
         "type": "object",

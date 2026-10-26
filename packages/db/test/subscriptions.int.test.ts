@@ -33,6 +33,7 @@ async function subscribe(email: string, method: "aba_payway" | "offline_qr" = "a
     method,
     locale: "en",
     subscriptionId,
+    platformFee: 0,
   });
   if (method !== "offline_qr") await store.setProviderRef(orderId, `tran_${orderId}`);
   return { userId, subscriptionId, orderId };
@@ -91,7 +92,7 @@ describe("subscriptions", () => {
     const store = createCommerceStore(db, alphaId);
     // findSubscription found it after the first payment.
     const { price } = (await store.findSubscription(subscriptionId, userId))!;
-    const { id: renewalId } = await store.createOrder({ userId, price, lines: [{ courseId, amount: 1500 }], bundleId: null, couponId: null, method: "aba_payway", locale: "en", subscriptionId });
+    const { id: renewalId } = await store.createOrder({ userId, price, lines: [{ courseId, amount: 1500 }], bundleId: null, couponId: null, method: "aba_payway", locale: "en", subscriptionId, platformFee: 0 });
     await store.setProviderRef(renewalId, `tran_${renewalId}`);
 
     await payAtGateway(db, "aba_payway", `tran_${renewalId}`, new Date("2026-11-20T09:00:00Z"));

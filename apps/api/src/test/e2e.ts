@@ -8,7 +8,7 @@ import { Test } from "@nestjs/testing";
 import type { Mailer, MailMessage } from "@reanit/core/auth";
 import type { PaymentGateway } from "@reanit/core/commerce";
 import type { ObjectStorage } from "@reanit/core/media";
-import type { DnsLookup, DomainEdge } from "@reanit/core/schools";
+import type { CreatorPlan, DnsLookup, DomainEdge, PaidPlan } from "@reanit/core/schools";
 import type { Redis } from "ioredis";
 // Types `inject("databaseUrl")` and `inject("redisUrl")` for the e2e files.
 import type {} from "@reanit/db/testing/postgres";
@@ -293,18 +293,34 @@ export async function signUp(app: NestFastifyApplication, name: string): Promise
 }
 
 /**
- * Signs a new user up and opens a school they own.
+ * Pays for a year of a plan through the test PayWay, as the school's owner, and waits for it to be confirmed.
+ *
+ * @param agent The owner's agent.
+ * @param plan The plan.
+ */
+export async function payForPlan(agent: Agent, plan: PaidPlan) {
+  const { paymentId } = (await agent.post("/schools/current/plan/checkout").send({ plan, interval: "year", method: "aba_payway" }).expect(201)).body;
+  paidAtGateway.add(`pw_${paymentId}`);
+  await agent.get(`/schools/current/plan/payments/${paymentId}`).expect(200, { status: "paid" });
+}
+
+/**
+ * Signs a new user up and opens a school they own, on Business unless told otherwise, so tests of
+ * other features are not held back by Free's limits.
  *
  * @param app The app under test.
  * @param name Unique name, used for the email and the subdomain.
+ * @param plan The school's plan.
  * @returns The owner's agent and the school.
  */
 export async function openSchool(
   app: NestFastifyApplication,
   name: string,
+  plan: CreatorPlan = "business",
 ): Promise<{ agent: Agent; school: { id: string; name: string; subdomain: string } }> {
   const { agent } = await signUp(app, name);
   const response = await agent.post("/schools").send({ name, subdomain: name }).expect(201);
+  if (plan !== "free") await payForPlan(agent, plan);
   return { agent, school: response.body.school };
 }
 

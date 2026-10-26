@@ -148,6 +148,12 @@ describe("addCustomDomain", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard/settings");
   });
 
+  it("says when the plan does not include a custom domain", async () => {
+    onApi(ADD, problem(403, "urn:reanit:problem:plan-limit"));
+
+    expect(await addCustomDomain(IDLE_DOMAIN, form({ hostname: "learn.angkor.com" }))).toEqual({ status: "planLimit" });
+  });
+
   it("refuses a URL without calling the API", async () => {
     expect(await addCustomDomain(IDLE_DOMAIN, form({ hostname: "https://learn.angkor.com/" }))).toEqual({ status: "invalid" });
     expect(requestTo(ADD)).toBeUndefined();
@@ -241,6 +247,12 @@ describe("inviteTeamMember", () => {
   it("refuses a malformed email without asking the API", async () => {
     expect(await inviteTeamMember(IDLE_INVITE, form({ email: "nope", role: "admin" }))).toEqual({ status: "invalid" });
     expect(requestTo("POST /team/invites")).toBeUndefined();
+  });
+
+  it("says when the plan has room for no more team members", async () => {
+    onApi("POST /team/invites", problem(403, "urn:reanit:problem:plan-limit"));
+
+    expect(await inviteTeamMember(IDLE_INVITE, form({ email: "vibol@example.com", role: "instructor" }))).toEqual({ status: "planLimit" });
   });
 
   it("says when the email already belongs to the team", async () => {

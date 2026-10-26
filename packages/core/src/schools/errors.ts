@@ -72,3 +72,30 @@ export class InviteExpiredError extends Error {
 export class InviteEmailMismatchError extends Error {
   override readonly name = "InviteEmailMismatchError";
 }
+
+/** What a plan limits. */
+export type PlanLimit = "publishedCourses" | "teamMembers" | "customDomain" | "offlineQr";
+
+/** The school's plan does not allow this addition; a higher plan does. */
+export class PlanLimitError extends Error {
+  override readonly name = "PlanLimitError";
+
+  /**
+   * Records which limit was reached.
+   *
+   * @param limit The limit.
+   */
+  constructor(readonly limit: PlanLimit) {
+    super(`Plan limit reached: ${limit}`);
+  }
+}
+
+/** The school has no such plan payment. */
+export class PlanPaymentNotFoundError extends Error {
+  override readonly name = "PlanPaymentNotFoundError";
+}
+
+/** The method cannot take a plan payment: not configured, not in dollars, or card-only one-time. */
+export class PlanPaymentMethodUnavailableError extends Error {
+  override readonly name = "PlanPaymentMethodUnavailableError";
+}

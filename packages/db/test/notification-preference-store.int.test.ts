@@ -37,7 +37,7 @@ describe("notification preference store", () => {
     expect(await store.unsubscribe(recipient!.unsubscribeToken, "newComment")).toEqual({ schoolName: "preferences-beta" }); // the school has an owner
 
     const owner = (await db.membership.findFirstOrThrow({ where: { schoolId: otherSchoolId, role: "owner" }, select: { userId: true } })).userId;
-    expect(await store.findPreferences(otherSchoolId, owner)).toEqual({ newSale: true, newComment: false, courseCompleted: true, locale: "en", subscriptionId: null });
+    expect(await store.findPreferences(otherSchoolId, owner)).toEqual({ newSale: true, newComment: false, courseCompleted: true, locale: "en" });
   });
 
   it("returns null for a token nobody has", async () => {

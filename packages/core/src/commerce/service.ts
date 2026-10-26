@@ -47,6 +47,8 @@ import {
   type RenewInput,
   type UpdateBundleInput,
 } from "./rules";
+import type { PlanConfirmationStore } from "../schools/plan-billing";
+import { platformFee, type PlanGuard } from "../schools/plans";
 import { currentStatus, renewSubscription } from "./subscriptions";
 
 /** Slug for a bundle title with no Latin letters or digits. */
@@ -80,6 +82,8 @@ export interface CommerceDependencies {
   confirmation: PaymentConfirmation;
   /** The current time, for coupon expiry. */
   clock: Clock;
+  /** The school's plan: it sets the platform's fee on each sale, and whether the school's own payment QR is offered. */
+  plan: Pick<PlanGuard, "plan" | "allows">;
 }
 
 /**
@@ -92,15 +96,17 @@ export interface CommerceDependencies {
  * @param dependencies.gateways Every configured gateway.
  * @param dependencies.confirmation Enrolls from a confirmed payment.
  * @param dependencies.clock The current time, for coupon expiry and when refunds happen.
+ * @param dependencies.plan The school's plan, for the platform's fee and the offline QR.
  * @returns Pricing, coupon, bundle, offer and checkout operations.
  * @example
  * const commerce = createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation, clock });
  */
-export function createCommerceService({ store, gateways, confirmation, clock }: CommerceDependencies) {
+export function createCommerceService({ store, gateways, confirmation, clock, plan }: CommerceDependencies) {
   /**
    * Lists the methods that can charge a price. A one-time price takes every gateway that takes its
    * currency. A subscription or payment plan is paid period by period without saved cards: by the
-   * school's own payment QR first (when it uploaded one), then by the gateways that are not one-time only.
+   * school's own payment QR first (when it uploaded one and its plan includes it), then by the gateways
+   * that are not one-time only.
    *
    * @param price The price.
    * @returns The methods, the default first.
@@ -110,7 +116,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
     const gatewayMethods = gateways
       .filter((gateway) => gateway.supports(price.currency) && (isOneTime || !ONE_TIME_ONLY_METHODS.includes(gateway.method)))
       .map((gateway) => gateway.method);
-    if (isOneTime || !(await store.hasPaymentQr())) return gatewayMethods;
+    if (isOneTime || !(await plan.allows("offlineQr")) || !(await store.hasPaymentQr())) return gatewayMethods;
     return ["offline_qr", ...gatewayMethods];
   }
 
@@ -174,6 +180,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
       method: terms.method,
       locale: terms.locale,
       subscriptionId: terms.subscriptionId,
+      platformFee: platformFee(terms.amount, product.price.currency, await plan.plan()),
     });
     const gateway = gateways.find(({ method }) => method === terms.method);
     // assertMethod let the method through, so without a gateway it is the school's offline QR.
@@ -615,16 +622,18 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
  * Builds the one path to enrollment: a confirmed payment marks the order paid and enrolls the buyer,
  * exactly once however often it is repeated. Gateways confirm their own payments; staff confirm the
  * offline QR payments they found in the school's account. A subscription's payment also moves its
- * period on (`renewSubscription`) and its enrollments' access with it.
+ * period on (`renewSubscription`) and its enrollments' access with it. A gateway payment that is no
+ * student's order may be a creator paying for their plan, which moves the school's plan on.
  *
- * @param dependencies Store and clock.
- * @param dependencies.store Confirms payments across schools.
+ * @param dependencies Stores and clock.
+ * @param dependencies.store Confirms students' payments across schools.
+ * @param dependencies.plans Confirms creators' plan payments across schools.
  * @param dependencies.clock When a payment is confirmed.
  * @returns The confirmation operations.
  * @example
- * await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock }).confirm("stripe", session.id);
+ * await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), plans: createPlanConfirmationStore(db), clock }).confirm("stripe", session.id);
  */
-export function createPaymentConfirmation({ store, clock }: { store: PaymentConfirmationStore; clock: Clock }) {
+export function createPaymentConfirmation({ store, plans, clock }: { store: PaymentConfirmationStore; plans: PlanConfirmationStore; clock: Clock }) {
   /**
    * Records a confirmed payment.
    *
@@ -633,9 +642,12 @@ export function createPaymentConfirmation({ store, clock }: { store: PaymentConf
    * @throws {UnknownPaymentError} When no order matches.
    */
   async function confirmPayment(payment: PaymentMatch) {
-    const result = await store.confirm(payment, clock.now(), renewSubscription);
-    if (!result) throw new UnknownPaymentError();
-    return result;
+    const at = clock.now();
+    const result = await store.confirm(payment, at, renewSubscription);
+    if (result) return result;
+    const planPayment = "offlineOrderId" in payment ? null : await plans.confirm(payment, at, renewSubscription);
+    if (!planPayment) throw new UnknownPaymentError();
+    return { orderId: planPayment.paymentId, isNewlyPaid: planPayment.isNewlyPaid };
   }
 
   return {
@@ -644,8 +656,8 @@ export function createPaymentConfirmation({ store, clock }: { store: PaymentConf
      *
      * @param method The gateway that confirmed it.
      * @param providerRef The gateway's reference for the payment.
-     * @returns The order and whether this call is the one that marked it paid.
-     * @throws {UnknownPaymentError} When no order has the reference.
+     * @returns The order (or plan payment) and whether this call is the one that marked it paid.
+     * @throws {UnknownPaymentError} When no order or plan payment has the reference.
      */
     confirm(method: PaymentGateway["method"], providerRef: string) {
       return confirmPayment({ method, providerRef });

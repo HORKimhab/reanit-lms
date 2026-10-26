@@ -47,6 +47,20 @@ enum PaymentMethod {
   offline_qr
 }
 
+/// A school's creator plan (API-26): what it pays the platform, its fee per sale and its limits.
+enum CreatorPlan {
+  free
+  pro
+  business
+}
+
+/// Where a creator's payment to the platform for a plan period stands.
+enum PlanPaymentStatus {
+  pending
+  paid
+  failed
+}
+
 /// How a price bills (API-25): once, every period, or in a set number of monthly instalments.
 enum PriceKind {
   one_time
@@ -135,16 +149,22 @@ model MagicLinkToken {
 
 /// A tenant: one creator's branded school.
 model School {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  subdomain    String   @unique
-  brandColor   String?  @map("brand_color")
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
+  subdomain     String           @unique
+  brandColor    String?          @map("brand_color")
   /// Object-storage key of the logo; the API signs it into a URL.
-  logoKey      String?  @map("logo_key")
+  logoKey       String?          @map("logo_key")
   /// Object-storage key of the school's own payment QR image, for offline payments (API-25).
-  paymentQrKey String?  @map("payment_qr_key")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  paymentQrKey  String?          @map("payment_qr_key")
+  /// The creator plan last paid for (API-26); the school is back on Free a week past `plan_period_end`.
+  plan          CreatorPlan      @default(free)
+  /// The paid plan's period; null on Free.
+  planInterval  BillingInterval? @map("plan_interval")
+  /// The end of the paid plan period; null on Free.
+  planPeriodEnd DateTime?        @map("plan_period_end")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
 
   memberships             Membership[]
   courses                 Course[]
@@ -171,6 +191,7 @@ model School {
   notificationPreferences NotificationPreference[]
   teamInvites             TeamInvite[]
   subscriptions           Subscription[]
+  planPayments            PlanPayment[]
 
   @@map("schools")
 }
@@ -347,6 +368,8 @@ model Order {
   subscriptionId   String?       @map("subscription_id") @db.Uuid
   /// The transaction reference the student gave for an offline QR payment, for staff to match.
   paymentReference String?       @map("payment_reference")
+  /// The platform's fee on this sale at the school's plan, in minor units (API-26); payouts settle it (API-27).
+  platformFee      Int           @default(0) @map("platform_fee")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
@@ -717,4 +740,27 @@ model Subscription {
   @@index([userId])
   @@index([status, currentPeriodEnd])
   @@map("subscriptions")
+}
+
+/// A creator's payment to the platform for one period of a plan (API-26). Confirmed by the gateway,
+/// it moves the school's plan on.
+model PlanPayment {
+  id          String            @id @default(uuid()) @db.Uuid
+  schoolId    String            @map("school_id") @db.Uuid
+  plan        CreatorPlan
+  interval    BillingInterval
+  /// Integer minor units of `currency` (plans are priced in USD).
+  amount      Int
+  currency    String            @default("USD") @db.Char(3)
+  method      PaymentMethod
+  status      PlanPaymentStatus @default(pending)
+  /// The gateway's id for this payment; set once payment starts.
+  providerRef String?           @unique @map("provider_ref")
+  paidAt      DateTime?         @map("paid_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@map("plan_payments")
 }

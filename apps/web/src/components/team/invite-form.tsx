@@ -41,6 +41,11 @@ export function InviteForm({ action }: { action: (state: TeamInviteState, formDa
           )}
         </Field>
       </div>
+      {state.status === "planLimit" ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t("errors.planLimit")}
+        </p>
+      ) : null}
       <SubmitRow label={t("send")} pendingLabel={t("sending")} isPending={isPending} savedMessage={state.status === "sent" ? t("sent") : undefined} />
     </form>
   );

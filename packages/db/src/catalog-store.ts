@@ -139,6 +139,16 @@ export function createCatalogStore(db: DbClient, schoolId: string) {
     },
 
     /**
+     * Counts the school's published courses, for its plan's limit.
+     *
+     * @param exceptCourseId A course not to count, such as the one being published.
+     * @returns How many.
+     */
+    countPublishedCourses(exceptCourseId: string) {
+      return tenant.course.count({ where: { status: "published", id: { not: exceptCourseId } } });
+    },
+
+    /**
      * Changes a course's details.
      *
      * @param id The course's id.

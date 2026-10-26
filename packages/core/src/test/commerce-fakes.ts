@@ -37,6 +37,8 @@ type FakeOrder = OrderSummary & {
   subscriptionId: string | null;
   /** The student's reference for an offline QR payment. */
   paymentReference: string | null;
+  /** The platform's fee on the sale. */
+  platformFee: number;
   /** Set once refunded. */
   refund?: { at: Date; isRefundedByHand: boolean };
 };
@@ -166,9 +168,10 @@ export class FakeCommerceStore implements CommerceStore {
    * @param order.method The payment method.
    * @param order.locale The buyer's language.
    * @param order.subscriptionId The subscription it pays a period of, or null.
+   * @param order.platformFee The platform's fee on the sale.
    * @returns The order's id.
    */
-  async createOrder({ userId, price, lines, bundleId, couponId, method, locale, subscriptionId }: NewOrder) {
+  async createOrder({ userId, price, lines, bundleId, couponId, method, locale, subscriptionId, platformFee }: NewOrder) {
     const id = `order-${this.orders.length + 1}`;
     const amount = lines.reduce((total, line) => total + line.amount, 0);
     this.orders.push({
@@ -186,6 +189,7 @@ export class FakeCommerceStore implements CommerceStore {
       providerRef: null,
       subscriptionId,
       paymentReference: null,
+      platformFee,
     });
     return { id };
   }

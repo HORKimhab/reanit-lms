@@ -102,6 +102,12 @@ describe("updateCourse", () => {
     expect(await requestTo(`PATCH ${COURSE_URL}`)?.json()).toEqual({ status: "published" });
   });
 
+  it("blames the status when the plan publishes no more courses", async () => {
+    onApi(`PATCH ${COURSE_URL}`, problem(403, "urn:reanit:problem:plan-limit"));
+
+    expect(await updateCourse(COURSE.id, IDLE, form({ status: "published" }))).toEqual({ status: "invalid", invalidFields: ["status"] });
+  });
+
   it("reports invalid fields without calling the API", async () => {
     expect(await updateCourse(COURSE.id, IDLE, form({ title: " ", status: "archived" }))).toEqual({
       status: "invalid",

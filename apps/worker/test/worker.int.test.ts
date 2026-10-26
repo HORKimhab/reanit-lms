@@ -11,6 +11,7 @@ import {
   createDbClient,
   createLearningStore,
   createPaymentConfirmationStore,
+  createPlanConfirmationStore,
   createSchoolStore,
 } from "@reanit/db";
 // Types `inject("databaseUrl")`.
@@ -185,10 +186,10 @@ describe("worker", () => {
     const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD", billing: { kind: "one_time" } });
     const buyer = await db.user.create({ data: { email: "worker-buyer@example.com", name: "Sokha" } });
     // setPrice found the course it just created.
-    const { id } = await commerce.createOrder({ userId: buyer.id, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null });
+    const { id } = await commerce.createOrder({ userId: buyer.id, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null, platformFee: 0 });
     await commerce.setProviderRef(id, `cs_worker_${id}`);
 
-    await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock: { now: currentTime } }).confirm("stripe", `cs_worker_${id}`);
+    await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), plans: createPlanConfirmationStore(db), clock: { now: currentTime } }).confirm("stripe", `cs_worker_${id}`);
 
     await vi.waitFor(() => expect(sent).toHaveLength(3), { timeout: EVENT_TIMEOUT_MS });
     const toBuyer = sent.filter(({ to }) => to === "worker-buyer@example.com");

@@ -23,7 +23,7 @@ async function order(schoolId: string, method: "stripe" | "bakong_khqr", placedA
   const course = await commerce.findCourse("expiring");
   if (!course?.price) throw new Error("The course has no price.");
   const { price } = course;
-  const { id } = await commerce.createOrder({ userId: buyerId, price, lines: [{ courseId: course.id, amount: price.amount }], bundleId: null, couponId: null, method, locale: "en", subscriptionId: null });
+  const { id } = await commerce.createOrder({ userId: buyerId, price, lines: [{ courseId: course.id, amount: price.amount }], bundleId: null, couponId: null, method, locale: "en", subscriptionId: null, platformFee: 0 });
   await db.order.update({ where: { id }, data: { createdAt: placedAt, status } });
   return id;
 }

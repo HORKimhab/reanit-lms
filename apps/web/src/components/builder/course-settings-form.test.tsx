@@ -54,6 +54,14 @@ describe("CourseSettingsForm", () => {
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 
+  it("says the plan publishes no more courses when the save rejects the status", async () => {
+    const user = await setup(courseActionReturning({ status: "invalid", invalidFields: ["status"] }));
+
+    await user.click(screen.getByRole("button", { name: "Save details" }));
+
+    expect(await screen.findByRole("combobox", { name: "Status" })).toHaveAccessibleDescription(expect.stringContaining("Your plan publishes this many courses at once."));
+  });
+
   it("shows Khmer status names when the locale is km", async () => {
     renderWithIntl(<CourseSettingsForm course={COURSE} action={courseActionReturning({ status: "idle", invalidFields: [] })} />, {
       locale: "km",

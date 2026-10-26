@@ -24,6 +24,7 @@ import {
   RenewBody,
   SchoolParams,
   SubscriptionParams,
+  toGatewayStep,
   toPriceResponse,
 } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
@@ -36,17 +37,8 @@ import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
  * @returns The step for the response.
  */
 function toPaymentStep(payment: PaymentStart, school: School): CheckoutResponse["payment"] {
-  switch (payment.kind) {
-    case "redirect":
-      return { kind: "redirect", url: payment.url };
-    case "form":
-      return { kind: "form", action: payment.action, fields: payment.fields };
-    case "qr":
-      return { kind: "qr", qr: payment.qr, expiresAt: payment.expiresAt.toISOString() };
-    case "offline":
-      // Checkout offers the offline QR only to a school that uploaded its payment QR image.
-      return { kind: "offline", qrImageUrl: school.paymentQrUrl! };
-  }
+  // Checkout offers the offline QR only to a school that uploaded its payment QR image.
+  return payment.kind === "offline" ? { kind: "offline", qrImageUrl: school.paymentQrUrl! } : toGatewayStep(payment);
 }
 
 /** Buying a course or bundle on a school site: its offer, checkout and the order's status. */

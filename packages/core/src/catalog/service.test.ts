@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { PlanLimitError } from "../schools";
 import { FakeCatalogStore } from "../test/catalog-fakes";
+import { planGuardOn } from "../test/plan-fakes";
 import { CourseNotFoundError } from "./errors";
 import { createCatalogService, type CatalogService } from "./service";
 
@@ -19,7 +21,7 @@ let catalog: CatalogService;
 
 beforeEach(() => {
   store = new FakeCatalogStore();
-  catalog = createCatalogService({ store });
+  catalog = createCatalogService({ store, plan: planGuardOn("business") });
 });
 
 describe("catalog service", () => {
@@ -112,3 +114,16 @@ describe("published courses", () => {
     await expect(catalog.getPublishedCourse("missing")).rejects.toThrow(CourseNotFoundError);
   });
 });
+
+describe("published course limit", () => {
+  it("refuses a fourth published course on Free, but lets an already published course be saved again", async () => {
+    const free = createCatalogService({ store, plan: planGuardOn("free") });
+    const courses = await Promise.all(["A", "B", "C", "D"].map((title) => free.createCourse({ title })));
+    for (const course of courses.slice(0, 3)) await free.updateCourse(course.id, { status: "published" });
+
+    await expect(free.updateCourse(courses[3]!.id, { status: "published" })).rejects.toThrow(new PlanLimitError("publishedCourses")); // four were created
+    await expect(free.updateCourse(courses[0]!.id, { status: "published", title: "A2" })).resolves.toMatchObject({ title: "A2" });
+    await expect(free.updateCourse(courses[3]!.id, { title: "Still a draft" })).resolves.toMatchObject({ status: "draft" });
+  });
+});
+

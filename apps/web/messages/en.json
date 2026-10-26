@@ -244,7 +244,8 @@
       "taken": "Another school already uses this domain.",
       "hasDomain": "Your school already has a custom domain. Reload the page to see it.",
       "notVerified": "The TXT record was not found yet. DNS changes can take up to an hour to show; check again later.",
-      "unavailable": "Custom domains are not available on this platform yet."
+      "unavailable": "Custom domains are not available on this platform yet.",
+      "planLimit": "Custom domains come with the Pro and Business plans. Upgrade to add one."
     }
   },
   "NotificationPreferences": {
@@ -535,7 +536,8 @@
     "cancel": "Cancel",
     "deleteWarning": "This deletes the course with all its sections and lessons. It cannot be undone.",
     "deleting": "Deleting…",
-    "curriculum": "Curriculum"
+    "curriculum": "Curriculum",
+    "statusPlanLimit": "Your plan publishes this many courses at once. Unpublish one, or upgrade to Pro to publish more."
   },
   "Bundles": {
     "newBundle": "New bundle",
@@ -745,7 +747,8 @@
     "sent": "Invite sent. The link works for 7 days.",
     "errors": {
       "invalid": "Enter a valid email address.",
-      "member": "This person is already on the team."
+      "member": "This person is already on the team.",
+      "planLimit": "Your plan has room for no more team members. Upgrade it to invite more."
     }
   },
   "Invite": {

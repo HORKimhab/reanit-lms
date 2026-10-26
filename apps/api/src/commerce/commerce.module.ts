@@ -1,12 +1,21 @@
 import { Module } from "@nestjs/common";
 import { createCommerceService, createOrderHistory, createPaymentConfirmation, type PaymentConfirmation, type PaymentGateway } from "@reanit/core/commerce";
-import { createCommerceStore, createOrderHistoryStore, createPaymentConfirmationStore, type DbClient } from "@reanit/db";
+import { createPlanBilling } from "@reanit/core/schools";
+import {
+  createCommerceStore,
+  createOrderHistoryStore,
+  createPaymentConfirmationStore,
+  createPlanBillingStore,
+  createPlanConfirmationStore,
+  type DbClient,
+} from "@reanit/db";
 import { DB_CLIENT, ENV } from "@reanit/nest";
 import Stripe from "stripe";
 
 import type { Env } from "../config/env";
 import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
+import { PLAN_GUARD_FOR, type PlanGuardFor } from "../schools/schools.tokens";
 import { BundlesController } from "./bundles.controller";
 import { CheckoutController } from "./checkout.controller";
 import { CouponsController } from "./coupons.controller";
@@ -20,12 +29,15 @@ import {
   PAYMENT_CONFIRMATION,
   PAYMENT_GATEWAYS,
   PAYWAY,
+  PLAN_BILLING_FOR_SCHOOL,
   STRIPE,
   type CommerceForSchool,
   type OrderHistoryForSchool,
+  type PlanBillingForSchool,
 } from "./commerce.tokens";
 import { createPayWayGateway } from "./payway-gateway";
 import { PayWayWebhookController } from "./payway-webhook.controller";
+import { PlanController } from "./plan.controller";
 import { OrdersController } from "./orders.controller";
 import { PriceController } from "./price.controller";
 import { PurchasesController } from "./purchases.controller";
@@ -100,15 +112,28 @@ function provideGateways(payway: PaymentGateway | null, bakong: PaymentGateway |
 }
 
 /**
- * Wires per-school commerce services to Postgres (tenant client), the gateways and the confirmation.
+ * Wires per-school commerce services to Postgres (tenant client), the gateways, the confirmation and the school's plan.
  *
  * @param db The shared database client.
  * @param gateways The configured gateways.
  * @param confirmation Enrolls from confirmed payments.
+ * @param planFor Builds a school's plan guard, for the platform's fee and the offline QR.
  * @returns A factory of commerce services limited to one school.
  */
-function provideCommerceForSchool(db: DbClient, gateways: PaymentGateway[], confirmation: PaymentConfirmation): CommerceForSchool {
-  return (schoolId) => createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation, clock: systemClock });
+function provideCommerceForSchool(db: DbClient, gateways: PaymentGateway[], confirmation: PaymentConfirmation, planFor: PlanGuardFor): CommerceForSchool {
+  return (schoolId) => createCommerceService({ store: createCommerceStore(db, schoolId), gateways, confirmation, clock: systemClock, plan: planFor(schoolId) });
+}
+
+/**
+ * Wires per-school plan billing to Postgres (tenant client), the gateways and the confirmation.
+ *
+ * @param db The shared database client.
+ * @param gateways The configured gateways.
+ * @param confirmation Confirms gateway payments, plan payments included.
+ * @returns A factory of plan billings limited to one school.
+ */
+function providePlanBillingForSchool(db: DbClient, gateways: PaymentGateway[], confirmation: PaymentConfirmation): PlanBillingForSchool {
+  return (schoolId) => createPlanBilling({ store: createPlanBillingStore(db, schoolId), gateways, confirmPlanPayment: confirmation.confirm, clock: systemClock });
 }
 
 /**
@@ -122,26 +147,37 @@ function provideOrderHistoryForSchool(db: DbClient): OrderHistoryForSchool {
 }
 
 /**
- * Wires the confirmation use case that enrolls from confirmed payments.
+ * Wires the confirmation use case that enrolls from confirmed payments and moves plans on from creators' plan payments.
  *
  * @param db The shared database client.
  * @returns The confirmation use case.
  */
 function provideConfirmation(db: DbClient) {
-  return createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock: systemClock });
+  return createPaymentConfirmation({ store: createPaymentConfirmationStore(db), plans: createPlanConfirmationStore(db), clock: systemClock });
 }
 
-/** Prices, coupons, bundles, subscriptions and payment plans, checkout with the configured gateways and offline QR, order history, refunds, and the webhooks that enroll on payment. */
+/** Prices, coupons, bundles, subscriptions and payment plans, checkout with the configured gateways and offline QR, order history, refunds, creators' plan billing, and the webhooks that confirm payments. */
 @Module({
   imports: [SchoolsModule],
-  controllers: [PriceController, CouponsController, BundlesController, CheckoutController, PurchasesController, OrdersController, StripeWebhookController, PayWayWebhookController],
+  controllers: [
+    PriceController,
+    CouponsController,
+    BundlesController,
+    CheckoutController,
+    PurchasesController,
+    OrdersController,
+    PlanController,
+    StripeWebhookController,
+    PayWayWebhookController,
+  ],
   providers: [
     { provide: STRIPE, inject: [ENV], useFactory: provideStripe },
     { provide: PAYWAY, inject: [ENV], useFactory: providePayWay },
     { provide: BAKONG, inject: [ENV], useFactory: provideBakong },
     { provide: CARD, inject: [ENV, STRIPE], useFactory: provideCardGateway },
     { provide: PAYMENT_GATEWAYS, inject: [PAYWAY, BAKONG, CARD], useFactory: provideGateways },
-    { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: provideCommerceForSchool },
+    { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION, PLAN_GUARD_FOR], useFactory: provideCommerceForSchool },
+    { provide: PLAN_BILLING_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: providePlanBillingForSchool },
     { provide: PAYMENT_CONFIRMATION, inject: [DB_CLIENT], useFactory: provideConfirmation },
     { provide: ORDER_HISTORY_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideOrderHistoryForSchool },
   ],

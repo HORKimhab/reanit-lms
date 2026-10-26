@@ -10,6 +10,7 @@ import { getApi } from "@/server/api";
 import { priceFrom } from "@/server/commerce/prices";
 import { invalidFieldsOf } from "@/server/form-errors";
 import { idPath } from "@/server/id-path";
+import { PLAN_LIMIT } from "@/server/plan-limit";
 import { checkStaffResponse } from "@/server/schools/staff";
 
 /** Result of the last submit of a course form (WEB-12). */
@@ -64,7 +65,7 @@ export async function setCoursePrice(courseId: string, _previous: CourseFormStat
  * @param courseId The course being edited.
  * @param _previous The form's last state; unused, but `useActionState` passes it first.
  * @param formData Untrusted `title`, `description` and `status`; absent fields stay as they are.
- * @returns `saved`, or `invalid` with the rejected fields.
+ * @returns `saved`, or `invalid` with the rejected fields (`status` when the plan publishes no more courses).
  * @throws {Error} Next's not-found signal for an unknown course, or any unexpected failure.
  */
 export async function updateCourse(
@@ -77,7 +78,9 @@ export async function updateCourse(
   );
   const parsed = updateCourseSchema.safeParse(fields);
   if (!parsed.success) return { status: "invalid", invalidFields: invalidFieldsOf(parsed.error) };
-  const { response } = await (await getApi()).PATCH("/courses/{id}", { params: idPath(courseId), body: parsed.data });
+  const { error, response } = await (await getApi()).PATCH("/courses/{id}", { params: idPath(courseId), body: parsed.data });
+  // The plan's limit on published courses blames the status the form asked for.
+  if ((error as { type?: string } | undefined)?.type === PLAN_LIMIT) return { status: "invalid", invalidFields: ["status"] };
   checkStaffResponse(response);
   revalidatePath(COURSES_PATH, "layout");
   return { status: "saved", invalidFields: [] };

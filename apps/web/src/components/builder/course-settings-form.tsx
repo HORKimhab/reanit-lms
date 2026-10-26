@@ -45,7 +45,7 @@ export function CourseSettingsForm({ course, action }: { course: Course; action:
           />
         )}
       </Field>
-      <Field label={t("status")} hint={t("statusHint")}>
+      <Field label={t("status")} hint={t("statusHint")} error={errorFor("status", t("statusPlanLimit"))}>
         {(control) => (
           <select {...control} name="status" defaultValue={course.status} className={INPUT_CLASS}>
             {COURSE_STATUSES.map((status) => (

@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { hashToken } from "../auth";
 import { FakeClock, FakeMailer } from "../test/auth-fakes";
+import { planGuardOn } from "../test/plan-fakes";
 import { FakeInviteStore, FakeTeamStore } from "../test/school-fakes";
-import { AlreadyTeamMemberError, InviteEmailMismatchError, InviteExpiredError, InviteNotFoundError, OwnerLockedError, TeamMemberNotFoundError } from "./errors";
+import { AlreadyTeamMemberError, InviteEmailMismatchError, InviteExpiredError, InviteNotFoundError, OwnerLockedError, PlanLimitError, TeamMemberNotFoundError } from "./errors";
 import type { InviteRecord, TeamMember } from "./ports";
 import { createInviteAcceptance, createTeamService, inviteSchema } from "./team";
 
@@ -30,7 +31,7 @@ function setup() {
   const store = new FakeTeamStore();
   store.members = [OWNER, ADMIN];
   const mailer = new FakeMailer();
-  return { store, mailer, team: createTeamService({ store, mailer, clock: new FakeClock(NOW) }) };
+  return { store, mailer, team: createTeamService({ store, mailer, clock: new FakeClock(NOW), plan: planGuardOn("business") }) };
 }
 
 describe("inviteMember", () => {
@@ -64,6 +65,28 @@ describe("inviteMember", () => {
 
   it.each([{ email: "vibol@example.com", role: "owner" }, { email: "vibol@example.com", role: "student" }, { email: "not-an-email", role: "admin" }])("refuses the input %j", (input) => {
     expect(inviteSchema.safeParse(input).success).toBe(false);
+  });
+});
+
+describe("team member limit", () => {
+  it("refuses any team member on Free", async () => {
+    const store = new FakeTeamStore();
+    store.members = [OWNER];
+    const mailer = new FakeMailer();
+    const free = createTeamService({ store, mailer, clock: new FakeClock(NOW), plan: planGuardOn("free") });
+
+    await expect(free.inviteMember({ email: "vibol@example.com", role: "instructor", locale: "en" }, compose)).rejects.toThrow(new PlanLimitError("teamMembers"));
+    expect(mailer.sent).toEqual([]);
+  });
+
+  it("counts the admin and waiting invites against Pro's three seats, but lets an invite be sent again", async () => {
+    const { store } = setup();
+    const pro = createTeamService({ store, mailer: new FakeMailer(), clock: new FakeClock(NOW), plan: planGuardOn("pro") });
+    await pro.inviteMember({ email: "a@example.com", role: "instructor", locale: "en" }, compose);
+    await pro.inviteMember({ email: "b@example.com", role: "instructor", locale: "en" }, compose);
+
+    await expect(pro.inviteMember({ email: "c@example.com", role: "instructor", locale: "en" }, compose)).rejects.toThrow(PlanLimitError);
+    await expect(pro.inviteMember({ email: "b@example.com", role: "admin", locale: "en" }, compose)).resolves.toMatchObject({ role: "admin" });
   });
 });
 

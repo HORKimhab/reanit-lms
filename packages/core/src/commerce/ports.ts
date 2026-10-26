@@ -103,6 +103,8 @@ export interface NewOrder {
   locale: EmailLocale;
   /** The subscription this order pays a period of; null for a one-time purchase. */
   subscriptionId: string | null;
+  /** The platform's fee on this sale at the school's plan, in minor units; settled in payouts. */
+  platformFee: number;
 }
 
 /** One school's prices, bundles, coupons and orders. `@reanit/db` implements it with `createCommerceStore`. */

@@ -21,6 +21,16 @@ export class FakeCatalogStore implements CatalogStore {
   readonly courses: CourseWithOutline[] = [];
 
   /**
+   * Counts the published courses other than one.
+   *
+   * @param exceptCourseId The course not to count.
+   * @returns How many.
+   */
+  async countPublishedCourses(exceptCourseId: string) {
+    return this.courses.filter(({ id, status }) => id !== exceptCourseId && status === "published").length;
+  }
+
+  /**
    * Lists courses, newest first.
    *
    * @returns The courses without outlines.

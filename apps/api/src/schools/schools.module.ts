@@ -5,13 +5,14 @@ import type { ObjectStorage } from "@reanit/core/media";
 import {
   createDomainService,
   createInviteAcceptance,
+  createPlanGuard,
   createSchoolService,
   createStudentService,
   createTeamService,
   type DnsLookup,
   type DomainEdge,
 } from "@reanit/core/schools";
-import { createDomainStore, createInviteStore, createSchoolStore, createStudentStore, createTeamStore, type DbClient } from "@reanit/db";
+import { createDomainStore, createInviteStore, createSchoolPlanStore, createSchoolStore, createStudentStore, createTeamStore, type DbClient } from "@reanit/db";
 import type { Mailer } from "@reanit/core/auth";
 import { DB_CLIENT, ENV, MAILER, OBJECT_STORAGE } from "@reanit/nest";
 
@@ -28,9 +29,11 @@ import {
   DOMAIN_EDGE,
   DOMAIN_SERVICE,
   INVITE_ACCEPTANCE,
+  PLAN_GUARD_FOR,
   SCHOOL_SERVICE,
   STUDENTS_FOR_SCHOOL,
   TEAM_FOR_SCHOOL,
+  type PlanGuardFor,
   type StudentsForSchool,
   type TeamForSchool,
 } from "./schools.tokens";
@@ -62,14 +65,25 @@ function provideStudentsForSchool(db: DbClient): StudentsForSchool {
 }
 
 /**
- * Wires per-school teams to Postgres through the tenant client, the mailer and the clock.
+ * Wires per-school plan guards to Postgres and the clock.
+ *
+ * @param db The shared database client.
+ * @returns A factory of plan guards for one school.
+ */
+function providePlanGuardFor(db: DbClient): PlanGuardFor {
+  return (schoolId) => createPlanGuard({ store: createSchoolPlanStore(db, schoolId), clock: systemClock });
+}
+
+/**
+ * Wires per-school teams to Postgres through the tenant client, the mailer, the clock and the school's plan.
  *
  * @param db The shared database client.
  * @param mailer Sends invite emails.
+ * @param planFor Builds a school's plan guard.
  * @returns A factory of team services limited to one school.
  */
-function provideTeamForSchool(db: DbClient, mailer: Mailer): TeamForSchool {
-  return (schoolId) => createTeamService({ store: createTeamStore(db, schoolId), mailer, clock: systemClock });
+function provideTeamForSchool(db: DbClient, mailer: Mailer, planFor: PlanGuardFor): TeamForSchool {
+  return (schoolId) => createTeamService({ store: createTeamStore(db, schoolId), mailer, clock: systemClock, plan: planFor(schoolId) });
 }
 
 /**
@@ -113,9 +127,10 @@ function newVerificationToken() {
  * @param dns Reads ownership TXT records.
  * @param edge The certificate provider and CNAME target, or null when custom domains are not configured.
  * @param env Validated environment.
+ * @param planFor Builds a school's plan guard; custom domains come with paid plans.
  * @returns The domain service.
  */
-function provideDomainService(db: DbClient, dns: DnsLookup, edge: DomainEdge | null, env: Env) {
+function provideDomainService(db: DbClient, dns: DnsLookup, edge: DomainEdge | null, env: Env, planFor: PlanGuardFor) {
   return createDomainService({
     store: createDomainStore(db),
     dns,
@@ -123,6 +138,7 @@ function provideDomainService(db: DbClient, dns: DnsLookup, edge: DomainEdge | n
     newToken: newVerificationToken,
     rootDomain: new URL(env.APP_URL).hostname,
     edge,
+    planFor,
   });
 }
 
@@ -133,12 +149,13 @@ function provideDomainService(db: DbClient, dns: DnsLookup, edge: DomainEdge | n
     { provide: SCHOOL_SERVICE, inject: [DB_CLIENT, OBJECT_STORAGE], useFactory: provideSchoolService },
     { provide: DNS_LOOKUP, useFactory: createDnsLookup },
     { provide: DOMAIN_EDGE, inject: [ENV], useFactory: provideDomainEdge },
-    { provide: DOMAIN_SERVICE, inject: [DB_CLIENT, DNS_LOOKUP, DOMAIN_EDGE, ENV], useFactory: provideDomainService },
+    { provide: PLAN_GUARD_FOR, inject: [DB_CLIENT], useFactory: providePlanGuardFor },
+    { provide: DOMAIN_SERVICE, inject: [DB_CLIENT, DNS_LOOKUP, DOMAIN_EDGE, ENV, PLAN_GUARD_FOR], useFactory: provideDomainService },
     { provide: STUDENTS_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideStudentsForSchool },
-    { provide: TEAM_FOR_SCHOOL, inject: [DB_CLIENT, MAILER], useFactory: provideTeamForSchool },
+    { provide: TEAM_FOR_SCHOOL, inject: [DB_CLIENT, MAILER, PLAN_GUARD_FOR], useFactory: provideTeamForSchool },
     { provide: INVITE_ACCEPTANCE, inject: [DB_CLIENT], useFactory: provideInviteAcceptance },
     RolesGuard,
   ],
-  exports: [SCHOOL_SERVICE, RolesGuard],
+  exports: [SCHOOL_SERVICE, PLAN_GUARD_FOR, RolesGuard],
 })
 export class SchoolsModule {}

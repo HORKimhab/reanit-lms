@@ -68,6 +68,7 @@ describe("CustomDomainSection", () => {
     ["taken", "Another school already uses this domain."],
     ["invalid", "Enter a domain such as learn.yourschool.com, without https:// or a path."],
     ["notAllowed", "This domain belongs to the platform. Use a domain you own."],
+    ["planLimit", "Custom domains come with the Pro and Business plans."],
   ] as const)("marks the domain invalid when adding answers %s", async (status, message) => {
     const { user } = setup({ isAvailable: true, domain: null }, { add: { status } });
 

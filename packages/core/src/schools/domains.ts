@@ -10,6 +10,7 @@ import {
   SchoolHasDomainError,
 } from "./errors";
 import type { DnsLookup, DomainCertificates, DomainRecord, DomainStore } from "./ports";
+import type { PlanGuard } from "./plans";
 
 /** Longest hostname DNS allows. */
 export const DOMAIN_HOSTNAME_MAX_LENGTH = 253;
@@ -80,6 +81,8 @@ export interface DomainDependencies {
   rootDomain: string;
   /** Null when this deployment has no certificate provider. */
   edge: DomainEdge | null;
+  /** Builds a school's plan guard; custom domains come with paid plans. */
+  planFor: (schoolId: string) => Pick<PlanGuard, "assertAllows">;
 }
 
 /**
@@ -107,11 +110,12 @@ function statusOf({ verifiedAt, tlsStatus }: DomainRecord): CustomDomainStatus {
  * @param dependencies.newToken Makes verification tokens.
  * @param dependencies.rootDomain The platform's own domain.
  * @param dependencies.edge The certificate provider and CNAME target, or null when domains are not offered.
+ * @param dependencies.planFor Builds a school's plan guard.
  * @returns Domain operations.
  * @example
  * const domains = createDomainService({ store: createDomainStore(db), dns, clock, newToken, rootDomain: "reanit.com", edge });
  */
-export function createDomainService({ store, dns, clock, newToken, rootDomain, edge }: DomainDependencies) {
+export function createDomainService({ store, dns, clock, newToken, rootDomain, edge, planFor }: DomainDependencies) {
   /**
    * Gets the edge, refusing when this deployment does not offer custom domains.
    *
@@ -199,12 +203,14 @@ export function createDomainService({ store, dns, clock, newToken, rootDomain, e
      * @param input.hostname The domain.
      * @returns The domain, awaiting its DNS records.
      * @throws {CustomDomainsUnavailableError} When custom domains are not offered.
+     * @throws {PlanLimitError} When the school's plan does not include a custom domain.
      * @throws {DomainNotAllowedError} When the hostname is the platform's domain or under it.
      * @throws {SchoolHasDomainError} When the school already has a domain.
      * @throws {DomainTakenError} When another school has verified the hostname.
      */
     async addDomain(schoolId: string, { hostname }: CustomDomainInput): Promise<CustomDomain> {
       const { cnameTarget } = requireEdge();
+      await planFor(schoolId).assertAllows("customDomain");
       if (hostname === rootDomain || hostname.endsWith(`.${rootDomain}`)) throw new DomainNotAllowedError();
       if (await store.findDomain(schoolId)) throw new SchoolHasDomainError();
       if ((await store.findVerifiedSubdomain(hostname)) !== null) throw new DomainTakenError();
