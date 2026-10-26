@@ -5,7 +5,7 @@ import { FakeClock } from "../test/auth-fakes";
 import { FakeObjectStorage } from "../test/media-fakes";
 import { FakeSchoolStore } from "../test/school-fakes";
 import { NotSchoolStaffError, SchoolNotFoundError, SubdomainTakenError } from "./errors";
-import { createSchoolService, LOGO_URL_TTL_SECONDS } from "./service";
+import { createSchoolService, IMAGE_URL_TTL_SECONDS } from "./service";
 
 const NOW = new Date("2026-10-19T00:00:00Z");
 const LOGO_KEY = "schools/school-1/logo/file-1.png";
@@ -36,7 +36,7 @@ describe("createSchool", () => {
 
     const school = await schoolService(store).createSchool({ name: "Angkor", subdomain: "angkor" }, "user-1");
 
-    expect(school).toEqual({ id: "school-1", name: "Angkor", subdomain: "angkor", brandColor: null, logoUrl: null });
+    expect(school).toEqual({ id: "school-1", name: "Angkor", subdomain: "angkor", brandColor: null, logoUrl: null, paymentQrUrl: null });
     expect(store.owners.get("school-1")).toBe("user-1");
   });
 
@@ -122,9 +122,9 @@ describe("getStaffSchool", () => {
   });
 });
 
-describe("requestLogoUpload", () => {
+describe("requestImageUpload", () => {
   it("presigns the logo under the school's logo prefix", async () => {
-    const upload = await schoolService().requestLogoUpload("school-1", { contentType: "image/png", sizeBytes: 2048 });
+    const upload = await schoolService().requestImageUpload("school-1", "logo", { contentType: "image/png", sizeBytes: 2048 });
 
     expect(upload).toEqual({
       key: LOGO_KEY,
@@ -134,21 +134,27 @@ describe("requestLogoUpload", () => {
     });
   });
 
+  it("presigns a payment QR under the school's payment QR prefix", async () => {
+    const upload = await schoolService().requestImageUpload("school-1", "payment-qr", { contentType: "image/png", sizeBytes: 2048 });
+
+    expect(upload.key).toBe("schools/school-1/payment-qr/file-1.png");
+  });
+
   it("stores a JPEG with the jpg extension", async () => {
-    const upload = await schoolService().requestLogoUpload("school-1", { contentType: "image/jpeg", sizeBytes: 2048 });
+    const upload = await schoolService().requestImageUpload("school-1", "logo", { contentType: "image/jpeg", sizeBytes: 2048 });
 
     expect(upload.key).toBe("schools/school-1/logo/file-1.jpg");
   });
 
   it.each(["image/svg+xml", "application/pdf", "toString"])("throws UnsupportedMediaError for %s", async (contentType) => {
-    await expect(schoolService().requestLogoUpload("school-1", { contentType, sizeBytes: 2048 })).rejects.toThrow(UnsupportedMediaError);
+    await expect(schoolService().requestImageUpload("school-1", "logo", { contentType, sizeBytes: 2048 })).rejects.toThrow(UnsupportedMediaError);
   });
 
   it("accepts exactly 1 MiB and throws MediaTooLargeError above it", async () => {
     const schools = schoolService();
 
-    await expect(schools.requestLogoUpload("school-1", { contentType: "image/png", sizeBytes: 1024 * 1024 })).resolves.toBeDefined();
-    await expect(schools.requestLogoUpload("school-1", { contentType: "image/png", sizeBytes: 1024 * 1024 + 1 })).rejects.toThrow(
+    await expect(schools.requestImageUpload("school-1", "logo", { contentType: "image/png", sizeBytes: 1024 * 1024 })).resolves.toBeDefined();
+    await expect(schools.requestImageUpload("school-1", "logo", { contentType: "image/png", sizeBytes: 1024 * 1024 + 1 })).rejects.toThrow(
       MediaTooLargeError,
     );
   });
@@ -169,6 +175,26 @@ async function openAngkorWithUploadedLogo() {
 }
 
 describe("updateSettings", () => {
+  const QR_KEY = "schools/school-1/payment-qr/file-2.png";
+
+  it("saves the payment QR image, signing it into a URL, and removes it for null", async () => {
+    const { store, schools } = await openAngkorWithUploadedLogo();
+    const storage = new FakeObjectStorage();
+    storage.uploaded.add(QR_KEY);
+    const withQr = schoolService(store, storage);
+
+    expect((await withQr.updateSettings("school-1", { name: "Angkor", brandColor: null, paymentQrKey: QR_KEY })).paymentQrUrl).toBe(
+      `https://storage.test/${QR_KEY}?download&expires=${IMAGE_URL_TTL_SECONDS}`,
+    );
+    expect((await schools.updateSettings("school-1", { name: "Angkor", brandColor: null, paymentQrKey: null })).paymentQrUrl).toBeNull();
+  });
+
+  it("refuses a logo saved as the payment QR", async () => {
+    const { schools } = await openAngkorWithUploadedLogo();
+
+    await expect(schools.updateSettings("school-1", { name: "Angkor", brandColor: null, paymentQrKey: LOGO_KEY })).rejects.toThrow(InvalidMediaKeyError);
+  });
+
   it("saves the name and brand color, and returns the school with its signed logo URL", async () => {
     const { store, schools } = await openAngkorWithUploadedLogo();
 
@@ -179,7 +205,8 @@ describe("updateSettings", () => {
       name: "Bayon",
       subdomain: "angkor",
       brandColor: "#0055aa",
-      logoUrl: `https://storage.test/${LOGO_KEY}?download&expires=${LOGO_URL_TTL_SECONDS}`,
+      logoUrl: `https://storage.test/${LOGO_KEY}?download&expires=${IMAGE_URL_TTL_SECONDS}`,
+      paymentQrUrl: null,
     });
     expect(store.schools[0]?.logoKey).toBe(LOGO_KEY);
   });

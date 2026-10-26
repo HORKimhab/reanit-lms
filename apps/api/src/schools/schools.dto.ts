@@ -23,11 +23,11 @@ export class CreateSchoolBody extends createZodDto(createSchoolSchema) {}
 /** `GET /schools/by-subdomain/:subdomain` path. */
 export class SubdomainParams extends createZodDto(z.object({ subdomain: subdomainSchema })) {}
 
-/** `PATCH /schools/current` body: name, brand color and logo key (left out to keep the logo, null to remove it). */
+/** `PATCH /schools/current` body: name, brand color, and logo and payment QR keys (left out to keep the image, null to remove it). */
 export class SchoolSettingsBody extends createZodDto(schoolSettingsSchema) {}
 
-/** `POST /schools/current/logo-uploads` body: the image the browser is about to send. */
-export class LogoUploadBody extends createZodDto(uploadRequestSchema) {}
+/** `POST /schools/current/logo-uploads` and `/payment-qr-uploads` body: the image the browser is about to send. */
+export class ImageUploadBody extends createZodDto(uploadRequestSchema) {}
 
 /** `POST /schools/current/domain` body: the custom domain to set up. */
 export class CustomDomainBody extends createZodDto(customDomainSchema) {}
@@ -44,6 +44,7 @@ const schoolSchema = z.object({
   subdomain: z.string(),
   brandColor: z.string().nullable(),
   logoUrl: z.url().nullable(),
+  paymentQrUrl: z.url().nullable(),
 });
 
 /** A school, as the schools routes return it. */

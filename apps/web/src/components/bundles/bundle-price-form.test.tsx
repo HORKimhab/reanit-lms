@@ -11,7 +11,7 @@ describe("BundlePriceForm", () => {
   it("shows the current price in major units and saves a new one", async () => {
     const user = userEvent.setup();
     const action = vi.fn<(state: CourseFormState, formData: FormData) => Promise<CourseFormState>>().mockResolvedValue({ status: "saved", invalidFields: [] });
-    renderWithIntl(<BundlePriceForm price={{ amount: 2_000_000, currency: "KHR" }} action={action} />);
+    renderWithIntl(<BundlePriceForm price={{ amount: 2_000_000, currency: "KHR", billing: { kind: "one_time" } }} action={action} />);
 
     const amount = await screen.findByRole("textbox", { name: "Amount" });
     expect(amount).toHaveValue("20000");

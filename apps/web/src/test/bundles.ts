@@ -15,5 +15,5 @@ export const BUNDLE: BundleView = {
   description: "Everything to start.",
   status: "published",
   courses: BUNDLE_COURSES,
-  price: { amount: 9900, currency: "USD" },
+  price: { amount: 9900, currency: "USD", billing: { kind: "one_time" } },
 };

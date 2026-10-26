@@ -1,8 +1,8 @@
-import { OrderNotFoundError, OrderNotRefundableError, RefundByHandRequiredError } from "@reanit/core/commerce";
+import { OfflinePaymentClosedError, OrderNotFoundError, OrderNotRefundableError, RefundByHandRequiredError } from "@reanit/core/commerce";
 import type { OrderDetail } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
+import { setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const ORDER_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1d";
 const staff = useStaffApp();
@@ -19,6 +19,7 @@ const ORDER: OrderDetail = {
   paidAt: new Date("2026-10-20T08:01:00Z"),
   refundedAt: new Date("2026-10-21T09:00:00Z"),
   isRefundedByHand: true,
+  paymentReference: null,
 };
 const ORDER_JSON = { ...ORDER, createdAt: "2026-10-20T08:00:00.000Z", paidAt: "2026-10-20T08:01:00.000Z", refundedAt: "2026-10-21T09:00:00.000Z" };
 
@@ -114,3 +115,43 @@ describe("GET /orders/:id", () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe("POST /orders/:id/confirm-payment and /reject-payment", () => {
+  it("confirms an offline payment for an admin and audits it", async () => {
+    setStaffRole(staff.clients, "admin");
+    staff.clients.commerce.confirmOfflinePayment.mockResolvedValue(undefined);
+
+    const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/confirm-payment`, headers: staff.headers });
+
+    expect(response.statusCode).toBe(204);
+    expect(staff.clients.commerce.confirmOfflinePayment).toHaveBeenCalledWith(ORDER_ID);
+    expect(staff.clients.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: "order.payment.confirm", targetId: ORDER_ID }));
+  });
+
+  it("rejects an offline payment and audits it", async () => {
+    setStaffRole(staff.clients, "owner");
+    staff.clients.commerce.rejectOfflinePayment.mockResolvedValue(undefined);
+
+    const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/reject-payment`, headers: staff.headers });
+
+    expect(response.statusCode).toBe(204);
+    expect(staff.clients.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: "order.payment.reject", targetId: ORDER_ID }));
+  });
+
+  it("answers 409 for an order that is not an open offline payment", async () => {
+    setStaffRole(staff.clients, "owner");
+    staff.clients.commerce.confirmOfflinePayment.mockRejectedValue(new OfflinePaymentClosedError());
+
+    const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/confirm-payment`, headers: staff.headers });
+
+    expect(response.statusCode).toBe(409);
+  });
+
+  it("refuses an instructor", async () => {
+    const response = await staff.app.inject({ method: "POST", url: `/orders/${ORDER_ID}/confirm-payment`, headers: staff.headers });
+
+    expect(response.statusCode).toBe(403);
+    expect(staff.clients.commerce.confirmOfflinePayment).not.toHaveBeenCalled();
+  });
+});
+

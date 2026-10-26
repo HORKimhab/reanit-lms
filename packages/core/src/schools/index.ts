@@ -51,17 +51,19 @@ export type {
 export {
   createSchoolSchema,
   DEFAULT_BRAND_COLOR,
-  LOGO_RULES,
+  SCHOOL_IMAGE_RULES,
   SCHOOL_NAME_MAX_LENGTH,
+  schoolImagePrefix,
   schoolSettingsSchema,
   studentSearchSchema,
   subdomainSchema,
   suggestSubdomain,
   type CreateSchoolInput,
+  type SchoolImage,
   type SchoolSettingsInput,
   type StudentSearchInput,
 } from "./rules";
-export { createSchoolService, LOGO_URL_TTL_SECONDS, type SchoolService } from "./service";
+export { createSchoolService, IMAGE_URL_TTL_SECONDS, type SchoolService } from "./service";
 export { createStudentService, STUDENTS_PAGE_SIZE, type StudentPage, type StudentService } from "./students";
 export {
   changeRoleSchema,

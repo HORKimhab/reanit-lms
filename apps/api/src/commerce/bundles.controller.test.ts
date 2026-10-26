@@ -1,7 +1,7 @@
 import { BundleNotFoundError, UnknownBundleCourseError } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
+import { setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const BUNDLE_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1e";
 const COURSE_IDS = ["5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c01", "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c02"];
@@ -74,12 +74,12 @@ describe("bundles builder routes", () => {
 describe("PUT /bundles/:id/price", () => {
   it("lets an owner set the price", async () => {
     setStaffRole(staff.clients, "owner");
-    staff.clients.commerce.setBundlePrice.mockResolvedValue({ id: "p", amount: 9900, currency: "USD" });
+    staff.clients.commerce.setBundlePrice.mockResolvedValue({ id: "p", amount: 9900, currency: "USD", billing: { kind: "one_time" } });
 
     const response = await staff.app.inject({ method: "PUT", url: `/bundles/${BUNDLE_ID}/price`, headers: staff.headers, payload: { amount: 9900, currency: "USD" } });
 
-    expect(response.json()).toEqual({ price: { amount: 9900, currency: "USD" } });
-    expect(staff.clients.commerce.setBundlePrice).toHaveBeenCalledWith(BUNDLE_ID, { amount: 9900, currency: "USD" });
+    expect(response.json()).toEqual({ price: { amount: 9900, currency: "USD", billing: { kind: "one_time" } } });
+    expect(staff.clients.commerce.setBundlePrice).toHaveBeenCalledWith(BUNDLE_ID, { amount: 9900, currency: "USD", billing: { kind: "one_time" } });
   });
 
   it("refuses an instructor: pricing is for owners and admins", async () => {

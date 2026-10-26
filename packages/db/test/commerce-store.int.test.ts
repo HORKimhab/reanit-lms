@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
-import { createCatalogStore, createCommerceStore, createDbClient, createPaymentConfirmationStore } from "../src";
+import { createCatalogStore, createCommerceStore, createDbClient } from "../src";
+import { ONE_TIME, payAtGateway } from "../src/test/payments";
 import { openTestSchool } from "../src/test/schools";
 
 const db = createDbClient(inject("databaseUrl"));
-const confirmations = createPaymentConfirmationStore(db);
 let alphaId: string;
 let betaId: string;
 let courseId: string;
@@ -33,6 +33,7 @@ async function pendingOrder(userId: string, coupon?: { id: string; amount: numbe
     couponId: coupon?.id ?? null,
     method: "stripe",
     locale: "en",
+    subscriptionId: null,
   });
   const providerRef = `cs_${randomUUID()}`;
   await store.setProviderRef(id, providerRef);
@@ -47,8 +48,8 @@ beforeAll(async () => {
   await catalog.updateCourse(courseId, { status: "published" });
   buyerId = (await db.user.create({ data: { email: "commerce-buyer@example.com" } })).id;
   const store = createCommerceStore(db, alphaId);
-  await store.setPrice(courseId, { amount: 2900, currency: "USD" });
-  await store.setPrice(courseId, { amount: 4900, currency: "USD" });
+  await store.setPrice(courseId, { amount: 2900, currency: "USD", billing: ONE_TIME });
+  await store.setPrice(courseId, { amount: 4900, currency: "USD", billing: ONE_TIME });
 });
 
 afterAll(async () => {
@@ -69,7 +70,7 @@ describe("commerce store", () => {
     const beta = createCommerceStore(db, betaId);
 
     expect(await beta.findCourse("sold")).toBeNull();
-    expect(await beta.setPrice(courseId, { amount: 1, currency: "USD" })).toBeNull();
+    expect(await beta.setPrice(courseId, { amount: 1, currency: "USD", billing: ONE_TIME })).toBeNull();
   });
 
   it("creates a pending order its buyer can read and others cannot", async () => {
@@ -87,10 +88,10 @@ describe("payment confirmation store", () => {
     const buyer = (await db.user.create({ data: { email: "commerce-once@example.com" } })).id;
     const { id, providerRef } = await pendingOrder(buyer);
 
-    expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
-    expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: false });
+    expect(await payAtGateway(db, "stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
+    expect(await payAtGateway(db, "stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: false });
 
-    expect(await createCommerceStore(db, alphaId).enrolledCourseIds(buyer, [courseId, randomUUID()])).toEqual([courseId]);
+    expect(await createCommerceStore(db, alphaId).enrolledCourseIds(buyer, [courseId, randomUUID()], new Date())).toEqual([courseId]);
     expect(await db.enrollment.count({ where: { userId: buyer, courseId } })).toBe(1);
     expect((await createCommerceStore(db, alphaId).findOrder(id, buyer))?.status).toBe("paid");
     expect(await db.outboxEvent.findMany({ where: { type: "OrderPaid", payload: { path: ["orderId"], equals: id } }, select: { schoolId: true, payload: true } })).toEqual([
@@ -102,7 +103,7 @@ describe("payment confirmation store", () => {
     const buyer = (await db.user.create({ data: { email: "commerce-race@example.com" } })).id;
     const { providerRef } = await pendingOrder(buyer);
 
-    const results = await Promise.all([confirmations.confirm("stripe", providerRef), confirmations.confirm("stripe", providerRef)]);
+    const results = await Promise.all([payAtGateway(db, "stripe", providerRef), payAtGateway(db, "stripe", providerRef)]);
 
     expect(results.filter((result) => result?.isNewlyPaid)).toHaveLength(1);
     expect(await db.enrollment.count({ where: { userId: buyer, courseId } })).toBe(1);
@@ -111,8 +112,8 @@ describe("payment confirmation store", () => {
   it("ignores a reference from another gateway or that no order has", async () => {
     const { providerRef } = await pendingOrder((await db.user.create({ data: { email: "commerce-other@example.com" } })).id);
 
-    expect(await confirmations.confirm("aba_payway", providerRef)).toBeNull();
-    expect(await confirmations.confirm("stripe", "cs_unknown")).toBeNull();
+    expect(await payAtGateway(db, "aba_payway", providerRef)).toBeNull();
+    expect(await payAtGateway(db, "stripe", "cs_unknown")).toBeNull();
   });
 });
 
@@ -152,7 +153,7 @@ describe("coupons", () => {
     const buyer = (await db.user.create({ data: { email: "commerce-coupon@example.com" } })).id;
     const paid = await pendingOrder(buyer, { id: coupon.id, amount: 3920 });
     await pendingOrder((await db.user.create({ data: { email: "commerce-coupon-pending@example.com" } })).id, { id: coupon.id, amount: 3920 });
-    await confirmations.confirm("stripe", paid.providerRef);
+    await payAtGateway(db, "stripe", paid.providerRef);
 
     expect((await store.findCoupon("COUNTED"))?.redemptions).toBe(1);
     expect((await store.findOrder(paid.id, buyer))?.amount).toBe(3920);
@@ -225,8 +226,8 @@ describe("bundles", () => {
     const store = createCommerceStore(db, alphaId);
     const bundle = await store.createBundle({ title: "Priced", slug: "priced", courseIds: [courseId, await course("priced-two")] });
 
-    await store.setBundlePrice(bundle.id, { amount: 9000, currency: "USD" });
-    await store.setBundlePrice(bundle.id, { amount: 8000, currency: "USD" });
+    await store.setBundlePrice(bundle.id, { amount: 9000, currency: "USD", billing: ONE_TIME });
+    await store.setBundlePrice(bundle.id, { amount: 8000, currency: "USD", billing: ONE_TIME });
 
     expect((await store.findBundle("priced"))?.price).toEqual({ id: expect.any(String), amount: 8000, currency: "USD" });
   });
@@ -238,7 +239,7 @@ describe("bundles", () => {
     expect(await beta.findBundle("mine")).toBeNull();
     expect(await beta.listBundles()).toEqual([]);
     expect(await beta.updateBundle(bundle.id, { title: "Taken" })).toBeNull();
-    expect(await beta.setBundlePrice(bundle.id, { amount: 1, currency: "USD" })).toBeNull();
+    expect(await beta.setBundlePrice(bundle.id, { amount: 1, currency: "USD", billing: ONE_TIME })).toBeNull();
     expect(await beta.findCourseIds([courseId])).toEqual([]);
     expect(await createCommerceStore(db, alphaId).findCourseIds([courseId, randomUUID()])).toEqual([courseId]);
   });
@@ -247,7 +248,7 @@ describe("bundles", () => {
     const store = createCommerceStore(db, alphaId);
     const other = await course("sold-with");
     const bundle = await store.createBundle({ title: "Sold kit", slug: "sold-kit", courseIds: [courseId, other] });
-    const price = await store.setBundlePrice(bundle.id, { amount: 9001, currency: "USD" });
+    const price = await store.setBundlePrice(bundle.id, { amount: 9001, currency: "USD", billing: ONE_TIME });
     if (!price) throw new Error("The bundle has no price.");
     const buyer = (await db.user.create({ data: { email: "commerce-bundle@example.com" } })).id;
 
@@ -262,16 +263,17 @@ describe("bundles", () => {
       couponId: null,
       method: "stripe",
       locale: "en",
+      subscriptionId: null,
     });
     await store.setProviderRef(id, `cs_bundle_${id}`);
-    await confirmations.confirm("stripe", `cs_bundle_${id}`);
+    await payAtGateway(db, "stripe", `cs_bundle_${id}`);
 
     expect(await db.order.findUnique({ where: { id }, select: { totalAmount: true } })).toEqual({ totalAmount: 9001 });
     expect(await db.orderItem.findMany({ where: { orderId: id }, select: { courseId: true, bundleId: true, amount: true }, orderBy: { amount: "desc" } })).toEqual([
       { courseId, bundleId: bundle.id, amount: 4501 },
       { courseId: other, bundleId: bundle.id, amount: 4500 },
     ]);
-    expect((await store.enrolledCourseIds(buyer, [courseId, other])).sort()).toEqual([courseId, other].sort());
+    expect((await store.enrolledCourseIds(buyer, [courseId, other], new Date())).sort()).toEqual([courseId, other].sort());
   });
 
   it("refuses a price that belongs to neither a course nor a bundle", async () => {
@@ -281,7 +283,7 @@ describe("bundles", () => {
   it("refunds a paid order: takes the course back, reverses the day's sales and records OrderRefunded, once", async () => {
     const refundedBuyer = (await db.user.create({ data: { email: "commerce-refunded@example.com" } })).id;
     const { id, providerRef } = await pendingOrder(refundedBuyer);
-    await confirmations.confirm("stripe", providerRef);
+    await payAtGateway(db, "stripe", providerRef);
     const { paidAt } = await db.order.findUniqueOrThrow({ where: { id }, select: { paidAt: true } });
     const day = new Date(`${paidAt!.toISOString().slice(0, 10)}T00:00:00Z`); // confirm set paidAt
     /**
@@ -324,7 +326,7 @@ describe("bundles", () => {
     await store.failOrder(id);
     expect((await store.findSchoolOrder(id))?.status).toBe("failed");
 
-    expect(await confirmations.confirm("stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
+    expect(await payAtGateway(db, "stripe", providerRef)).toEqual({ orderId: id, isNewlyPaid: true });
     expect((await store.findSchoolOrder(id))?.status).toBe("paid");
     expect(await db.enrollment.count({ where: { userId: lateBuyer } })).toBe(1);
 

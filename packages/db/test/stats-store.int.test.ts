@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
-import { createCatalogStore, createCommerceStore, createDbClient, createLearningStore, createPaymentConfirmationStore, createStatsStore } from "../src";
+import { createCatalogStore, createCommerceStore, createDbClient, createLearningStore, createStatsStore } from "../src";
 import { openTestSchool } from "../src/test/schools";
+import { ONE_TIME, payAtGateway } from "../src/test/payments";
 
 const db = createDbClient(inject("databaseUrl"));
 let alphaId: string;
@@ -20,10 +21,10 @@ async function sellTo(email: string) {
   const price = (await store.findCourse("sold"))?.price;
   if (!price) throw new Error("The course has no price.");
   const userId = (await db.user.create({ data: { email } })).id;
-  const { id } = await store.createOrder({ userId, price, lines: [{ courseId: soldId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en" });
+  const { id } = await store.createOrder({ userId, price, lines: [{ courseId: soldId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null });
   await store.setProviderRef(id, `cs_stats_${id}`);
-  await createPaymentConfirmationStore(db).confirm("stripe", `cs_stats_${id}`);
-  await createPaymentConfirmationStore(db).confirm("stripe", `cs_stats_${id}`);
+  await payAtGateway(db, "stripe", `cs_stats_${id}`);
+  await payAtGateway(db, "stripe", `cs_stats_${id}`);
   return db.enrollment.findUniqueOrThrow({ where: { userId_courseId: { userId, courseId: soldId } }, select: { id: true, courseId: true } });
 }
 
@@ -34,10 +35,10 @@ beforeAll(async () => {
   soldId = (await catalog.createCourse({ title: "Sold", slug: "sold" })).id;
   unsoldId = (await catalog.createCourse({ title: "Unsold", slug: "unsold" })).id;
   const commerce = createCommerceStore(db, alphaId);
-  await commerce.setPrice(soldId, { amount: 1_500_000_000, currency: "KHR" });
+  await commerce.setPrice(soldId, { amount: 1_500_000_000, currency: "KHR", billing: ONE_TIME });
   const first = await sellTo("stats-buyer-1@example.com");
   await sellTo("stats-buyer-2@example.com");
-  await commerce.setPrice(soldId, { amount: 4900, currency: "USD" });
+  await commerce.setPrice(soldId, { amount: 4900, currency: "USD", billing: ONE_TIME });
   await sellTo("stats-buyer-3@example.com");
   await createLearningStore(db, alphaId).completeCourse(first, new Date());
 });

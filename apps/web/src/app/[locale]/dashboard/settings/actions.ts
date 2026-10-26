@@ -10,7 +10,7 @@ import { getApi } from "@/server/api";
 import { checkStaffResponse } from "@/server/schools/staff";
 
 /** A settings field that can fail validation. */
-export type SettingsField = "name" | "brand" | "logo";
+export type SettingsField = "name" | "brand" | "logo" | "paymentQr";
 
 /** Result of the last save, shown by the settings form; `failed` means the logo never reached storage. */
 export type SettingsState = { status: "idle" | "saved" | "invalid" | "failed"; invalidFields: SettingsField[] };
@@ -19,7 +19,7 @@ export type SettingsState = { status: "idle" | "saved" | "invalid" | "failed"; i
 export type LogoUploadStart = { status: "ready"; url: string; headers: Record<string, string>; key: string } | { status: "rejected" };
 
 /** The form field each settings value comes from. */
-const FIELD_OF: Record<keyof SchoolSettingsInput, SettingsField> = { name: "name", brandColor: "brand", logoKey: "logo" };
+const FIELD_OF: Record<keyof SchoolSettingsInput, SettingsField> = { name: "name", brandColor: "brand", logoKey: "logo", paymentQrKey: "paymentQr" };
 
 /** API answers to a logo upload request that mean the image is not acceptable: wrong type (415) or too big (413). */
 const LOGO_REFUSALS = new Set([415, 413]);

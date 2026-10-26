@@ -24,7 +24,7 @@ export class UnknownPaymentError extends Error {
 }
 
 /** Why a coupon cannot be used on an order. */
-type CouponProblem = "unknown" | "expired" | "used_up" | "wrong_currency" | "covers_price";
+type CouponProblem = "unknown" | "expired" | "used_up" | "wrong_currency" | "covers_price" | "one_time_only";
 
 /** The coupon code cannot be used on this order; `reason` says why. */
 export class InvalidCouponError extends Error {
@@ -68,4 +68,19 @@ export class OrderNotRefundableError extends Error {
 /** The order's gateway cannot refund (KHQR, PayWay): staff pay the student back themselves, then confirm it. */
 export class RefundByHandRequiredError extends Error {
   override readonly name = "RefundByHandRequiredError";
+}
+
+/** The student has no such subscription or payment plan in the school. */
+export class SubscriptionNotFoundError extends Error {
+  override readonly name = "SubscriptionNotFoundError";
+}
+
+/** The subscription cannot take another payment: its first one is still open, or the plan is paid off. */
+export class SubscriptionNotRenewableError extends Error {
+  override readonly name = "SubscriptionNotRenewableError";
+}
+
+/** The order is not an offline QR payment that can still be marked paid, confirmed or rejected. */
+export class OfflinePaymentClosedError extends Error {
+  override readonly name = "OfflinePaymentClosedError";
 }

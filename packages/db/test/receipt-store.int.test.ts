@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
-import { createCatalogStore, createCommerceStore, createDbClient, createPaymentConfirmationStore, createReceiptStore } from "../src";
+import { createCatalogStore, createCommerceStore, createDbClient, createReceiptStore } from "../src";
 import { openTestSchool } from "../src/test/schools";
+import { ONE_TIME, payAtGateway } from "../src/test/payments";
 
 const db = createDbClient(inject("databaseUrl"));
 let alphaId: string;
@@ -20,9 +21,9 @@ async function order(email: string, isPaid: boolean) {
   const price = (await store.findCourse("receipted"))?.price;
   if (!price) throw new Error("The course has no price.");
   const userId = (await db.user.create({ data: { email, name: "Sokha" } })).id;
-  const { id } = await store.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km" });
+  const { id } = await store.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null });
   await store.setProviderRef(id, `cs_receipt_${id}`);
-  if (isPaid) await createPaymentConfirmationStore(db).confirm("stripe", `cs_receipt_${id}`);
+  if (isPaid) await payAtGateway(db, "stripe", `cs_receipt_${id}`);
   return id;
 }
 
@@ -32,7 +33,7 @@ beforeAll(async () => {
   const catalog = createCatalogStore(db, alphaId);
   courseId = (await catalog.createCourse({ title: "Receipted", slug: "receipted" })).id;
   await catalog.updateCourse(courseId, { status: "published" });
-  await createCommerceStore(db, alphaId).setPrice(courseId, { amount: 648_000_000, currency: "KHR" });
+  await createCommerceStore(db, alphaId).setPrice(courseId, { amount: 648_000_000, currency: "KHR", billing: ONE_TIME });
 });
 
 afterAll(async () => {

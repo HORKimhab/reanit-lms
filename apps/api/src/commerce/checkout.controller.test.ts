@@ -2,8 +2,10 @@ import {
   AlreadyEnrolledError,
   CourseNotForSaleError,
   InvalidCouponError,
+  OfflinePaymentClosedError,
   OrderNotFoundError,
   PaymentMethodUnavailableError,
+  SubscriptionNotRenewableError,
 } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
@@ -207,3 +209,66 @@ describe("public bundle routes", () => {
     expect(urls(ORDER_ID).cancelUrl).toBe(`http://localhost:3000/s/${TEST_SCHOOL.subdomain}/bundles/design-kit`);
   });
 });
+
+describe("offline QR checkout", () => {
+  const QR_URL = "https://storage.test/schools/s/payment-qr/qr.png?download";
+
+  it("shows the school's payment QR image to pay a subscription offline", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.schools.getSchoolBySubdomain.mockResolvedValue({ ...TEST_SCHOOL, paymentQrUrl: QR_URL });
+    testApp.clients.commerce.checkout.mockResolvedValue({ orderId: ORDER_ID, payment: { kind: "offline" } });
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/checkout`, headers, payload: { courseSlug: "club", method: "offline_qr" } });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({ orderId: ORDER_ID, payment: { kind: "offline", qrImageUrl: QR_URL } });
+  });
+
+  it("records the student's transaction reference for staff to confirm", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.submitOfflinePayment.mockResolvedValue(undefined);
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/orders/${ORDER_ID}/offline-payment`, headers, payload: { reference: "  ABA-123 " } });
+
+    expect(response.statusCode).toBe(204);
+    expect(testApp.clients.commerce.submitOfflinePayment).toHaveBeenCalledWith(ORDER_ID, TEST_USER.id, { reference: "ABA-123" });
+  });
+
+  it("answers 409 for an order that is not waiting for an offline payment, and 400 without a reference", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.submitOfflinePayment.mockRejectedValue(new OfflinePaymentClosedError());
+
+    const closed = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/orders/${ORDER_ID}/offline-payment`, headers, payload: { reference: "ABA-123" } });
+    const blank = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/orders/${ORDER_ID}/offline-payment`, headers, payload: { reference: " " } });
+
+    expect(closed.statusCode).toBe(409);
+    expect(closed.json().type).toBe("urn:reanit:problem:offline-payment-closed");
+    expect(blank.statusCode).toBe(400);
+  });
+});
+
+describe("POST .../subscriptions/:subscriptionId/renew", () => {
+  const SUBSCRIPTION_ID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+
+  it("pays the next period with the chosen method, coming back to the student's purchases", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.renewSubscription.mockResolvedValue({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://payway.test/pay", providerRef: "tran" } });
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/subscriptions/${SUBSCRIPTION_ID}/renew`, headers, payload: { method: "aba_payway", locale: "km" } });
+
+    expect(response.json()).toEqual({ orderId: ORDER_ID, payment: { kind: "redirect", url: "https://payway.test/pay" } });
+    const [buyer, subscriptionId, body, urls] = testApp.clients.commerce.renewSubscription.mock.calls[0] ?? [];
+    expect([buyer, subscriptionId, body]).toEqual([{ userId: TEST_USER.id, email: TEST_USER.email }, SUBSCRIPTION_ID, { method: "aba_payway", locale: "km" }]);
+    expect(urls(ORDER_ID).cancelUrl).toBe(`http://localhost:3000/s/${TEST_SCHOOL.subdomain}/purchases`);
+  });
+
+  it("answers 409 for a subscription that cannot take another payment", async () => {
+    const headers = signInAs(testApp.clients);
+    testApp.clients.commerce.renewSubscription.mockRejectedValue(new SubscriptionNotRenewableError());
+
+    const response = await testApp.app.inject({ method: "POST", url: `${BASE_URL}/subscriptions/${SUBSCRIPTION_ID}/renew`, headers, payload: { method: "aba_payway" } });
+
+    expect(response.statusCode).toBe(409);
+  });
+});
+

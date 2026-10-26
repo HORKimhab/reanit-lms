@@ -10,10 +10,13 @@ import {
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
+  OfflinePaymentClosedError,
   OrderNotFoundError,
   OrderNotRefundableError,
   PaymentMethodUnavailableError,
   RefundByHandRequiredError,
+  SubscriptionNotFoundError,
+  SubscriptionNotRenewableError,
   UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
@@ -25,20 +28,26 @@ import type {
   OrderSummary,
   PaymentConfirmationStore,
   PaymentGateway,
+  PaymentMatch,
   PaymentStart,
   Price,
+  SubscriptionRecord,
 } from "./ports";
-import type {
-  BundleCheckoutInput,
-  CheckoutInput,
-  CouponInput,
-  CreateBundleInput,
-  OfferQuery,
-  PaymentMethod,
-  PriceInput,
-  RefundInput,
-  UpdateBundleInput,
+import {
+  ONE_TIME_ONLY_METHODS,
+  type BundleCheckoutInput,
+  type CheckoutInput,
+  type CouponInput,
+  type CreateBundleInput,
+  type OfferQuery,
+  type OfflinePaymentInput,
+  type PaymentMethod,
+  type PriceInput,
+  type RefundInput,
+  type RenewInput,
+  type UpdateBundleInput,
 } from "./rules";
+import { currentStatus, renewSubscription } from "./subscriptions";
 
 /** Slug for a bundle title with no Latin letters or digits. */
 const FALLBACK_BUNDLE_SLUG = "bundle";
@@ -54,6 +63,12 @@ type Offer = { price: Price | null; methods: PaymentMethod[]; discount: Discount
 
 /** What an order sells: one course, or a bundle's courses at the bundle's price. */
 type Product = { title: string; price: Price; courseIds: string[]; bundleId: string | null };
+
+/** How one order is paid: the method, the buyer's language, the coupon and amount, and the subscription period it pays, if any. */
+type OrderTerms = Pick<CheckoutInput, "method" | "locale"> & { couponId: string | null; amount: number; subscriptionId: string | null };
+
+/** Offline QR orders staff may still confirm or reject: the student has not paid, has said they paid, or staff rejected it by mistake. */
+const OPEN_OFFLINE_STATUSES = new Set(["pending", "awaiting_confirmation", "failed"]);
 
 /** What `createCommerceService` needs. */
 export interface CommerceDependencies {
@@ -83,13 +98,31 @@ export interface CommerceDependencies {
  */
 export function createCommerceService({ store, gateways, confirmation, clock }: CommerceDependencies) {
   /**
-   * Lists the methods that can charge a price.
+   * Lists the methods that can charge a price. A one-time price takes every gateway that takes its
+   * currency. A subscription or payment plan is paid period by period without saved cards: by the
+   * school's own payment QR first (when it uploaded one), then by the gateways that are not one-time only.
    *
    * @param price The price.
-   * @returns The methods, in the configured order.
+   * @returns The methods, the default first.
    */
-  function methodsFor(price: Price): PaymentMethod[] {
-    return gateways.filter((gateway) => gateway.supports(price.currency)).map((gateway) => gateway.method);
+  async function methodsFor(price: Price): Promise<PaymentMethod[]> {
+    const isOneTime = price.billing.kind === "one_time";
+    const gatewayMethods = gateways
+      .filter((gateway) => gateway.supports(price.currency) && (isOneTime || !ONE_TIME_ONLY_METHODS.includes(gateway.method)))
+      .map((gateway) => gateway.method);
+    if (isOneTime || !(await store.hasPaymentQr())) return gatewayMethods;
+    return ["offline_qr", ...gatewayMethods];
+  }
+
+  /**
+   * Checks that a method can charge a price.
+   *
+   * @param method The chosen method.
+   * @param price The price.
+   * @throws {PaymentMethodUnavailableError} When it is not configured, does not take the currency, or does not take this kind of price.
+   */
+  async function assertMethod(method: PaymentMethod, price: Price): Promise<void> {
+    if (!(await methodsFor(price)).includes(method)) throw new PaymentMethodUnavailableError();
   }
 
   /**
@@ -98,9 +131,10 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
    * @param price The course's price.
    * @param code The coupon code, normalized to upper case.
    * @returns The coupon and its discount.
-   * @throws {InvalidCouponError} When the school has no such coupon, or it cannot be used on this price.
+   * @throws {InvalidCouponError} When the school has no such coupon, it cannot be used on this price, or the price is not one-time.
    */
   async function discountFor(price: Price, code: string): Promise<{ coupon: Coupon; discount: Discount }> {
+    if (price.billing.kind !== "one_time") throw new InvalidCouponError("one_time_only");
     const coupon = await store.findCoupon(code);
     if (!coupon) throw new InvalidCouponError("unknown");
     return { coupon, discount: applyCoupon(price, coupon, clock.now()) };
@@ -117,19 +151,55 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
   async function offerFor(price: Price | null, query: OfferQuery): Promise<Offer> {
     if (!price) return { price: null, methods: [], discount: null };
     const discount = query.coupon ? (await discountFor(price, query.coupon)).discount : null;
-    return { price, methods: methodsFor(price), discount };
+    return { price, methods: await methodsFor(price), discount };
   }
 
   /**
-   * Creates a pending order for a course or bundle at its price less any coupon, split across its
-   * courses, and asks the chosen gateway to take the payment.
+   * Creates a pending order for a product, its amount split across its courses, and starts its
+   * payment: the gateway's step, or showing the school's payment QR for an offline payment.
+   *
+   * @param buyer Who is paying.
+   * @param product What is bought.
+   * @param terms The method (already checked), language, coupon, amount and subscription.
+   * @param urls Where the gateway sends the student back.
+   * @returns The order id and what the browser does next.
+   */
+  async function placeOrder(buyer: Buyer, product: Product, terms: OrderTerms, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
+    const { id: orderId } = await store.createOrder({
+      userId: buyer.userId,
+      price: product.price,
+      lines: splitAcrossCourses(terms.amount, product.courseIds, product.price.currency),
+      bundleId: product.bundleId,
+      couponId: terms.couponId,
+      method: terms.method,
+      locale: terms.locale,
+      subscriptionId: terms.subscriptionId,
+    });
+    const gateway = gateways.find(({ method }) => method === terms.method);
+    // assertMethod let the method through, so without a gateway it is the school's offline QR.
+    if (!gateway) return { orderId, payment: { kind: "offline" } };
+    const payment = await gateway.startPayment({
+      orderId,
+      amount: terms.amount,
+      currency: product.price.currency,
+      description: product.title,
+      customerEmail: buyer.email,
+      ...urls(orderId),
+    });
+    await store.setProviderRef(orderId, payment.providerRef);
+    return { orderId, payment };
+  }
+
+  /**
+   * Starts buying a course or bundle: at its price less any coupon for a one-time price, or as a new
+   * subscription's first period for a recurring price or payment plan.
    *
    * @param buyer Who is paying.
    * @param product What is bought.
    * @param input The payment method, coupon code and the buyer's language.
    * @param urls Where the gateway sends the student back.
    * @returns The order id and what the browser does next.
-   * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
+   * @throws {PaymentMethodUnavailableError} When the method cannot charge the price.
    * @throws {AlreadyEnrolledError} When the student already has every course sold.
    * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the price.
    */
@@ -139,32 +209,39 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
     input: Pick<CheckoutInput, "method" | "couponCode" | "locale">,
     urls: ReturnUrls,
   ): Promise<{ orderId: string; payment: PaymentStart }> {
-    const gateway = gateways.find(({ method }) => method === input.method);
-    if (!gateway?.supports(product.price.currency)) throw new PaymentMethodUnavailableError();
-    const owned = await store.enrolledCourseIds(buyer.userId, product.courseIds);
+    await assertMethod(input.method, product.price);
+    const owned = await store.enrolledCourseIds(buyer.userId, product.courseIds, clock.now());
     if (owned.length === product.courseIds.length) throw new AlreadyEnrolledError();
     const coupon = input.couponCode ? await discountFor(product.price, input.couponCode) : null;
-    const amount = coupon?.discount.total ?? product.price.amount;
+    const subscription =
+      product.price.billing.kind === "one_time" ? null : await store.createSubscription({ userId: buyer.userId, priceId: product.price.id });
+    return placeOrder(
+      buyer,
+      product,
+      {
+        method: input.method,
+        locale: input.locale,
+        couponId: coupon?.coupon.id ?? null,
+        amount: coupon?.discount.total ?? product.price.amount,
+        subscriptionId: subscription?.id ?? null,
+      },
+      urls,
+    );
+  }
 
-    const { id: orderId } = await store.createOrder({
-      userId: buyer.userId,
-      price: product.price,
-      lines: splitAcrossCourses(amount, product.courseIds, product.price.currency),
-      bundleId: product.bundleId,
-      couponId: coupon?.coupon.id ?? null,
-      method: gateway.method,
-      locale: input.locale,
-    });
-    const payment = await gateway.startPayment({
-      orderId,
-      amount,
-      currency: product.price.currency,
-      description: product.title,
-      customerEmail: buyer.email,
-      ...urls(orderId),
-    });
-    await store.setProviderRef(orderId, payment.providerRef);
-    return { orderId, payment };
+  /**
+   * Finds an offline QR order of the school that staff can still confirm or reject.
+   *
+   * @param orderId The order.
+   * @returns The order.
+   * @throws {OrderNotFoundError} When the school has no such order.
+   * @throws {OfflinePaymentClosedError} When it is not an offline QR order, or is already paid or refunded.
+   */
+  async function openOfflineOrder(orderId: string): Promise<OrderSummary> {
+    const order = await store.findSchoolOrder(orderId);
+    if (!order) throw new OrderNotFoundError();
+    if (order.method !== "offline_qr" || !OPEN_OFFLINE_STATUSES.has(order.status)) throw new OfflinePaymentClosedError();
+    return order;
   }
 
   /**
@@ -266,7 +343,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
      * @throws {CourseNotFoundError} When the school has no published course with that slug.
      * @throws {CourseNotForSaleError} When the course has no price.
      * @throws {AlreadyEnrolledError} When the student already has the course.
-     * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
+     * @throws {PaymentMethodUnavailableError} When the method cannot charge the course's price.
      * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the course's price.
      */
     async checkout(buyer: Buyer, input: CheckoutInput, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
@@ -378,7 +455,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
      * @throws {BundleNotFoundError} When the school has no published bundle with that slug.
      * @throws {CourseNotForSaleError} When the bundle has no price.
      * @throws {AlreadyEnrolledError} When the student already has every course of the bundle.
-     * @throws {PaymentMethodUnavailableError} When the method is not configured or does not take the currency.
+     * @throws {PaymentMethodUnavailableError} When the method cannot charge the bundle's price.
      * @throws {InvalidCouponError} When the coupon is unknown or cannot be used on the bundle's price.
      */
     async checkoutBundle(buyer: Buyer, input: BundleCheckoutInput, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
@@ -408,7 +485,7 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
         return { ...order, status: "failed" };
       }
       if (check !== "paid") return order;
-      await confirmation.confirm(order.method, order.providerRef);
+      await confirmation.confirm(gateway.method, order.providerRef);
       return { ...order, status: "paid" };
     },
 
@@ -428,39 +505,145 @@ export function createCommerceService({ store, gateways, confirmation, clock }: 
     async refundOrder(orderId: string, { isRefundedByHand }: RefundInput): Promise<void> {
       const order = await store.findSchoolOrder(orderId);
       if (!order) throw new OrderNotFoundError();
-      if (order.status !== "paid" || !order.providerRef) throw new OrderNotRefundableError();
+      if (order.status !== "paid") throw new OrderNotRefundableError();
       const gateway = gateways.find(({ method }) => method === order.method);
-      if (gateway?.refund) await gateway.refund(order.providerRef);
+      // Gateway orders get their reference when payment starts; offline QR orders have none and no gateway.
+      const canGatewayRefund = Boolean(gateway?.refund && order.providerRef);
+      if (canGatewayRefund) await gateway!.refund!(order.providerRef!);
       else if (!isRefundedByHand) throw new RefundByHandRequiredError();
-      const isRefunded = await store.refundOrder(orderId, { at: clock.now(), isRefundedByHand: !gateway?.refund });
+      const isRefunded = await store.refundOrder(orderId, { at: clock.now(), isRefundedByHand: !canGatewayRefund });
       if (!isRefunded) throw new OrderNotRefundableError();
+    },
+
+    /**
+     * Pays a subscription's next period or a payment plan's next instalment, at its price; the
+     * confirmed payment extends access. A lapsed subscription comes back this way.
+     *
+     * @param buyer Who is paying.
+     * @param buyer.userId Their user id.
+     * @param buyer.email Their email, for the gateway's receipt.
+     * @param subscriptionId The subscription.
+     * @param input The payment method and the buyer's language.
+     * @param urls Where the gateway sends the student back, given the new order's id.
+     * @returns The order id and what the browser does next.
+     * @throws {SubscriptionNotFoundError} When the student has no such subscription in the school.
+     * @throws {SubscriptionNotRenewableError} When its first payment is still open, or the plan is paid off.
+     * @throws {PaymentMethodUnavailableError} When the method cannot charge the price.
+     */
+    async renewSubscription(buyer: Buyer, subscriptionId: string, input: RenewInput, urls: ReturnUrls): Promise<{ orderId: string; payment: PaymentStart }> {
+      const subscription = await store.findSubscription(subscriptionId, buyer.userId);
+      if (!subscription) throw new SubscriptionNotFoundError();
+      if (subscription.status === "pending" || subscription.status === "completed") throw new SubscriptionNotRenewableError();
+      await assertMethod(input.method, subscription.price);
+      const { title, price, courseIds, bundleId } = subscription;
+      return placeOrder(buyer, { title, price, courseIds, bundleId }, { ...input, couponId: null, amount: price.amount, subscriptionId }, urls);
+    },
+
+    /**
+     * Lists the student's subscriptions and payment plans in the school, with where each stands now.
+     *
+     * @param userId The signed-in student.
+     * @returns Every subscription ever paid, newest first; an active one past its grace period shows as lapsed.
+     */
+    async listMySubscriptions(userId: string): Promise<SubscriptionRecord[]> {
+      const now = clock.now();
+      return (await store.listSubscriptions(userId)).map((subscription) => ({ ...subscription, status: currentStatus(subscription, now) }));
+    },
+
+    /**
+     * Records the student's word that they paid an offline QR order, with the reference their banking
+     * app showed; the order then waits for staff to confirm the money arrived.
+     *
+     * @param orderId The order.
+     * @param userId The signed-in student.
+     * @param input The transaction reference.
+     * @param input.reference As the banking app showed it.
+     * @throws {OrderNotFoundError} When the student has no such order in the school.
+     * @throws {OfflinePaymentClosedError} When it is not a pending offline QR order.
+     */
+    async submitOfflinePayment(orderId: string, userId: string, { reference }: OfflinePaymentInput): Promise<void> {
+      if (await store.submitOfflinePayment(orderId, userId, reference)) return;
+      if (!(await store.findOrder(orderId, userId))) throw new OrderNotFoundError();
+      throw new OfflinePaymentClosedError();
+    },
+
+    /**
+     * Confirms, for staff, that an offline QR payment arrived: the order is paid and enrolls its buyer
+     * through the same confirmation as gateway payments.
+     *
+     * @param orderId The order.
+     * @throws {OrderNotFoundError} When the school has no such order.
+     * @throws {OfflinePaymentClosedError} When it is not an offline QR order, or is already paid or refunded.
+     */
+    async confirmOfflinePayment(orderId: string): Promise<void> {
+      await openOfflineOrder(orderId);
+      await confirmation.confirmOffline(orderId);
+    },
+
+    /**
+     * Rejects, for staff, an offline QR payment that never arrived: the order fails and enrolls nobody.
+     *
+     * @param orderId The order.
+     * @throws {OrderNotFoundError} When the school has no such order.
+     * @throws {OfflinePaymentClosedError} When it is not an offline QR order still waiting for payment or confirmation.
+     */
+    async rejectOfflinePayment(orderId: string): Promise<void> {
+      await openOfflineOrder(orderId);
+      if (!(await store.failOrder(orderId))) throw new OfflinePaymentClosedError();
     },
   };
 }
 
 /**
- * Builds the one path to enrollment: a gateway's confirmed payment marks the order paid and
- * enrolls the buyer, exactly once however often the gateway repeats itself.
+ * Builds the one path to enrollment: a confirmed payment marks the order paid and enrolls the buyer,
+ * exactly once however often it is repeated. Gateways confirm their own payments; staff confirm the
+ * offline QR payments they found in the school's account. A subscription's payment also moves its
+ * period on (`renewSubscription`) and its enrollments' access with it.
  *
- * @param store Confirms payments across schools.
- * @returns The confirmation operation.
+ * @param dependencies Store and clock.
+ * @param dependencies.store Confirms payments across schools.
+ * @param dependencies.clock When a payment is confirmed.
+ * @returns The confirmation operations.
  * @example
- * await createPaymentConfirmation(createPaymentConfirmationStore(db)).confirm("stripe", session.id);
+ * await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock }).confirm("stripe", session.id);
  */
-export function createPaymentConfirmation(store: PaymentConfirmationStore) {
+export function createPaymentConfirmation({ store, clock }: { store: PaymentConfirmationStore; clock: Clock }) {
+  /**
+   * Records a confirmed payment.
+   *
+   * @param payment How to find its order.
+   * @returns The order and whether this call is the one that marked it paid.
+   * @throws {UnknownPaymentError} When no order matches.
+   */
+  async function confirmPayment(payment: PaymentMatch) {
+    const result = await store.confirm(payment, clock.now(), renewSubscription);
+    if (!result) throw new UnknownPaymentError();
+    return result;
+  }
+
   return {
     /**
-     * Records a payment the gateway has confirmed (webhook or status check).
+     * Records a payment a gateway has confirmed (webhook or status check).
      *
      * @param method The gateway that confirmed it.
      * @param providerRef The gateway's reference for the payment.
      * @returns The order and whether this call is the one that marked it paid.
      * @throws {UnknownPaymentError} When no order has the reference.
      */
-    async confirm(method: PaymentMethod, providerRef: string) {
-      const result = await store.confirm(method, providerRef);
-      if (!result) throw new UnknownPaymentError();
-      return result;
+    confirm(method: PaymentGateway["method"], providerRef: string) {
+      return confirmPayment({ method, providerRef });
+    },
+
+    /**
+     * Records an offline QR payment staff found in the school's account; the caller has checked the
+     * order is the staff member's school's.
+     *
+     * @param orderId The order.
+     * @returns The order and whether this call is the one that marked it paid.
+     * @throws {UnknownPaymentError} When no offline QR order has the id.
+     */
+    confirmOffline(orderId: string) {
+      return confirmPayment({ offlineOrderId: orderId });
     },
   };
 }

@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { createAccountStore, createCatalogStore, createCommerceStore, createDbClient } from "../src";
 import { enrollTestStudent, openTestSchool } from "../src/test/schools";
+import { ONE_TIME } from "../src/test/payments";
 
 const db = createDbClient(inject("databaseUrl"));
 const store = createAccountStore(db);
@@ -36,9 +37,9 @@ async function openSchoolWithCourse(subdomain: string) {
  */
 async function orderCourse({ schoolId, courseId }: { schoolId: string; courseId: string }, userId: string) {
   const commerce = createCommerceStore(db, schoolId);
-  const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD" });
+  const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD", billing: ONE_TIME });
   // setPrice found the course the test created.
-  return (await commerce.createOrder({ userId, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en" })).id;
+  return (await commerce.createOrder({ userId, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null })).id;
 }
 
 let alpha: Awaited<ReturnType<typeof openSchoolWithCourse>>;
@@ -48,6 +49,8 @@ let otherStudentId: string;
 let ownerId: string;
 let paidOrderId: string;
 let pendingOrderId: string;
+let awaitingOrderId: string;
+let subscriptionId: string;
 
 beforeAll(async () => {
   alpha = await openSchoolWithCourse("account-alpha");
@@ -66,6 +69,10 @@ beforeAll(async () => {
   paidOrderId = await orderCourse(alpha, id);
   await db.order.update({ where: { id: paidOrderId }, data: { status: "paid", paidAt: AT } });
   pendingOrderId = await orderCourse(beta, id);
+  awaitingOrderId = await orderCourse(beta, id);
+  await db.order.update({ where: { id: awaitingOrderId }, data: { status: "awaiting_confirmation", paymentMethod: "offline_qr", paymentReference: "ABA-1" } });
+  const { priceId } = await db.orderItem.findFirstOrThrow({ where: { orderId: awaitingOrderId }, select: { priceId: true } });
+  subscriptionId = (await db.subscription.create({ data: { schoolId: beta.schoolId, userId: id, priceId, status: "active", paidPeriods: 1 } })).id;
   await db.session.create({ data: { userId: id, tokenHash: "account-session", expiresAt: new Date("2027-01-01T00:00:00Z") } });
   await db.magicLinkToken.create({ data: { email: "account-student@example.com", tokenHash: "account-link", expiresAt: new Date("2027-01-01T00:00:00Z") } });
   otherStudentId = (await enrollTestStudent(db, alpha, "account-other@example.com")).studentId;
@@ -88,6 +95,7 @@ describe("account store", () => {
     expect(data?.orders.map(({ school, status, total, items }) => [school, status, total, items])).toEqual([
       ["account-alpha", "paid", { amount: 4900, currency: "USD" }, [{ course: "account-alpha course", amount: 4900, currency: "USD" }]],
       ["account-beta", "pending", { amount: 4900, currency: "USD" }, [{ course: "account-beta course", amount: 4900, currency: "USD" }]],
+      ["account-beta", "awaiting_confirmation", { amount: 4900, currency: "USD" }, [{ course: "account-beta course", amount: 4900, currency: "USD" }]],
     ]);
     expect(data?.quizAttempts).toEqual([{ school: "account-alpha", lesson: "Lesson one", scorePercent: 80, isPassed: true, answers: { q1: "a" }, createdAt: AT }]);
     expect(data?.comments).toEqual([{ school: "account-alpha", lesson: "Lesson one", body: "How do I start?", createdAt: AT }]);
@@ -120,6 +128,8 @@ describe("account store", () => {
     expect(await db.magicLinkToken.count({ where: { email: "account-student@example.com" } })).toBe(0);
     expect(await db.order.findUniqueOrThrow({ where: { id: paidOrderId } })).toMatchObject({ status: "paid", userId: studentId });
     expect((await db.order.findUniqueOrThrow({ where: { id: pendingOrderId } })).status).toBe("failed");
+    expect((await db.order.findUniqueOrThrow({ where: { id: awaitingOrderId } })).status).toBe("failed");
+    expect((await db.subscription.findUniqueOrThrow({ where: { id: subscriptionId } })).status).toBe("lapsed");
     expect(await db.lessonComment.findMany({ where: { lessonId: alpha.lessonId }, orderBy: { parentId: { sort: "asc", nulls: "first" } }, select: { body: true, authorId: true } })).toEqual([
       { body: "How do I start?", authorId: null },
       { body: "Open lesson one.", authorId: ownerId },

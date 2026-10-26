@@ -1,7 +1,7 @@
 import { CouponCodeTakenError, CouponNotFoundError } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
+import { setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const COUPON_ID = "5a4b3c2d-1e0f-4a9b-8c7d-6e5f4a3b2c1d";
 const COUPON = { code: "SAVE20", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: null } as const;

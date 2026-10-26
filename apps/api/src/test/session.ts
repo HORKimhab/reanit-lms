@@ -14,6 +14,7 @@ export const TEST_SCHOOL: School = {
   subdomain: "angkor",
   brandColor: null,
   logoUrl: null,
+  paymentQrUrl: null,
 };
 
 /**

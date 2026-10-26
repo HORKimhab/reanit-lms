@@ -7,7 +7,7 @@ import { Link } from "@/i18n/navigation";
 
 import { RefreshWhilePending } from "./refresh-while-pending";
 
-const ICONS = { pending: Loader, paid: CircleCheck, failed: CircleX, refunded: CircleX } as const;
+const ICONS = { pending: Loader, awaiting_confirmation: Loader, paid: CircleCheck, failed: CircleX, refunded: CircleX } as const;
 
 /**
  * An order's status after checkout: waiting (and re-checking), paid, or not paid.

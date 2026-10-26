@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { createCatalogStore, createCommerceStore, createDbClient, createOrderHistoryStore } from "../src";
 import { openTestSchool } from "../src/test/schools";
+import { ONE_TIME } from "../src/test/payments";
 
 const db = createDbClient(inject("databaseUrl"));
 const WINDOW = { limit: 50, offset: 0 };
@@ -26,7 +27,7 @@ async function order(courseId: string, userId: string, placedAt: Date, status: "
   const course = await db.course.findUniqueOrThrow({ where: { id: courseId }, select: { slug: true } });
   const price = (await commerce.findCourse(course.slug))?.price;
   if (!price) throw new Error("The course has no price.");
-  const { id } = await commerce.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en" });
+  const { id } = await commerce.createOrder({ userId, price, lines: [{ courseId, amount: price.amount }], bundleId: null, couponId: null, method: "stripe", locale: "en", subscriptionId: null });
   await db.order.update({ where: { id }, data: { status, createdAt: placedAt, paidAt: status === "pending" ? null : placedAt } });
   return id;
 }
@@ -38,8 +39,8 @@ beforeAll(async () => {
   const commerce = createCommerceStore(db, alphaId);
   brandId = (await catalog.createCourse({ title: "Brand", slug: "brand" })).id;
   socialId = (await catalog.createCourse({ title: "Social", slug: "social" })).id;
-  await commerce.setPrice(brandId, { amount: 4900, currency: "USD" });
-  await commerce.setPrice(socialId, { amount: 200_000, currency: "KHR" });
+  await commerce.setPrice(brandId, { amount: 4900, currency: "USD", billing: ONE_TIME });
+  await commerce.setPrice(socialId, { amount: 200_000, currency: "KHR", billing: ONE_TIME });
   sokhaId = (await db.user.create({ data: { email: "history-sokha@example.com", name: "Sokha" } })).id;
   daraId = (await db.user.create({ data: { email: "history-dara@example.com" } })).id;
 });

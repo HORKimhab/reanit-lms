@@ -566,7 +566,8 @@
     "methods": {
       "stripe": "Card",
       "aba_payway": "ABA PayWay",
-      "bakong_khqr": "Bakong KHQR"
+      "bakong_khqr": "Bakong KHQR",
+      "offline_qr": "Payment QR"
     },
     "pay": "Pay {price}",
     "paying": "Starting payment…",
@@ -590,6 +591,7 @@
   "Orders": {
     "status": {
       "pending": "Pending",
+      "awaiting_confirmation": "Awaiting confirmation",
       "paid": "Paid",
       "failed": "Failed",
       "refunded": "Refunded"
@@ -695,6 +697,7 @@
   "Order": {
     "title": "Your order",
     "pending": "Waiting for your payment…",
+    "awaiting_confirmation": "Payment sent. Waiting for the school to confirm it.",
     "paid": "Payment received. You're enrolled!",
     "failed": "The payment didn't go through.",
     "refunded": "This order was refunded.",

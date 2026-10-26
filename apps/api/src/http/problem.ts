@@ -12,10 +12,13 @@ import {
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
+  OfflinePaymentClosedError,
   OrderNotFoundError,
   OrderNotRefundableError,
   PaymentMethodUnavailableError,
   RefundByHandRequiredError,
+  SubscriptionNotFoundError,
+  SubscriptionNotRenewableError,
   UnknownBundleCourseError,
 } from "@reanit/core/commerce";
 import {
@@ -113,6 +116,9 @@ const DOMAIN_PROBLEMS: DomainProblem[] = [
   { error: UnknownBundleCourseError, status: HttpStatus.BAD_REQUEST, code: "unknown-bundle-course", detail: "A course in the bundle does not exist." },
   { error: OrderNotRefundableError, status: HttpStatus.CONFLICT, code: "order-not-refundable", detail: "Only a paid order can be refunded." },
   { error: RefundByHandRequiredError, status: HttpStatus.CONFLICT, code: "refund-by-hand-required", detail: "This payment method cannot refund. Pay the student back yourself, then confirm the refund." },
+  { error: SubscriptionNotFoundError, status: HttpStatus.NOT_FOUND, code: "subscription-not-found", detail: "You have no such subscription or payment plan." },
+  { error: SubscriptionNotRenewableError, status: HttpStatus.CONFLICT, code: "subscription-not-renewable", detail: "This subscription can't take another payment: its first payment is still open, or the plan is paid off." },
+  { error: OfflinePaymentClosedError, status: HttpStatus.CONFLICT, code: "offline-payment-closed", detail: "This order is not an offline QR payment waiting to be paid or confirmed." },
   { error: OrderNotFoundError, status: HttpStatus.NOT_FOUND, code: "order-not-found", detail: "The order does not exist." },
   { error: LessonNotFoundError, status: HttpStatus.NOT_FOUND, code: "lesson-not-found", detail: "The lesson does not exist." },
   { error: LessonMediaMissingError, status: HttpStatus.NOT_FOUND, code: "lesson-media-missing", detail: "The lesson has no file yet." },

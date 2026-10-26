@@ -7,18 +7,21 @@ export interface School {
   subdomain: string;
   /** `#rrggbb` used as the school site's brand color; null for the platform default. */
   brandColor: string | null;
-  /** Signed URL of the logo, valid for `LOGO_URL_TTL_SECONDS`; null when the school has none. */
+  /** Signed URL of the logo, valid for `IMAGE_URL_TTL_SECONDS`; null when the school has none. */
   logoUrl: string | null;
+  /** Signed URL of the school's own payment QR image, for offline payments; null when it has none. */
+  paymentQrUrl: string | null;
 }
 
-/** A school as stored: the logo is an object-storage key, signed into a URL on the way out. */
-export type SchoolRecord = Omit<School, "logoUrl"> & { logoKey: string | null };
+/** A school as stored: its images are object-storage keys, signed into URLs on the way out. */
+export type SchoolRecord = Omit<School, "logoUrl" | "paymentQrUrl"> & { logoKey: string | null; paymentQrKey: string | null };
 
-/** What a settings save writes; a missing `logoKey` keeps the current logo, null removes it. */
+/** What a settings save writes; a missing image key keeps the current image, null removes it. */
 export interface SchoolChanges {
   name: string;
   brandColor: string | null;
   logoKey?: string | null;
+  paymentQrKey?: string | null;
 }
 
 /** A member's role in a school. */

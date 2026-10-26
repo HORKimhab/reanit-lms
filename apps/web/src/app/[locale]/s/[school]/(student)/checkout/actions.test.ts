@@ -149,6 +149,12 @@ describe("startCheckout", () => {
     expect(await pay("bakong_khqr")).toEqual({ status: "qr", qr: "00020101021229", expiresAt: "2026-10-19T01:15:00.000Z", orderId: ORDER_ID });
   });
 
+  it("returns the school's payment QR image and the order for an offline payment", async () => {
+    onApi(ROUTE, started({ kind: "offline", qrImageUrl: "https://storage.test/qr.png" }));
+
+    expect(await pay("offline_qr")).toEqual({ status: "offline", qrImageUrl: "https://storage.test/qr.png", orderId: ORDER_ID });
+  });
+
   it.each([null, "cash"])("refuses method %s without calling the API", async (method) => {
     expect(await pay(method)).toEqual({ status: "unavailable" });
     expect(requestTo(ROUTE)).toBeUndefined();

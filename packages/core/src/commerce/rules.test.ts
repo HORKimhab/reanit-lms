@@ -6,8 +6,27 @@ describe("priceSchema", () => {
   it.each([
     [{ amount: 4999, currency: "USD" }],
     [{ amount: 2_000_000, currency: "KHR" }],
-  ])("accepts %j", (price) => {
-    expect(priceSchema.parse(price)).toEqual(price);
+  ])("accepts %j, billing once by default", (price) => {
+    expect(priceSchema.parse(price)).toEqual({ ...price, billing: { kind: "one_time" } });
+  });
+
+  it.each([
+    [{ kind: "recurring", interval: "month" }],
+    [{ kind: "recurring", interval: "year" }],
+    [{ kind: "payment_plan", installments: 2 }],
+    [{ kind: "payment_plan", installments: 24 }],
+  ])("accepts the billing %j", (billing) => {
+    expect(priceSchema.parse({ amount: 1500, currency: "USD", billing }).billing).toEqual(billing);
+  });
+
+  it.each([
+    [{ kind: "recurring", interval: "week" }],
+    [{ kind: "recurring" }],
+    [{ kind: "payment_plan", installments: 1 }],
+    [{ kind: "payment_plan", installments: 25 }],
+    [{ kind: "lifetime" }],
+  ])("refuses the billing %j", (billing) => {
+    expect(priceSchema.safeParse({ amount: 1500, currency: "USD", billing }).success).toBe(false);
   });
 
   it.each([

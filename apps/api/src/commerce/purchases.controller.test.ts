@@ -35,3 +35,31 @@ describe("GET /schools/by-subdomain/:subdomain/orders", () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe("GET /schools/by-subdomain/:subdomain/subscriptions", () => {
+  it("lists the student's subscriptions with their price and period end", async () => {
+    const headers = signInAs(test.clients);
+    test.clients.schools.getSchoolBySubdomain.mockResolvedValue(TEST_SCHOOL);
+    const price = { id: "p", amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } } as const;
+    test.clients.commerce.listMySubscriptions.mockResolvedValue([
+      { id: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f", status: "lapsed", title: "Design Club", price, courseIds: ["c"], bundleId: null, paidPeriods: 2, currentPeriodEnd: new Date("2026-10-01T00:00:00Z") },
+    ]);
+
+    const response = await test.app.inject({ method: "GET", url: `/schools/by-subdomain/${TEST_SCHOOL.subdomain}/subscriptions`, headers });
+
+    expect(response.json()).toEqual({
+      subscriptions: [
+        {
+          id: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+          status: "lapsed",
+          title: "Design Club",
+          price: { amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } },
+          paidPeriods: 2,
+          currentPeriodEnd: "2026-10-01T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(test.clients.commerce.listMySubscriptions).toHaveBeenCalledWith(TEST_USER.id);
+  });
+});
+

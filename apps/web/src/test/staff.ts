@@ -11,6 +11,7 @@ export const STAFF_SCHOOL: School = {
   subdomain: "angkor",
   brandColor: "#0055aa",
   logoUrl: null,
+  paymentQrUrl: null,
 };
 
 /** Students as `GET /students` lists them, newest first: one without a name. */

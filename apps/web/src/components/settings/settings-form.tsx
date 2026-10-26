@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_BRAND_COLOR, LOGO_RULES, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
+import { DEFAULT_BRAND_COLOR, SCHOOL_IMAGE_RULES, SCHOOL_NAME_MAX_LENGTH, type School } from "@reanit/core/schools";
 import { Button } from "@reanit/ui/components/button";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
@@ -13,8 +13,8 @@ import { BrandPreview } from "./brand-preview";
 
 const INITIAL_STATE: SettingsState = { status: "idle", invalidFields: [] };
 const BYTES_PER_MB = 1024 * 1024;
-const LOGO_TYPES = Object.keys(LOGO_RULES.contentTypes);
-const LOGO_MAX_MB = LOGO_RULES.maxBytes / BYTES_PER_MB;
+const LOGO_TYPES = Object.keys(SCHOOL_IMAGE_RULES.contentTypes);
+const LOGO_MAX_MB = SCHOOL_IMAGE_RULES.maxBytes / BYTES_PER_MB;
 
 /** The server actions the settings form calls. */
 export type SettingsActions = {
@@ -31,7 +31,7 @@ export type SettingsActions = {
  * @returns Whether the file can be used as a logo.
  */
 function isAllowedLogo({ type, size }: { type: string; size: number }) {
-  return LOGO_TYPES.includes(type) && size <= LOGO_RULES.maxBytes;
+  return LOGO_TYPES.includes(type) && size <= SCHOOL_IMAGE_RULES.maxBytes;
 }
 
 /**

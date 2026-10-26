@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
-import type { SchoolService } from "@reanit/core/schools";
+import type { SchoolImage, SchoolService } from "@reanit/core/schools";
 
 import { Audited, currentSchool } from "../audit/audit.decorator";
 import { CurrentUser, Public } from "../auth/auth.decorators";
@@ -10,7 +10,7 @@ import { UploadResponse } from "../media/media.dto";
 import { CurrentSchool, Roles } from "./schools.decorators";
 import {
   CreateSchoolBody,
-  LogoUploadBody,
+  ImageUploadBody,
   PublicSchoolResponse,
   SchoolResponse,
   SchoolSettingsBody,
@@ -61,13 +61,13 @@ export class SchoolsController {
   }
 
   /**
-   * Saves the school's name, brand color and logo. Instructors cannot change a school's branding.
+   * Saves the school's name, brand color, logo and payment QR image. Instructors cannot change a school's settings.
    *
    * @param current The caller's school.
-   * @param body Name, brand color and logo key.
+   * @param body Name, brand color, and logo and payment QR keys.
    * @returns The updated school.
-   * @throws {InvalidMediaKeyError} When the logo key is not this school's (400).
-   * @throws {MediaNotUploadedError} When the logo upload has not arrived (409).
+   * @throws {InvalidMediaKeyError} When an image key is not this school's image of that kind (400).
+   * @throws {MediaNotUploadedError} When an image upload has not arrived (409).
    */
   @Patch("current")
   @Audited("school.settings.update", currentSchool)
@@ -89,8 +89,39 @@ export class SchoolsController {
   @Post("current/logo-uploads")
   @Roles("owner", "admin")
   @ApiCreatedResponse({ type: UploadResponse })
-  async requestLogoUpload(@CurrentSchool() current: StaffSchool, @Body() body: LogoUploadBody): Promise<UploadResponse> {
-    const upload = await this.schools.requestLogoUpload(current.id, body);
+  requestLogoUpload(@CurrentSchool() current: StaffSchool, @Body() body: ImageUploadBody): Promise<UploadResponse> {
+    return this.presignImage(current.id, "logo", body);
+  }
+
+  /**
+   * Presigns the upload of the school's own payment QR image, which students scan to pay
+   * subscriptions and plans offline; save its key with `PATCH /schools/current` afterwards.
+   *
+   * @param current The caller's school.
+   * @param body The image's content type and size.
+   * @returns The upload URL, the headers to send, the key and when the URL expires.
+   * @throws {UnsupportedMediaError} When the image is not PNG, JPEG or WebP (415).
+   * @throws {MediaTooLargeError} When the image is over 1 MiB (413).
+   */
+  @Post("current/payment-qr-uploads")
+  @Roles("owner", "admin")
+  @ApiCreatedResponse({ type: UploadResponse })
+  requestPaymentQrUpload(@CurrentSchool() current: StaffSchool, @Body() body: ImageUploadBody): Promise<UploadResponse> {
+    return this.presignImage(current.id, "payment-qr", body);
+  }
+
+  /**
+   * Presigns a school image's upload and shapes it for the response.
+   *
+   * @param schoolId The school.
+   * @param image Which image.
+   * @param body The image's content type and size.
+   * @returns The upload, its expiry as an ISO string.
+   * @throws {UnsupportedMediaError} When the image is not PNG, JPEG or WebP.
+   * @throws {MediaTooLargeError} When the image is over 1 MiB.
+   */
+  private async presignImage(schoolId: string, image: SchoolImage, body: ImageUploadBody): Promise<UploadResponse> {
+    const upload = await this.schools.requestImageUpload(schoolId, image, body);
     return { ...upload, expiresAt: upload.expiresAt.toISOString() };
   }
 

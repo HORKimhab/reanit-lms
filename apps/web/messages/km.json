@@ -566,7 +566,8 @@
     "methods": {
       "stripe": "កាត",
       "aba_payway": "ABA PayWay",
-      "bakong_khqr": "Bakong KHQR"
+      "bakong_khqr": "Bakong KHQR",
+      "offline_qr": "QR ទូទាត់"
     },
     "pay": "បង់ {price}",
     "paying": "កំពុងចាប់ផ្ដើមការបង់ប្រាក់…",
@@ -590,6 +591,7 @@
   "Orders": {
     "status": {
       "pending": "កំពុងរង់ចាំ",
+      "awaiting_confirmation": "កំពុងរង់ចាំការបញ្ជាក់",
       "paid": "បានបង់",
       "failed": "បរាជ័យ",
       "refunded": "បានសងប្រាក់វិញ"
@@ -695,6 +697,7 @@
   "Order": {
     "title": "ការបញ្ជាទិញរបស់អ្នក",
     "pending": "កំពុងរង់ចាំការបង់ប្រាក់របស់អ្នក…",
+    "awaiting_confirmation": "បានផ្ញើការទូទាត់។ កំពុងរង់ចាំសាលាបញ្ជាក់។",
     "paid": "បានទទួលការបង់ប្រាក់។ អ្នកបានចុះឈ្មោះហើយ!",
     "failed": "ការបង់ប្រាក់មិនបានជោគជ័យទេ។",
     "refunded": "ការបញ្ជាទិញនេះត្រូវបានសងប្រាក់វិញ។",

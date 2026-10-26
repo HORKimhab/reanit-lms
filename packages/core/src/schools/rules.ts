@@ -56,17 +56,25 @@ const MIB = 1024 * 1024;
 const STORAGE_KEY_MAX_LENGTH = 512;
 const STUDENT_SEARCH_MAX_LENGTH = 100;
 
-/** Images a school logo may be, with the file extension stored, and how big it may be. SVG is left out because it can carry scripts. */
-export const LOGO_RULES = {
+/**
+ * Images a school's logo and payment QR may be, with the file extension stored, and how big they may
+ * be. SVG is left out because it can carry scripts.
+ */
+export const SCHOOL_IMAGE_RULES = {
   contentTypes: { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" },
   maxBytes: MIB,
 } as const;
 
-/** Settings form input; leave out `logoKey` to keep the logo, send null to remove it. */
+/** A school image's storage key: leave it out to keep the image, send null to remove it. */
+const imageKeySchema = z.string().min(1).max(STORAGE_KEY_MAX_LENGTH).nullable().optional();
+
+/** Settings form input; leave out `logoKey` or `paymentQrKey` to keep that image, send null to remove it. */
 export const schoolSettingsSchema = z.object({
   name: createSchoolSchema.shape.name,
   brandColor: z.string().trim().toLowerCase().regex(BRAND_COLOR_PATTERN).nullable(),
-  logoKey: z.string().min(1).max(STORAGE_KEY_MAX_LENGTH).nullable().optional(),
+  logoKey: imageKeySchema,
+  /** The school's own payment QR image, which students scan to pay subscriptions and plans offline. */
+  paymentQrKey: imageKeySchema,
 });
 
 /** Parsed settings input. */
@@ -81,14 +89,19 @@ export const studentSearchSchema = z.object({
 /** Parsed students list query. */
 export type StudentSearchInput = z.infer<typeof studentSearchSchema>;
 
+/** A school's own images: its logo, and the payment QR students scan to pay offline. */
+export type SchoolImage = "logo" | "payment-qr";
+
 /**
- * Where a school's logos live in the bucket, so a key from another school can never be saved.
+ * Where a school's images of one kind live in the bucket, so a key from another school, or another
+ * kind of image, can never be saved.
  *
  * @param schoolId The school's id.
+ * @param image Which image.
  * @returns The key prefix, ending in a slash.
  * @example
- * schoolLogoPrefix(school.id); // "schools/<school>/logo/"
+ * schoolImagePrefix(school.id, "logo"); // "schools/<school>/logo/"
  */
-export function schoolLogoPrefix(schoolId: string): string {
-  return `schools/${schoolId}/logo/`;
+export function schoolImagePrefix(schoolId: string, image: SchoolImage): string {
+  return `schools/${schoolId}/${image}/`;
 }

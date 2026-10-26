@@ -62,6 +62,7 @@ describe("certificate store", () => {
       completedAt: COMPLETED_AT,
       school: { name: "certificates-alpha", subdomain: "certificates-alpha", brandColor: null },
       locale: "en",
+      subscriptionId: null,
     });
   });
 

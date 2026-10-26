@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
+import { setStaffRole, TEST_SCHOOL, useStaffApp } from "../test/session";
 
 const TEMPLATE = { signerName: "Dara Kim", signerTitle: "Founder" };
 const staff = useStaffApp();

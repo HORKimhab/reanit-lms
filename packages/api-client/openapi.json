@@ -524,7 +524,38 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LogoUploadBody"
+                "$ref": "#/components/schemas/ImageUploadBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Schools"
+        ]
+      }
+    },
+    "/schools/current/payment-qr-uploads": {
+      "post": {
+        "operationId": "SchoolsController_requestPaymentQrUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUploadBody"
               }
             }
           }
@@ -1839,6 +1870,105 @@
         ]
       }
     },
+    "/schools/by-subdomain/{subdomain}/subscriptions/{subscriptionId}/renew": {
+      "post": {
+        "operationId": "CheckoutController_renew",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "subscriptionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
+    "/schools/by-subdomain/{subdomain}/orders/{orderId}/offline-payment": {
+      "post": {
+        "operationId": "CheckoutController_submitOfflinePayment",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflinePaymentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
     "/schools/by-subdomain/{subdomain}/orders": {
       "get": {
         "operationId": "PurchasesController_list",
@@ -1883,6 +2013,39 @@
         ]
       }
     },
+    "/schools/by-subdomain/{subdomain}/subscriptions": {
+      "get": {
+        "operationId": "PurchasesController_subscriptions",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Purchases"
+        ]
+      }
+    },
     "/orders": {
       "get": {
         "operationId": "OrdersController_list",
@@ -1895,6 +2058,7 @@
               "type": "string",
               "enum": [
                 "pending",
+                "awaiting_confirmation",
                 "paid",
                 "failed",
                 "refunded"
@@ -2029,6 +2193,56 @@
             }
           }
         },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/orders/{id}/confirm-payment": {
+      "post": {
+        "operationId": "OrdersController_confirmPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/orders/{id}/reject-payment": {
+      "post": {
+        "operationId": "OrdersController_rejectPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": ""
@@ -3400,6 +3614,11 @@
                 "nullable": true,
                 "type": "string",
                 "format": "uri"
+              },
+              "paymentQrUrl": {
+                "nullable": true,
+                "type": "string",
+                "format": "uri"
               }
             },
             "required": [
@@ -3407,7 +3626,8 @@
               "name",
               "subdomain",
               "brandColor",
-              "logoUrl"
+              "logoUrl",
+              "paymentQrUrl"
             ]
           }
         },
@@ -3440,6 +3660,11 @@
                 "nullable": true,
                 "type": "string",
                 "format": "uri"
+              },
+              "paymentQrUrl": {
+                "nullable": true,
+                "type": "string",
+                "format": "uri"
               }
             },
             "required": [
@@ -3447,7 +3672,8 @@
               "name",
               "subdomain",
               "brandColor",
-              "logoUrl"
+              "logoUrl",
+              "paymentQrUrl"
             ]
           },
           "role": {
@@ -3483,6 +3709,12 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 512
+          },
+          "paymentQrKey": {
+            "nullable": true,
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
           }
         },
         "required": [
@@ -3490,7 +3722,7 @@
           "brandColor"
         ]
       },
-      "LogoUploadBody": {
+      "ImageUploadBody": {
         "type": "object",
         "properties": {
           "contentType": {
@@ -3564,6 +3796,11 @@
                 "nullable": true,
                 "type": "string",
                 "format": "uri"
+              },
+              "paymentQrUrl": {
+                "nullable": true,
+                "type": "string",
+                "format": "uri"
               }
             },
             "required": [
@@ -3571,7 +3808,8 @@
               "name",
               "subdomain",
               "brandColor",
-              "logoUrl"
+              "logoUrl",
+              "paymentQrUrl"
             ]
           },
           "owner": {
@@ -4495,6 +4733,69 @@
               "USD",
               "KHR"
             ]
+          },
+          "billing": {
+            "default": {
+              "kind": "one_time"
+            },
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "one_time"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "recurring"
+                    ]
+                  },
+                  "interval": {
+                    "type": "string",
+                    "enum": [
+                      "month",
+                      "year"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "interval"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "payment_plan"
+                    ]
+                  },
+                  "installments": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 24
+                  }
+                },
+                "required": [
+                  "kind",
+                  "installments"
+                ]
+              }
+            ]
           }
         },
         "required": [
@@ -4519,11 +4820,72 @@
                   "USD",
                   "KHR"
                 ]
+              },
+              "billing": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "one_time"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "recurring"
+                        ]
+                      },
+                      "interval": {
+                        "type": "string",
+                        "enum": [
+                          "month",
+                          "year"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "interval"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "payment_plan"
+                        ]
+                      },
+                      "installments": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 24
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "installments"
+                    ]
+                  }
+                ]
               }
             },
             "required": [
               "amount",
-              "currency"
+              "currency",
+              "billing"
             ]
           }
         },
@@ -4942,11 +5304,72 @@
                         "USD",
                         "KHR"
                       ]
+                    },
+                    "billing": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "one_time"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "recurring"
+                              ]
+                            },
+                            "interval": {
+                              "type": "string",
+                              "enum": [
+                                "month",
+                                "year"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "interval"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "payment_plan"
+                              ]
+                            },
+                            "installments": {
+                              "type": "integer",
+                              "minimum": 2,
+                              "maximum": 24
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "installments"
+                          ]
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "amount",
-                    "currency"
+                    "currency",
+                    "billing"
                   ]
                 }
               },
@@ -5057,11 +5480,72 @@
                       "USD",
                       "KHR"
                     ]
+                  },
+                  "billing": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "one_time"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "recurring"
+                            ]
+                          },
+                          "interval": {
+                            "type": "string",
+                            "enum": [
+                              "month",
+                              "year"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "interval"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "payment_plan"
+                            ]
+                          },
+                          "installments": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 24
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "installments"
+                        ]
+                      }
+                    ]
                   }
                 },
                 "required": [
                   "amount",
-                  "currency"
+                  "currency",
+                  "billing"
                 ]
               }
             },
@@ -5129,11 +5613,72 @@
                   "USD",
                   "KHR"
                 ]
+              },
+              "billing": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "one_time"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "recurring"
+                        ]
+                      },
+                      "interval": {
+                        "type": "string",
+                        "enum": [
+                          "month",
+                          "year"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "interval"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "payment_plan"
+                        ]
+                      },
+                      "installments": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 24
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "installments"
+                    ]
+                  }
+                ]
               }
             },
             "required": [
               "amount",
-              "currency"
+              "currency",
+              "billing"
             ]
           },
           "methods": {
@@ -5143,7 +5688,8 @@
               "enum": [
                 "stripe",
                 "aba_payway",
-                "bakong_khqr"
+                "bakong_khqr",
+                "offline_qr"
               ]
             }
           },
@@ -5191,7 +5737,8 @@
             "enum": [
               "stripe",
               "aba_payway",
-              "bakong_khqr"
+              "bakong_khqr",
+              "offline_qr"
             ]
           },
           "couponCode": {
@@ -5290,6 +5837,25 @@
                   "qr",
                   "expiresAt"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "offline"
+                    ]
+                  },
+                  "qrImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "qrImageUrl"
+                ]
               }
             ]
           }
@@ -5307,7 +5873,8 @@
             "enum": [
               "stripe",
               "aba_payway",
-              "bakong_khqr"
+              "bakong_khqr",
+              "offline_qr"
             ]
           },
           "couponCode": {
@@ -5348,6 +5915,7 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "awaiting_confirmation",
                   "paid",
                   "failed",
                   "refunded"
@@ -5375,7 +5943,8 @@
                 "enum": [
                   "stripe",
                   "aba_payway",
-                  "bakong_khqr"
+                  "bakong_khqr",
+                  "offline_qr"
                 ]
               }
             },
@@ -5391,6 +5960,44 @@
         },
         "required": [
           "order"
+        ]
+      },
+      "RenewBody": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "stripe",
+              "aba_payway",
+              "bakong_khqr",
+              "offline_qr"
+            ]
+          },
+          "locale": {
+            "default": "en",
+            "type": "string",
+            "enum": [
+              "en",
+              "km"
+            ]
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "OfflinePaymentBody": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "reference"
         ]
       },
       "OrdersResponse": {
@@ -5410,6 +6017,7 @@
                   "type": "string",
                   "enum": [
                     "pending",
+                    "awaiting_confirmation",
                     "paid",
                     "failed",
                     "refunded"
@@ -5420,7 +6028,8 @@
                   "enum": [
                     "stripe",
                     "aba_payway",
-                    "bakong_khqr"
+                    "bakong_khqr",
+                    "offline_qr"
                   ]
                 },
                 "total": {
@@ -5527,6 +6136,10 @@
                 },
                 "isRefundedByHand": {
                   "type": "boolean"
+                },
+                "paymentReference": {
+                  "nullable": true,
+                  "type": "string"
                 }
               },
               "required": [
@@ -5541,7 +6154,8 @@
                 "createdAt",
                 "paidAt",
                 "refundedAt",
-                "isRefundedByHand"
+                "isRefundedByHand",
+                "paymentReference"
               ]
             }
           },
@@ -5568,6 +6182,138 @@
           "pageSize"
         ]
       },
+      "SubscriptionsResponse": {
+        "type": "object",
+        "properties": {
+          "subscriptions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "completed",
+                    "lapsed"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "USD",
+                        "KHR"
+                      ]
+                    },
+                    "billing": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "one_time"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "recurring"
+                              ]
+                            },
+                            "interval": {
+                              "type": "string",
+                              "enum": [
+                                "month",
+                                "year"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "interval"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "payment_plan"
+                              ]
+                            },
+                            "installments": {
+                              "type": "integer",
+                              "minimum": 2,
+                              "maximum": 24
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "installments"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency",
+                    "billing"
+                  ]
+                },
+                "paidPeriods": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "currentPeriodEnd": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "title",
+                "price",
+                "paidPeriods",
+                "currentPeriodEnd"
+              ]
+            }
+          }
+        },
+        "required": [
+          "subscriptions"
+        ]
+      },
       "OrderDetailResponse": {
         "type": "object",
         "properties": {
@@ -5583,6 +6329,7 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "awaiting_confirmation",
                   "paid",
                   "failed",
                   "refunded"
@@ -5593,7 +6340,8 @@
                 "enum": [
                   "stripe",
                   "aba_payway",
-                  "bakong_khqr"
+                  "bakong_khqr",
+                  "offline_qr"
                 ]
               },
               "total": {
@@ -5700,6 +6448,10 @@
               },
               "isRefundedByHand": {
                 "type": "boolean"
+              },
+              "paymentReference": {
+                "nullable": true,
+                "type": "string"
               }
             },
             "required": [
@@ -5714,7 +6466,8 @@
               "createdAt",
               "paidAt",
               "refundedAt",
-              "isRefundedByHand"
+              "isRefundedByHand",
+              "paymentReference"
             ]
           }
         },
@@ -7071,6 +7824,8 @@
                     "bundle.update",
                     "bundle.price.set",
                     "order.refund",
+                    "order.payment.confirm",
+                    "order.payment.reject",
                     "lesson.media.attach",
                     "lesson.quiz.save",
                     "comment.reply",

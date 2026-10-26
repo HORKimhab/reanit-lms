@@ -133,7 +133,7 @@ const SCHOOL_METHODS = [
   "getSchoolBySubdomain",
   "getPublicSchool",
   "getStaffSchool",
-  "requestLogoUpload",
+  "requestImageUpload",
   "updateSettings",
 ] as const satisfies readonly (keyof SchoolService)[];
 const DOMAIN_METHODS = [
@@ -173,6 +173,11 @@ const COMMERCE_METHODS = [
   "setBundlePrice",
   "getBundleOffer",
   "checkoutBundle",
+  "renewSubscription",
+  "listMySubscriptions",
+  "submitOfflinePayment",
+  "confirmOfflinePayment",
+  "rejectOfflinePayment",
   "getOrder",
   "refundOrder",
 ] as const satisfies readonly (keyof CommerceService)[];

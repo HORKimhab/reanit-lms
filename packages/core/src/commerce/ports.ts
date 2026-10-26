@@ -1,12 +1,15 @@
 import type { CourseStatus } from "../catalog";
 import type { EmailLocale } from "../notifications/rules";
-import type { CouponInput, Currency, ORDER_STATUSES, PaymentMethod, PriceInput, UpdateBundleInput } from "./rules";
+import type { Billing, CouponInput, Currency, ORDER_STATUSES, PaymentMethod, PriceInput, UpdateBundleInput } from "./rules";
+import type { RenewSubscription, SubscriptionStatus } from "./subscriptions";
 
-/** A course's current price. */
+/** A course's or bundle's current price. */
 export interface Price {
   id: string;
+  /** Per payment: the whole price, one period, or one instalment. */
   amount: number;
   currency: Currency;
+  billing: Billing;
 }
 
 /** A course as checkout sees it. */
@@ -66,8 +69,40 @@ export interface OrderSummary {
   amount: number;
   currency: Currency;
   method: PaymentMethod;
-  /** The gateway's reference; null until payment starts. Never sent to the browser. */
+  /** The gateway's reference; null until payment starts, and for offline QR orders. Never sent to the browser. */
   providerRef: string | null;
+}
+
+/** A student's subscription or payment plan, with what it sells and its price's terms. */
+export interface SubscriptionRecord {
+  id: string;
+  status: SubscriptionStatus;
+  /** The course's or bundle's title. */
+  title: string;
+  /** The price subscribed to; its billing is never one-time. */
+  price: Price;
+  /** The courses each period pays for. */
+  courseIds: string[];
+  /** The bundle subscribed to, or null for a course. */
+  bundleId: string | null;
+  paidPeriods: number;
+  /** The end of the last paid period; null before the first payment. */
+  currentPeriodEnd: Date | null;
+}
+
+/** A new order: what it sells, how it is paid, and the period it pays when it belongs to a subscription. */
+export interface NewOrder {
+  userId: string;
+  price: Price;
+  /** The lines' amounts add up to what the order charges: the price less any coupon. */
+  lines: OrderLine[];
+  /** The bundle bought, or null for a single course. */
+  bundleId: string | null;
+  couponId: string | null;
+  method: PaymentMethod;
+  locale: EmailLocale;
+  /** The subscription this order pays a period of; null for a one-time purchase. */
+  subscriptionId: string | null;
 }
 
 /** One school's prices, bundles, coupons and orders. `@reanit/db` implements it with `createCommerceStore`. */
@@ -75,25 +110,28 @@ export interface CommerceStore {
   findCourse(slug: string): Promise<SellableCourse | null>;
   /** Returns the new price, or null when the school has no such course. */
   setPrice(courseId: string, price: PriceInput): Promise<Price | null>;
-  /** The ones among `courseIds` the user is enrolled in. */
-  enrolledCourseIds(userId: string, courseIds: string[]): Promise<string[]>;
+  /** The ones among `courseIds` the user has access to at `at`: enrolled, and not expired. */
+  enrolledCourseIds(userId: string, courseIds: string[], at: Date): Promise<string[]>;
   /** The ones among `courseIds` the school has. */
   findCourseIds(courseIds: string[]): Promise<string[]>;
-  /** The lines' amounts add up to what the order charges: the price less any coupon. */
-  createOrder(order: {
-    userId: string;
-    price: Price;
-    lines: OrderLine[];
-    /** The bundle bought, or null for a single course. */
-    bundleId: string | null;
-    couponId: string | null;
-    method: PaymentMethod;
-    locale: EmailLocale;
-  }): Promise<{ id: string }>;
+  createOrder(order: NewOrder): Promise<{ id: string }>;
   setProviderRef(orderId: string, providerRef: string): Promise<void>;
   findOrder(orderId: string, userId: string): Promise<OrderSummary | null>;
-  /** Marks a pending order failed: its gateway said the payment will not complete. Other orders are left alone. */
-  failOrder(orderId: string): Promise<void>;
+  /**
+   * Marks an order failed: its gateway said the payment will not complete, or staff found no offline
+   * payment. Only pending orders and those awaiting confirmation change; returns whether this one did.
+   */
+  failOrder(orderId: string): Promise<boolean>;
+  /** Records the student's word that they paid a pending offline QR order of theirs; returns false for any other order. */
+  submitOfflinePayment(orderId: string, userId: string, reference: string): Promise<boolean>;
+  /** Whether the school has uploaded its payment QR image, so offline QR payments can be offered. */
+  hasPaymentQr(): Promise<boolean>;
+  /** Starts a subscription to a recurring or payment plan price, pending until its first payment. */
+  createSubscription(subscription: { userId: string; priceId: string }): Promise<{ id: string }>;
+  /** One of the user's subscriptions, or null when they have no such subscription in the school. */
+  findSubscription(subscriptionId: string, userId: string): Promise<SubscriptionRecord | null>;
+  /** The user's subscriptions in the school that were ever paid, newest first. */
+  listSubscriptions(userId: string): Promise<SubscriptionRecord[]>;
   /** Any buyer's order in the school, for staff. */
   findSchoolOrder(orderId: string): Promise<OrderSummary | null>;
   /**
@@ -128,20 +166,27 @@ export interface CommerceStore {
 export interface PaymentConfirmationStore {
   /**
    * Marks the order paid and enrolls its buyer in one transaction. A repeat for an order already
-   * paid changes nothing. An order marked failed (expired) is paid all the same: the gateway took the
-   * money. Returns null when no order has the reference.
+   * paid changes nothing. An order marked failed (expired, or rejected by staff) is paid all the same:
+   * the money arrived. For a subscription's order, `renew` gives the new period, and the enrollment
+   * lasts until its access end. Returns null when no order matches.
    */
-  confirm(method: PaymentMethod, providerRef: string): Promise<{ orderId: string; isNewlyPaid: boolean } | null>;
+  confirm(payment: PaymentMatch, at: Date, renew: RenewSubscription): Promise<{ orderId: string; isNewlyPaid: boolean } | null>;
 }
 
-/** What the browser does next to pay. */
-export type PaymentStart =
+/** How a confirmation finds its order: a gateway's reference, or the id of an offline QR order staff checked. */
+export type PaymentMatch = { method: Exclude<PaymentMethod, "offline_qr">; providerRef: string } | { offlineOrderId: string };
+
+/** What the browser does next to pay through a gateway, with the gateway's reference for the payment. */
+export type GatewayPaymentStart =
   /** Go to the gateway's hosted page (Stripe Checkout, PayWay). */
   | { kind: "redirect"; url: string; providerRef: string }
   /** Post these fields from the browser to the gateway's hosted page (PayWay checkout). */
   | { kind: "form"; action: string; fields: Record<string, string>; providerRef: string }
   /** Show a KHQR code to scan in a banking app. */
   | { kind: "qr"; qr: string; providerRef: string; expiresAt: Date };
+
+/** What the browser does next to pay: a gateway's step, or showing the school's own payment QR image, after which the student says they paid and staff confirm it. */
+export type PaymentStart = GatewayPaymentStart | { kind: "offline" };
 
 /** What a gateway says about a payment when asked. */
 export type PaymentCheck = "paid" | "pending" | "failed";
@@ -160,9 +205,9 @@ export interface PaymentRequest {
 
 /** A payment provider. apps/api has one adapter per method; tests use a fake. */
 export interface PaymentGateway {
-  readonly method: PaymentMethod;
+  readonly method: Exclude<PaymentMethod, "offline_qr">;
   supports(currency: Currency): boolean;
-  startPayment(request: PaymentRequest): Promise<PaymentStart>;
+  startPayment(request: PaymentRequest): Promise<GatewayPaymentStart>;
   /** Asks the gateway whether a payment arrived; gateways that only push (Stripe) leave it out. */
   checkPayment?(providerRef: string): Promise<PaymentCheck>;
   /**
@@ -191,6 +236,8 @@ export interface OrderDetail {
   refundedAt: Date | null;
   /** Staff paid the student back themselves (KHQR, PayWay). */
   isRefundedByHand: boolean;
+  /** The transaction reference the student gave for an offline QR payment, or null. */
+  paymentReference: string | null;
 }
 
 /** Which of a school's orders to list; every field narrows the list. */

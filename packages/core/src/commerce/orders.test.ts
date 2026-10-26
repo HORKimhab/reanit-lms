@@ -18,6 +18,7 @@ const ORDER: OrderDetail = {
   paidAt: new Date("2026-10-20T08:01:00Z"),
   refundedAt: null,
   isRefundedByHand: false,
+  paymentReference: null,
 };
 
 describe("listMyOrders", () => {

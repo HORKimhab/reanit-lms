@@ -120,7 +120,8 @@ export function createAccountStore(db: DbClient) {
     /**
      * Erases a person in one transaction: their enrollments (with progress, quiz attempts and
      * certificates), memberships, email settings, sessions and sign-in links go; their comments stay
-     * under no name; their pending orders fail; and the account keeps only its id, so paid orders stay
+     * under no name; their unpaid orders fail and their subscriptions lapse, so no renewal reaches them;
+     * and the account keeps only its id, so paid orders stay
      * whole. Each school whose certificate PDFs named them gets `StudentErased`, so the worker deletes the files.
      *
      * @param userId The person.
@@ -133,7 +134,8 @@ export function createAccountStore(db: DbClient) {
 
         await tx.enrollment.deleteMany({ where: { userId } });
         await tx.lessonComment.updateMany({ where: { authorId: userId }, data: { authorId: null } });
-        await tx.order.updateMany({ where: { userId, status: "pending" }, data: { status: "failed" } });
+        await tx.order.updateMany({ where: { userId, status: { in: ["pending", "awaiting_confirmation"] } }, data: { status: "failed" } });
+        await tx.subscription.updateMany({ where: { userId, status: { in: ["pending", "active"] } }, data: { status: "lapsed" } });
         await tx.notificationPreference.deleteMany({ where: { userId } });
         await tx.membership.deleteMany({ where: { userId } });
         await tx.session.deleteMany({ where: { userId } });

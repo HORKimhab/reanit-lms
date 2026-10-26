@@ -10,7 +10,7 @@ import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, type CommerceForSchool, 
 /** The staff school `@Roles` resolved for the request. */
 type StaffSchool = NonNullable<RequestContext["school"]>;
 
-/** The school's orders for its owner and admins: the list with filters, one order, and its refund. */
+/** The school's orders for its owner and admins: the list with filters, one order, its refund, and confirming or rejecting offline QR payments. */
 @Controller("orders")
 @Roles("owner", "admin")
 export class OrdersController {
@@ -69,5 +69,36 @@ export class OrdersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async refund(@CurrentSchool() school: StaffSchool, @Param() params: IdParams, @Body() body: RefundBody) {
     await this.commerceFor(school.id).refundOrder(params.id, body);
+  }
+
+  /**
+   * Confirms that an offline QR payment arrived in the school's account: the order is paid and
+   * enrolls its buyer, through the same confirmation as gateway payments.
+   *
+   * @param school The caller's school.
+   * @param params The order's id.
+   * @throws {OrderNotFoundError} When the school has no such order (404).
+   * @throws {OfflinePaymentClosedError} When it is not an offline QR order, or is already paid or refunded (409).
+   */
+  @Post(":id/confirm-payment")
+  @Audited("order.payment.confirm", pathParam("id"))
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmPayment(@CurrentSchool() school: StaffSchool, @Param() params: IdParams) {
+    await this.commerceFor(school.id).confirmOfflinePayment(params.id);
+  }
+
+  /**
+   * Rejects an offline QR payment that never arrived: the order fails and enrolls nobody.
+   *
+   * @param school The caller's school.
+   * @param params The order's id.
+   * @throws {OrderNotFoundError} When the school has no such order (404).
+   * @throws {OfflinePaymentClosedError} When it is not an offline QR order still waiting for payment or confirmation (409).
+   */
+  @Post(":id/reject-payment")
+  @Audited("order.payment.reject", pathParam("id"))
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async rejectPayment(@CurrentSchool() school: StaffSchool, @Param() params: IdParams) {
+    await this.commerceFor(school.id).rejectOfflinePayment(params.id);
   }
 }

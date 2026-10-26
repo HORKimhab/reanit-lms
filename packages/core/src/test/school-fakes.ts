@@ -50,7 +50,7 @@ export class FakeSchoolStore implements SchoolStore {
    * @returns The school.
    */
   async createSchoolWithOwner({ name, subdomain, ownerId }: { name: string; subdomain: string; ownerId: string }) {
-    const school = { id: `school-${this.schools.length + 1}`, name, subdomain, brandColor: null, logoKey: null };
+    const school = { id: `school-${this.schools.length + 1}`, name, subdomain, brandColor: null, logoKey: null, paymentQrKey: null };
     this.schools.push(school);
     this.owners.set(school.id, ownerId);
     this.memberships.push({ schoolId: school.id, userId: ownerId, role: "owner" });
@@ -84,7 +84,7 @@ export class FakeSchoolStore implements SchoolStore {
    * Applies settings to a stored school.
    *
    * @param schoolId The school's id.
-   * @param changes The new values; a missing `logoKey` keeps the logo.
+   * @param changes The new values; a missing image key keeps that image.
    * @returns The updated school.
    * @throws {Error} When no school has the id.
    */

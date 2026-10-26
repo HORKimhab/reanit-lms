@@ -1,13 +1,25 @@
 import type { DbClient } from "./client";
 import { recordSale, reverseSale } from "./daily-stats";
-import { Prisma, type PaymentMethod } from "./generated/prisma/client";
+import { Prisma, type BillingInterval, type PaymentMethod, type PriceKind } from "./generated/prisma/client";
 import { appendEvent } from "./outbox";
 import { forSchool, inSchoolTransaction, type SchoolTransaction } from "./tenant";
 
 /** Prices are integer minor units with an ISO code; the store only knows these two currencies. */
 type Currency = "USD" | "KHR";
 
-const PRICE_FIELDS = { id: true, amount: true, currency: true } as const;
+const PRICE_FIELDS = { id: true, amount: true, currency: true, kind: true, interval: true, installments: true } as const;
+
+/** How a price bills; matches `Billing` in `@reanit/core/commerce`. */
+type Billing = { kind: "one_time" } | { kind: "recurring"; interval: BillingInterval } | { kind: "payment_plan"; installments: number };
+
+/** A price as it is set; matches `PriceInput` in `@reanit/core/commerce`. */
+type PriceInput = { amount: number; currency: Currency; billing: Billing };
+
+/** A price row as `PRICE_FIELDS` selects it. */
+type PriceRow = { id: string; amount: number; currency: string; kind: PriceKind; interval: BillingInterval | null; installments: number | null };
+
+/** Order statuses a confirmation pays: not yet paid, expired or rejected, or waiting for staff to confirm. */
+const CONFIRMABLE_STATUSES = ["pending", "failed", "awaiting_confirmation"] as const;
 const NEWEST_FIRST = { createdAt: "desc" } as const;
 /** Prisma's error code for a unique constraint violation. */
 const UNIQUE_VIOLATION = "P2002";
@@ -93,16 +105,82 @@ function toCoupon(row: CouponRow) {
 }
 
 /**
- * Narrows a stored currency code to the ones courses are sold in.
+ * Reads how a stored price bills; the table's check constraint guarantees each kind has its own
+ * columns, so the fallbacks never apply.
  *
- * @param price A stored price.
- * @param price.id Its id.
- * @param price.amount Amount in minor units.
- * @param price.currency ISO code as stored.
- * @returns The same price, typed.
+ * @param price The stored price's kind, period and instalments.
+ * @param price.kind How it bills.
+ * @param price.interval A recurring price's period.
+ * @param price.installments A payment plan's number of payments.
+ * @returns The billing.
  */
-function toPrice({ id, amount, currency }: { id: string; amount: number; currency: string }) {
-  return { id, amount, currency: currency as Currency };
+function toBilling({ kind, interval, installments }: Pick<PriceRow, "kind" | "interval" | "installments">): Billing {
+  if (kind === "recurring") return { kind, interval: interval ?? "month" };
+  if (kind === "payment_plan") return { kind, installments: installments ?? 0 };
+  return { kind };
+}
+
+/**
+ * Turns a stored price into the price checkout uses: its currency narrowed and its billing read.
+ *
+ * @param row A stored price.
+ * @returns The price, typed.
+ */
+function toPrice(row: PriceRow) {
+  return { id: row.id, amount: row.amount, currency: row.currency as Currency, billing: toBilling(row) };
+}
+
+/**
+ * Turns a price as set into the columns that store it.
+ *
+ * @param price The price.
+ * @param price.amount Amount in minor units, per payment.
+ * @param price.currency ISO code.
+ * @param price.billing How it bills.
+ * @returns The price's columns.
+ */
+function priceColumns({ amount, currency, billing }: PriceInput) {
+  return {
+    amount,
+    currency,
+    kind: billing.kind,
+    interval: billing.kind === "recurring" ? billing.interval : null,
+    installments: billing.kind === "payment_plan" ? billing.installments : null,
+  };
+}
+
+/** A subscription's columns with the price it bills, the course or bundle it sells, and the bundle's courses in order. */
+const SUBSCRIPTION_FIELDS = {
+  id: true,
+  status: true,
+  paidPeriods: true,
+  currentPeriodEnd: true,
+  price: {
+    select: {
+      ...PRICE_FIELDS,
+      course: { select: { id: true, title: true } },
+      bundle: { select: { id: true, title: true, courses: { orderBy: { position: "asc" }, select: { courseId: true } } } },
+    },
+  },
+} satisfies Prisma.SubscriptionSelect;
+
+/**
+ * Turns a subscription row into what checkout and the student's list use.
+ *
+ * @param row The stored subscription.
+ * @param row.price Its price, with the course or bundle it sells.
+ * @returns The subscription with its title, price, courses and bundle.
+ */
+function toSubscription({ price, ...subscription }: Prisma.SubscriptionGetPayload<{ select: typeof SUBSCRIPTION_FIELDS }>) {
+  const { course, bundle } = price;
+  return {
+    ...subscription,
+    title: course?.title ?? bundle?.title ?? "",
+    price: toPrice(price),
+    // A price belongs to a course or a bundle, never both.
+    courseIds: course ? [course.id] : (bundle?.courses.map(({ courseId }) => courseId) ?? []),
+    bundleId: bundle?.id ?? null,
+  };
 }
 
 /**
@@ -172,14 +250,12 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * Gives a course a new price; older prices stay for the orders that used them.
      *
      * @param courseId The course.
-     * @param price Amount in minor units and currency.
-     * @param price.amount Amount in minor units.
-     * @param price.currency ISO code.
+     * @param price Amount in minor units, currency and billing.
      * @returns The new price, or null when the school has no such course.
      */
-    async setPrice(courseId: string, { amount, currency }: { amount: number; currency: Currency }) {
+    async setPrice(courseId: string, price: PriceInput) {
       if (!(await tenant.course.findFirst({ where: { id: courseId }, select: { id: true } }))) return null;
-      return toPrice(await tenant.price.create({ data: { schoolId, courseId, amount, currency }, select: PRICE_FIELDS }));
+      return toPrice(await tenant.price.create({ data: { schoolId, courseId, ...priceColumns(price) }, select: PRICE_FIELDS }));
     },
 
     /**
@@ -187,10 +263,14 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      *
      * @param userId The user.
      * @param courseIds The courses to check.
-     * @returns The ones the user is enrolled in.
+     * @param at The moment access is checked at.
+     * @returns The ones the user is enrolled in and whose access has not ended.
      */
-    async enrolledCourseIds(userId: string, courseIds: string[]) {
-      const enrollments = await tenant.enrollment.findMany({ where: { userId, courseId: { in: courseIds } }, select: { courseId: true } });
+    async enrolledCourseIds(userId: string, courseIds: string[], at: Date) {
+      const enrollments = await tenant.enrollment.findMany({
+        where: { userId, courseId: { in: courseIds }, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
+        select: { courseId: true },
+      });
       return enrollments.map((enrollment) => enrollment.courseId);
     },
 
@@ -211,13 +291,13 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * @param order.userId The buyer.
      * @param order.price The course's or bundle's price.
      * @param order.price.id Its id.
-     * @param order.price.amount Amount in minor units.
      * @param order.price.currency ISO code.
      * @param order.lines Each course and its share of the charge, in minor units.
      * @param order.bundleId The bundle bought, or null for a single course.
      * @param order.couponId The coupon used, or null.
      * @param order.method The payment method chosen.
      * @param order.locale The language the buyer checked out in.
+     * @param order.subscriptionId The subscription it pays a period of, or null.
      * @returns The order's id.
      */
     createOrder({
@@ -228,14 +308,16 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
       couponId,
       method,
       locale,
+      subscriptionId,
     }: {
       userId: string;
-      price: { id: string; amount: number; currency: Currency };
+      price: { id: string; currency: Currency };
       lines: { courseId: string; amount: number }[];
       bundleId: string | null;
       couponId: string | null;
       method: PaymentMethod;
       locale: string;
+      subscriptionId: string | null;
     }) {
       return inSchoolTransaction(db, schoolId, (tx) =>
         tx.order.create({
@@ -247,6 +329,7 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
             paymentMethod: method,
             locale,
             couponId,
+            subscriptionId,
             // Items carry what was charged for each course, so sales stats count discounts and bundle shares.
             items: {
               create: lines.map(({ courseId, amount }) => ({ schoolId, courseId, bundleId, priceId: price.id, amount, currency: price.currency })),
@@ -279,12 +362,79 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
     },
 
     /**
-     * Marks a pending order failed, when its gateway says the payment will not complete.
+     * Marks an order failed, when its gateway says the payment will not complete or staff found no
+     * offline payment; only pending orders and those awaiting confirmation change.
      *
      * @param orderId The order.
+     * @returns Whether it changed.
      */
     async failOrder(orderId: string) {
-      await tenant.order.updateMany({ where: { id: orderId, status: "pending" }, data: { status: "failed" } });
+      const { count } = await tenant.order.updateMany({ where: { id: orderId, status: { in: ["pending", "awaiting_confirmation"] } }, data: { status: "failed" } });
+      return count > 0;
+    },
+
+    /**
+     * Records a student's word that they paid their pending offline QR order: it waits for staff with the reference.
+     *
+     * @param orderId The order.
+     * @param userId The student.
+     * @param reference The transaction reference their banking app showed.
+     * @returns False for any other order.
+     */
+    async submitOfflinePayment(orderId: string, userId: string, reference: string) {
+      const { count } = await tenant.order.updateMany({
+        where: { id: orderId, userId, paymentMethod: "offline_qr", status: "pending" },
+        data: { status: "awaiting_confirmation", paymentReference: reference },
+      });
+      return count > 0;
+    },
+
+    /**
+     * Tells whether the school uploaded its payment QR image.
+     *
+     * @returns Whether it has one.
+     */
+    async hasPaymentQr() {
+      return (await tenant.school.count({ where: { id: schoolId, paymentQrKey: { not: null } } })) > 0;
+    },
+
+    /**
+     * Starts a subscription, pending until its first payment.
+     *
+     * @param subscription The buyer and the recurring or payment plan price.
+     * @param subscription.userId The buyer.
+     * @param subscription.priceId The price.
+     * @returns Its id.
+     */
+    createSubscription({ userId, priceId }: { userId: string; priceId: string }) {
+      return tenant.subscription.create({ data: { schoolId, userId, priceId }, select: { id: true } });
+    },
+
+    /**
+     * Finds one of a user's subscriptions with what it sells.
+     *
+     * @param subscriptionId The subscription.
+     * @param userId The user.
+     * @returns The subscription, or null when the user has no such subscription in the school.
+     */
+    async findSubscription(subscriptionId: string, userId: string) {
+      const row = await tenant.subscription.findFirst({ where: { id: subscriptionId, userId }, select: SUBSCRIPTION_FIELDS });
+      return row && toSubscription(row);
+    },
+
+    /**
+     * Lists a user's subscriptions that were ever paid.
+     *
+     * @param userId The user.
+     * @returns The subscriptions, newest first.
+     */
+    async listSubscriptions(userId: string) {
+      const rows = await tenant.subscription.findMany({
+        where: { userId, status: { not: "pending" } },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: SUBSCRIPTION_FIELDS,
+      });
+      return rows.map(toSubscription);
     },
 
     /**
@@ -446,67 +596,107 @@ export function createCommerceStore(db: DbClient, schoolId: string) {
      * Gives a bundle a new price; older prices stay for the orders that used them.
      *
      * @param bundleId The bundle.
-     * @param price Amount in minor units and currency.
-     * @param price.amount Amount in minor units.
-     * @param price.currency ISO code.
+     * @param price Amount in minor units, currency and billing.
      * @returns The new price, or null when the school has no such bundle.
      */
-    async setBundlePrice(bundleId: string, { amount, currency }: { amount: number; currency: Currency }) {
+    async setBundlePrice(bundleId: string, price: PriceInput) {
       if (!(await tenant.bundle.findFirst({ where: { id: bundleId }, select: { id: true } }))) return null;
-      return toPrice(await tenant.price.create({ data: { schoolId, bundleId, amount, currency }, select: PRICE_FIELDS }));
+      return toPrice(await tenant.price.create({ data: { schoolId, bundleId, ...priceColumns(price) }, select: PRICE_FIELDS }));
     },
   };
 }
 
+/** How a confirmation finds its order; matches `PaymentMatch` in `@reanit/core/commerce`. */
+type PaymentMatch = { method: Exclude<PaymentMethod, "offline_qr">; providerRef: string } | { offlineOrderId: string };
+
+/** A subscription's terms and what one paid period changes; match `SubscriptionTerms`, `SubscriptionChange` and `RenewSubscription` in `@reanit/core/commerce`. */
+type RenewSubscription = (
+  terms: { billing: Exclude<Billing, { kind: "one_time" }>; paidPeriods: number; currentPeriodEnd: Date | null },
+  paidAt: Date,
+) => { paidPeriods: number; currentPeriodEnd: Date; status: "active" | "completed"; accessUntil: Date | null };
+
 /**
- * Confirms payments across schools: finds the order by the gateway's reference (which is unique),
- * then marks it paid and enrolls its buyer inside that school's tenant transaction.
- * It satisfies `PaymentConfirmationStore` from `@reanit/core/commerce`.
+ * Applies a paid period to a subscription, inside the payment's transaction. Touching the row first
+ * locks it, so two payments of the same subscription confirmed at once apply one after the other.
+ *
+ * @param tx The school's transaction.
+ * @param subscriptionId The subscription.
+ * @param at When the payment was confirmed.
+ * @param renew Computes the new period from the current one.
+ * @returns What changed: the paid periods and the access end.
+ */
+async function applyPaidPeriod(tx: SchoolTransaction, subscriptionId: string, at: Date, renew: RenewSubscription) {
+  const subscription = await tx.subscription.update({
+    where: { id: subscriptionId },
+    data: { updatedAt: at },
+    select: { paidPeriods: true, currentPeriodEnd: true, price: { select: { kind: true, interval: true, installments: true } } },
+  });
+  // Subscriptions are only made for recurring and payment plan prices.
+  const billing = toBilling(subscription.price) as Exclude<Billing, { kind: "one_time" }>;
+  const change = renew({ billing, paidPeriods: subscription.paidPeriods, currentPeriodEnd: subscription.currentPeriodEnd }, at);
+  await tx.subscription.update({
+    where: { id: subscriptionId },
+    data: { status: change.status, paidPeriods: change.paidPeriods, currentPeriodEnd: change.currentPeriodEnd },
+  });
+  return change;
+}
+
+/**
+ * Confirms payments across schools: finds the order by the gateway's reference (which is unique), or
+ * by id for an offline QR payment staff checked, then marks it paid and enrolls its buyer inside that
+ * school's tenant transaction. It satisfies `PaymentConfirmationStore` from `@reanit/core/commerce`.
  *
  * @param db Unscoped client from `createDbClient`.
  * @returns The store operations.
  * @example
- * const confirmation = createPaymentConfirmation(createPaymentConfirmationStore(db));
+ * const confirmation = createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock });
  */
 export function createPaymentConfirmationStore(db: DbClient) {
   return {
     /**
-     * Marks an order paid, enrolls its buyer, counts the sale in the daily stats and records `OrderPaid`
-     * in the outbox, once. Concurrent confirmations of the same order are safe: only the one that moves it out of
-     * `pending` (or `failed`, for an order that expired before the gateway confirmed it) enrolls.
+     * Marks an order paid, enrolls its buyer, counts the sale in the daily stats and records the event
+     * in the outbox, once. Concurrent confirmations of the same order are safe: only the one that moves it
+     * out of `pending`, `awaiting_confirmation` or `failed` (expired, or rejected by staff) enrolls. A
+     * subscription's order also moves its period on, and its enrollments last until the new access end;
+     * its first payment records `OrderPaid`, later ones `SubscriptionRenewed`.
      *
-     * @param method The gateway that confirmed the payment.
-     * @param providerRef The gateway's reference.
-     * @returns The order and whether this call paid it, or null when no order of that gateway has the reference.
+     * @param payment How to find the order: the gateway and its reference, or an offline QR order's id.
+     * @param at When the payment was confirmed.
+     * @param renew Computes a subscription's new period.
+     * @returns The order and whether this call paid it, or null when no order matches.
      */
-    async confirm(method: PaymentMethod, providerRef: string) {
-      const order = await db.order.findUnique({
-        where: { providerRef },
-        select: { id: true, schoolId: true, userId: true, paymentMethod: true },
-      });
-      if (!order || order.paymentMethod !== method) return null;
+    async confirm(payment: PaymentMatch, at: Date, renew: RenewSubscription) {
+      const where: Prisma.OrderWhereInput =
+        "offlineOrderId" in payment ? { id: payment.offlineOrderId, paymentMethod: "offline_qr" } : { providerRef: payment.providerRef, paymentMethod: payment.method };
+      const order = await db.order.findFirst({ where, select: { id: true, schoolId: true, userId: true, subscriptionId: true } });
+      if (!order) return null;
       return inSchoolTransaction(db, order.schoolId, async (tx) => {
-        const paidAt = new Date();
-        // A failed order is one the expiry sweep gave up on; the gateway took the money all the same.
         const { count } = await tx.order.updateMany({
-          where: { id: order.id, status: { in: ["pending", "failed"] } },
-          data: { status: "paid", paidAt },
+          where: { id: order.id, status: { in: [...CONFIRMABLE_STATUSES] } },
+          data: { status: "paid", paidAt: at },
         });
         if (count === 0) return { orderId: order.id, isNewlyPaid: false };
+        const change = order.subscriptionId ? await applyPaidPeriod(tx, order.subscriptionId, at, renew) : null;
+        const expiresAt = change?.accessUntil ?? null;
         const items = await tx.orderItem.findMany({ where: { orderId: order.id }, select: { courseId: true, amount: true, currency: true } });
         for (const { courseId, amount, currency } of items) {
           await tx.enrollment.upsert({
             where: { userId_courseId: { userId: order.userId, courseId } },
-            create: { schoolId: order.schoolId, userId: order.userId, courseId, orderId: order.id, source: "purchase" },
-            update: {},
+            create: { schoolId: order.schoolId, userId: order.userId, courseId, orderId: order.id, source: "purchase", expiresAt },
+            update: { expiresAt },
           });
-          await recordSale(tx, { schoolId: order.schoolId, courseId, amount, currency, at: paidAt });
+          await recordSale(tx, { schoolId: order.schoolId, courseId, amount, currency, at });
         }
-        await appendEvent(tx, {
-          type: "OrderPaid",
-          schoolId: order.schoolId,
-          payload: { orderId: order.id, userId: order.userId, courseIds: items.map((item) => item.courseId) },
-        });
+        const courseIds = items.map((item) => item.courseId);
+        if (change && order.subscriptionId && change.paidPeriods > 1) {
+          await appendEvent(tx, {
+            type: "SubscriptionRenewed",
+            schoolId: order.schoolId,
+            payload: { subscriptionId: order.subscriptionId, orderId: order.id, userId: order.userId, courseIds, accessUntil: expiresAt?.toISOString() ?? null },
+          });
+        } else {
+          await appendEvent(tx, { type: "OrderPaid", schoolId: order.schoolId, payload: { orderId: order.id, userId: order.userId, courseIds } });
+        }
         return { orderId: order.id, isNewlyPaid: true };
       });
     },

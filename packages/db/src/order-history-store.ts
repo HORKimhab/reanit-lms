@@ -26,6 +26,7 @@ const ORDER_FIELDS = {
   paidAt: true,
   refundedAt: true,
   isRefundedByHand: true,
+  paymentReference: true,
   coupon: { select: { code: true } },
   user: { select: { id: true, name: true, email: true } },
   items: { select: { courseId: true, amount: true, currency: true, course: { select: { title: true } }, bundle: { select: { title: true } } } },
@@ -51,6 +52,7 @@ function toOrderDetail(row: Prisma.OrderGetPayload<{ select: typeof ORDER_FIELDS
     paidAt: row.paidAt,
     refundedAt: row.refundedAt,
     isRefundedByHand: row.isRefundedByHand,
+    paymentReference: row.paymentReference,
   };
 }
 

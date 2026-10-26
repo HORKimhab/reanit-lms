@@ -5,8 +5,8 @@ import { InvalidCouponError } from "./errors";
 import type { Coupon, Price } from "./ports";
 
 const NOW = new Date("2026-10-19T12:00:00Z");
-const USD_PRICE: Price = { id: "p1", amount: 4999, currency: "USD" };
-const KHR_PRICE: Price = { id: "p2", amount: 2_000_000, currency: "KHR" };
+const USD_PRICE: Price = { id: "p1", amount: 4999, currency: "USD", billing: { kind: "one_time" } };
+const KHR_PRICE: Price = { id: "p2", amount: 2_000_000, currency: "KHR", billing: { kind: "one_time" } };
 
 /**
  * Builds a percent coupon with no expiry or limit, unless overridden.

@@ -146,7 +146,8 @@ User ─┬─< Membership >─ School ──o Domain  (one custom domain per sc
 
 **Reliability**
 - Payment and enrollment operations use idempotency keys.
-- Pending orders past their gateway's payment window (KHQR 15 minutes, Stripe and PayWay 24 hours, plus an hour) are failed by a worker sweep; a gateway that still confirms one later enrolls the student.
+- Pending orders past their gateway's payment window (KHQR 15 minutes, Stripe and PayWay 24 hours, offline QR 7 days, plus an hour) are failed by a worker sweep; a gateway that still confirms one later enrolls the student.
+- Subscriptions and payment plans (API-25) bill one order per period, with no saved cards: each period is paid by the school's own payment QR image (the default; the student gives their transaction reference and staff confirm or reject it, audited) or by a dynamic Bakong KHQR or ABA PayWay payment. Stripe stays one-time only. A confirmed period extends the enrollment to the period's end plus a 7-day grace; a payment plan's last instalment keeps the course for good. Staff confirmations go through the same idempotent confirmation as gateway webhooks.
 - Events are published through the outbox pattern, with retries and a dead-letter queue for failed jobs. Each handler of an event runs as its own job, so one failing never repeats another (a staff email never resends a receipt).
 
 **Observability**

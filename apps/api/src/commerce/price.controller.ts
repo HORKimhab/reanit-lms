@@ -5,7 +5,7 @@ import { Audited, pathParam } from "../audit/audit.decorator";
 import { CourseIdParams } from "../catalog/catalog.dto";
 import type { RequestContext } from "../context/request-context";
 import { CurrentSchool, Roles } from "../schools/schools.decorators";
-import { PriceBody, PriceResponse } from "./commerce.dto";
+import { PriceBody, PriceResponse, toPriceResponse } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
 /** Sets what a course costs. */
@@ -24,7 +24,7 @@ export class PriceController {
    *
    * @param school The caller's school.
    * @param params The course's id.
-   * @param body Amount in minor units and currency.
+   * @param body Amount in minor units, currency and billing.
    * @returns The price.
    * @throws {CourseNotFoundError} When the school has no such course (404).
    */
@@ -36,7 +36,6 @@ export class PriceController {
     @Param() params: CourseIdParams,
     @Body() body: PriceBody,
   ): Promise<PriceResponse> {
-    const { amount, currency } = await this.commerceFor(school.id).setPrice(params.id, body);
-    return { price: { amount, currency } };
+    return { price: toPriceResponse(await this.commerceFor(school.id).setPrice(params.id, body)) };
   }
 }

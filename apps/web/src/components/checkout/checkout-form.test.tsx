@@ -7,7 +7,7 @@ import { renderWithIntl } from "@/test/render";
 
 import { CheckoutForm } from "./checkout-form";
 
-const PRICE = { amount: 4900, currency: "USD" as const };
+const PRICE = { amount: 4900, currency: "USD" as const, billing: { kind: "one_time" as const } };
 
 /**
  * Renders the form with a checkout action that answers as given.

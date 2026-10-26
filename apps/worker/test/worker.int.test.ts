@@ -1,6 +1,7 @@
 import { getSharedConfigToken } from "@nestjs/bullmq";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { MailMessage } from "@reanit/core/auth";
+import { createPaymentConfirmation } from "@reanit/core/commerce";
 import type { EventHandler, EventHandlers } from "@reanit/core/events";
 import type { ObjectStorage } from "@reanit/core/media";
 import {
@@ -123,6 +124,15 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+/**
+ * Reads the real clock, as the API's confirmation does.
+ *
+ * @returns Now.
+ */
+function currentTime() {
+  return new Date();
+}
+
 describe("worker", () => {
   it("boots with BullMQ configured from the environment", async () => {
     const { app } = await bootWorker({});
@@ -172,13 +182,13 @@ describe("worker", () => {
     const courseId = (await catalog.createCourse({ title: "Brand", slug: "brand" })).id;
     await catalog.updateCourse(courseId, { status: "published" });
     const commerce = createCommerceStore(db, schoolId);
-    const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD" });
+    const price = await commerce.setPrice(courseId, { amount: 4900, currency: "USD", billing: { kind: "one_time" } });
     const buyer = await db.user.create({ data: { email: "worker-buyer@example.com", name: "Sokha" } });
     // setPrice found the course it just created.
-    const { id } = await commerce.createOrder({ userId: buyer.id, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km" });
+    const { id } = await commerce.createOrder({ userId: buyer.id, price: price!, lines: [{ courseId, amount: price!.amount }], bundleId: null, couponId: null, method: "stripe", locale: "km", subscriptionId: null });
     await commerce.setProviderRef(id, `cs_worker_${id}`);
 
-    await createPaymentConfirmationStore(db).confirm("stripe", `cs_worker_${id}`);
+    await createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock: { now: currentTime } }).confirm("stripe", `cs_worker_${id}`);
 
     await vi.waitFor(() => expect(sent).toHaveLength(3), { timeout: EVENT_TIMEOUT_MS });
     const toBuyer = sent.filter(({ to }) => to === "worker-buyer@example.com");

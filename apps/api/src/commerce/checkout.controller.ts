@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Query } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
 import type { CommerceService, PaymentStart } from "@reanit/core/commerce";
-import type { SchoolService } from "@reanit/core/schools";
+import type { School, SchoolService } from "@reanit/core/schools";
 import { ENV } from "@reanit/nest";
 
 import { CurrentUser, Public } from "../auth/auth.decorators";
@@ -18,19 +18,24 @@ import {
   OfferParams,
   OfferQuery,
   OfferResponse,
+  OfflinePaymentBody,
   OrderParams,
   OrderResponse,
+  RenewBody,
   SchoolParams,
+  SubscriptionParams,
+  toPriceResponse,
 } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
 /**
  * Describes the browser's next step without the gateway's reference, which stays on the server.
  *
- * @param payment What the gateway returned.
+ * @param payment What checkout returned.
+ * @param school The school, whose payment QR image an offline payment shows.
  * @returns The step for the response.
  */
-function toPaymentStep(payment: PaymentStart): CheckoutResponse["payment"] {
+function toPaymentStep(payment: PaymentStart, school: School): CheckoutResponse["payment"] {
   switch (payment.kind) {
     case "redirect":
       return { kind: "redirect", url: payment.url };
@@ -38,6 +43,9 @@ function toPaymentStep(payment: PaymentStart): CheckoutResponse["payment"] {
       return { kind: "form", action: payment.action, fields: payment.fields };
     case "qr":
       return { kind: "qr", qr: payment.qr, expiresAt: payment.expiresAt.toISOString() };
+    case "offline":
+      // Checkout offers the offline QR only to a school that uploaded its payment QR image.
+      return { kind: "offline", qrImageUrl: school.paymentQrUrl! };
   }
 }
 
@@ -58,6 +66,18 @@ export class CheckoutController {
   ) {}
 
   /**
+   * Finds the school a subdomain belongs to, with its commerce service.
+   *
+   * @param subdomain The school's subdomain.
+   * @returns The school and its commerce service.
+   * @throws {SchoolNotFoundError} When no school has the subdomain.
+   */
+  private async schoolCommerce(subdomain: string): Promise<{ school: School; commerce: CommerceService }> {
+    const school = await this.schools.getSchoolBySubdomain(subdomain);
+    return { school, commerce: this.commerceFor(school.id) };
+  }
+
+  /**
    * Picks the commerce service of the school a subdomain belongs to.
    *
    * @param subdomain The school's subdomain.
@@ -65,7 +85,7 @@ export class CheckoutController {
    * @throws {SchoolNotFoundError} When no school has the subdomain.
    */
   private async commerce(subdomain: string): Promise<CommerceService> {
-    return this.commerceFor((await this.schools.getSchoolBySubdomain(subdomain)).id);
+    return (await this.schoolCommerce(subdomain)).commerce;
   }
 
   /**
@@ -96,11 +116,12 @@ export class CheckoutController {
   @ApiOkResponse({ type: OfferResponse })
   async offer(@Param() params: OfferParams, @Query() query: OfferQuery): Promise<OfferResponse> {
     const { price, methods, discount } = await (await this.commerce(params.subdomain)).getOffer(params.slug, query);
-    return { price: price && { amount: price.amount, currency: price.currency }, methods, discount };
+    return { price: price && toPriceResponse(price), methods, discount };
   }
 
   /**
-   * Starts buying a course with the chosen method and coupon. Enrollment follows only the gateway's confirmation.
+   * Starts buying a course with the chosen method and coupon: at once for a one-time price, or the
+   * first period of a subscription or payment plan. Enrollment follows only a confirmed payment.
    *
    * @param params The school's subdomain.
    * @param body The course, payment method and coupon code.
@@ -116,8 +137,9 @@ export class CheckoutController {
   @ApiCreatedResponse({ type: CheckoutResponse })
   async checkout(@Param() params: SchoolParams, @Body() body: CheckoutBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
     const urls = this.returnUrls(params.subdomain, `/courses/${body.courseSlug}`);
-    const { orderId, payment } = await (await this.commerce(params.subdomain)).checkout({ userId: user.id, email: user.email }, body, urls);
-    return { orderId, payment: toPaymentStep(payment) };
+    const { school, commerce } = await this.schoolCommerce(params.subdomain);
+    const { orderId, payment } = await commerce.checkout({ userId: user.id, email: user.email }, body, urls);
+    return { orderId, payment: toPaymentStep(payment, school) };
   }
 
   /**
@@ -150,7 +172,7 @@ export class CheckoutController {
   @ApiOkResponse({ type: OfferResponse })
   async bundleOffer(@Param() params: OfferParams, @Query() query: OfferQuery): Promise<OfferResponse> {
     const { price, methods, discount } = await (await this.commerce(params.subdomain)).getBundleOffer(params.slug, query);
-    return { price: price && { amount: price.amount, currency: price.currency }, methods, discount };
+    return { price: price && toPriceResponse(price), methods, discount };
   }
 
   /**
@@ -171,8 +193,9 @@ export class CheckoutController {
   @ApiCreatedResponse({ type: CheckoutResponse })
   async checkoutBundle(@Param() params: SchoolParams, @Body() body: BundleCheckoutBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
     const urls = this.returnUrls(params.subdomain, `/bundles/${body.bundleSlug}`);
-    const { orderId, payment } = await (await this.commerce(params.subdomain)).checkoutBundle({ userId: user.id, email: user.email }, body, urls);
-    return { orderId, payment: toPaymentStep(payment) };
+    const { school, commerce } = await this.schoolCommerce(params.subdomain);
+    const { orderId, payment } = await commerce.checkoutBundle({ userId: user.id, email: user.email }, body, urls);
+    return { orderId, payment: toPaymentStep(payment, school) };
   }
 
   /**
@@ -189,5 +212,42 @@ export class CheckoutController {
     // Picked field by field: the gateway's reference stays on the server.
     const { id, status, courseId, amount, currency, method } = await (await this.commerce(params.subdomain)).getOrder(params.orderId, user.id);
     return { order: { id, status, courseId, amount, currency, method } };
+  }
+
+  /**
+   * Pays a subscription's next period or a payment plan's next instalment; a lapsed subscription comes back this way.
+   *
+   * @param params The school's subdomain and the subscription's id.
+   * @param body How to pay and the receipt's language.
+   * @param user The signed-in student.
+   * @returns The order and what the browser does next.
+   * @throws {SubscriptionNotFoundError} When the student has no such subscription in this school (404).
+   * @throws {SubscriptionNotRenewableError} When its first payment is still open or the plan is paid off (409).
+   * @throws {PaymentMethodUnavailableError} When the method cannot take the payment (400).
+   */
+  @Post("subscriptions/:subscriptionId/renew")
+  @RateLimit("checkout")
+  @ApiCreatedResponse({ type: CheckoutResponse })
+  async renew(@Param() params: SubscriptionParams, @Body() body: RenewBody, @CurrentUser() user: AuthUser): Promise<CheckoutResponse> {
+    const urls = this.returnUrls(params.subdomain, "/purchases");
+    const { school, commerce } = await this.schoolCommerce(params.subdomain);
+    const { orderId, payment } = await commerce.renewSubscription({ userId: user.id, email: user.email }, params.subscriptionId, body, urls);
+    return { orderId, payment: toPaymentStep(payment, school) };
+  }
+
+  /**
+   * Records that the student paid an offline QR order, with their transaction reference; staff then confirm it.
+   *
+   * @param params The school's subdomain and the order's id.
+   * @param body The transaction reference.
+   * @param user The signed-in student.
+   * @throws {OrderNotFoundError} When the student has no such order in this school (404).
+   * @throws {OfflinePaymentClosedError} When it is not a pending offline QR order (409).
+   */
+  @Post("orders/:orderId/offline-payment")
+  @RateLimit("checkout")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async submitOfflinePayment(@Param() params: OrderParams, @Body() body: OfflinePaymentBody, @CurrentUser() user: AuthUser) {
+    await (await this.commerce(params.subdomain)).submitOfflinePayment(params.orderId, user.id, body);
   }
 }

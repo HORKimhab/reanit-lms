@@ -213,6 +213,19 @@ describe("PATCH /schools/current", () => {
   });
 });
 
+describe("POST /schools/current/payment-qr-uploads", () => {
+  it("presigns the payment QR upload for an admin's school", async () => {
+    const headers = signInAs(clients);
+    clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "admin" });
+    clients.schools.requestImageUpload.mockResolvedValue({ key: "schools/s/payment-qr/a.png", url: "https://storage.test/a", headers: {}, expiresAt: new Date("2026-10-19T00:15:00Z") });
+
+    const response = await app.inject({ method: "POST", url: "/schools/current/payment-qr-uploads", headers, payload: { contentType: "image/png", sizeBytes: 2048 } });
+
+    expect(response.statusCode).toBe(201);
+    expect(clients.schools.requestImageUpload).toHaveBeenCalledWith(TEST_SCHOOL.id, "payment-qr", { contentType: "image/png", sizeBytes: 2048 });
+  });
+});
+
 describe("POST /schools/current/logo-uploads", () => {
   const BODY = { contentType: "image/png", sizeBytes: 2048 };
 
@@ -220,13 +233,13 @@ describe("POST /schools/current/logo-uploads", () => {
     const headers = signInAs(clients);
     clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
     const upload = { key: "schools/s/logo/a.png", url: "https://storage.test/a", headers: { "content-type": "image/png" } };
-    clients.schools.requestLogoUpload.mockResolvedValue({ ...upload, expiresAt: new Date("2026-10-19T00:15:00Z") });
+    clients.schools.requestImageUpload.mockResolvedValue({ ...upload, expiresAt: new Date("2026-10-19T00:15:00Z") });
 
     const response = await app.inject({ method: "POST", url: "/schools/current/logo-uploads", headers, payload: BODY });
 
     expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual({ ...upload, expiresAt: "2026-10-19T00:15:00.000Z" });
-    expect(clients.schools.requestLogoUpload).toHaveBeenCalledWith(TEST_SCHOOL.id, BODY);
+    expect(clients.schools.requestImageUpload).toHaveBeenCalledWith(TEST_SCHOOL.id, "logo", BODY);
   });
 
   it("answers 403 to an instructor", async () => {
@@ -242,7 +255,7 @@ describe("POST /schools/current/logo-uploads", () => {
   ])("maps %s to %i", async (error, status) => {
     const headers = signInAs(clients);
     clients.schools.getStaffSchool.mockResolvedValue({ school: TEST_SCHOOL, role: "owner" });
-    clients.schools.requestLogoUpload.mockRejectedValue(error);
+    clients.schools.requestImageUpload.mockRejectedValue(error);
 
     expect((await app.inject({ method: "POST", url: "/schools/current/logo-uploads", headers, payload: BODY })).statusCode).toBe(status);
   });

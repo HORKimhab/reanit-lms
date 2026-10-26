@@ -31,6 +31,8 @@ enum LessonType {
 
 enum OrderStatus {
   pending
+  /// Paid by offline QR, per the student; waits for staff to confirm the money arrived (API-25).
+  awaiting_confirmation
   paid
   failed
   refunded
@@ -41,6 +43,30 @@ enum PaymentMethod {
   stripe
   aba_payway
   bakong_khqr
+  /// The school's own static payment QR image; staff confirm each payment by hand (API-25).
+  offline_qr
+}
+
+/// How a price bills (API-25): once, every period, or in a set number of monthly instalments.
+enum PriceKind {
+  one_time
+  recurring
+  payment_plan
+}
+
+/// How long a recurring price's period is.
+enum BillingInterval {
+  month
+  year
+}
+
+/// Where a subscription or payment plan stands. `pending` until its first payment, `completed` once a
+/// plan's last instalment is paid, `lapsed` once access ended unpaid.
+enum SubscriptionStatus {
+  pending
+  active
+  completed
+  lapsed
 }
 
 /// Where a custom domain's certificate stands at the edge (Cloudflare for SaaS).
@@ -77,6 +103,7 @@ model User {
   auditEvents             AuditEvent[]
   comments                LessonComment[]
   notificationPreferences NotificationPreference[]
+  subscriptions           Subscription[]
 
   @@map("users")
 }
@@ -108,14 +135,16 @@ model MagicLinkToken {
 
 /// A tenant: one creator's branded school.
 model School {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String
-  subdomain  String   @unique
-  brandColor String?  @map("brand_color")
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  subdomain    String   @unique
+  brandColor   String?  @map("brand_color")
   /// Object-storage key of the logo; the API signs it into a URL.
-  logoKey    String?  @map("logo_key")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  logoKey      String?  @map("logo_key")
+  /// Object-storage key of the school's own payment QR image, for offline payments (API-25).
+  paymentQrKey String?  @map("payment_qr_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   memberships             Membership[]
   courses                 Course[]
@@ -141,6 +170,7 @@ model School {
   domain                  Domain?
   notificationPreferences NotificationPreference[]
   teamInvites             TeamInvite[]
+  subscriptions           Subscription[]
 
   @@map("schools")
 }
@@ -230,18 +260,25 @@ model Lesson {
 /// What a course or a bundle costs; exactly one of `course_id` and `bundle_id` is set. Newest wins.
 /// Money is integer minor units + ISO 4217 code.
 model Price {
-  id        String   @id @default(uuid()) @db.Uuid
-  schoolId  String   @map("school_id") @db.Uuid
-  courseId  String?  @map("course_id") @db.Uuid
-  bundleId  String?  @map("bundle_id") @db.Uuid
-  amount    Int
-  currency  String   @db.Char(3)
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String           @id @default(uuid()) @db.Uuid
+  schoolId     String           @map("school_id") @db.Uuid
+  courseId     String?          @map("course_id") @db.Uuid
+  bundleId     String?          @map("bundle_id") @db.Uuid
+  /// Per period for recurring prices and per instalment for payment plans.
+  amount       Int
+  currency     String           @db.Char(3)
+  kind         PriceKind        @default(one_time)
+  /// A recurring price's period; null otherwise (payment plans bill monthly).
+  interval     BillingInterval?
+  /// How many monthly payments a payment plan takes; null otherwise.
+  installments Int?
+  createdAt    DateTime         @default(now()) @map("created_at")
 
-  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  course     Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  bundle     Bundle?     @relation(fields: [bundleId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  course        Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  bundle        Bundle?        @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  subscriptions Subscription[]
 
   @@index([schoolId])
   @@index([courseId])
@@ -306,18 +343,24 @@ model Order {
   refundedAt       DateTime?     @map("refunded_at")
   /// The gateway could not refund (KHQR, PayWay), so staff paid the student back themselves.
   isRefundedByHand Boolean       @default(false) @map("is_refunded_by_hand")
+  /// The subscription or payment plan period this order pays; null for a one-time purchase.
+  subscriptionId   String?       @map("subscription_id") @db.Uuid
+  /// The transaction reference the student gave for an offline QR payment, for staff to match.
+  paymentReference String?       @map("payment_reference")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
-  coupon      Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  items       OrderItem[]
-  enrollments Enrollment[]
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  coupon       Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  items        OrderItem[]
+  enrollments  Enrollment[]
 
   @@index([schoolId])
   @@index([userId])
   @@index([couponId])
+  @@index([subscriptionId])
   @@map("orders")
 }
 
@@ -643,4 +686,30 @@ model TeamInvite {
 
   @@unique([schoolId, email])
   @@map("team_invites")
+}
+
+/// A student's recurring price or payment plan for a course or bundle (API-25). Each period is its
+/// own order; a confirmed payment extends `current_period_end`, and the enrollment's `expires_at` with it.
+model Subscription {
+  id               String             @id @default(uuid()) @db.Uuid
+  schoolId         String             @map("school_id") @db.Uuid
+  userId           String             @map("user_id") @db.Uuid
+  /// The price subscribed to; its kind, period and instalments stay as they were.
+  priceId          String             @map("price_id") @db.Uuid
+  status           SubscriptionStatus @default(pending)
+  /// Periods (or instalments) paid so far.
+  paidPeriods      Int                @default(0) @map("paid_periods")
+  /// The end of the last paid period; null until the first payment.
+  currentPeriodEnd DateTime?          @map("current_period_end")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  price  Price   @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@index([schoolId])
+  @@index([userId])
+  @@map("subscriptions")
 }

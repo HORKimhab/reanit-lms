@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { createCatalogStore, createCommerceStore, createDbClient, createOrderExpiryStore } from "../src";
 import { openTestSchool } from "../src/test/schools";
+import { ONE_TIME } from "../src/test/payments";
 
 const db = createDbClient(inject("databaseUrl"));
 const CUTOFF = new Date("2026-10-26T10:00:00Z");
@@ -22,7 +23,7 @@ async function order(schoolId: string, method: "stripe" | "bakong_khqr", placedA
   const course = await commerce.findCourse("expiring");
   if (!course?.price) throw new Error("The course has no price.");
   const { price } = course;
-  const { id } = await commerce.createOrder({ userId: buyerId, price, lines: [{ courseId: course.id, amount: price.amount }], bundleId: null, couponId: null, method, locale: "en" });
+  const { id } = await commerce.createOrder({ userId: buyerId, price, lines: [{ courseId: course.id, amount: price.amount }], bundleId: null, couponId: null, method, locale: "en", subscriptionId: null });
   await db.order.update({ where: { id }, data: { createdAt: placedAt, status } });
   return id;
 }
@@ -31,7 +32,7 @@ beforeAll(async () => {
   schoolIds = [await openTestSchool(db, "expiry-alpha"), await openTestSchool(db, "expiry-beta")];
   for (const schoolId of schoolIds) {
     const courseId = (await createCatalogStore(db, schoolId).createCourse({ title: "Expiring", slug: "expiring" })).id;
-    await createCommerceStore(db, schoolId).setPrice(courseId, { amount: 100, currency: "USD" });
+    await createCommerceStore(db, schoolId).setPrice(courseId, { amount: 100, currency: "USD", billing: ONE_TIME });
   }
   buyerId = (await db.user.create({ data: { email: "expiry-buyer@example.com" } })).id;
 });
@@ -53,6 +54,7 @@ describe("order expiry store", () => {
       bakong_khqr: CUTOFF,
       stripe: new Date("2026-10-25T10:00:00Z"),
       aba_payway: new Date("2026-10-25T10:00:00Z"),
+      offline_qr: new Date("2026-10-19T10:00:00Z"),
     });
 
     expect(failed).toBe(2);

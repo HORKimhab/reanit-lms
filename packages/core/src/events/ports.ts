@@ -5,6 +5,16 @@ export interface OrderPaid {
   payload: { orderId: string; userId: string; courseIds: string[] };
 }
 
+/**
+ * A subscription's or payment plan's later period was paid (the first payment is `OrderPaid`); access
+ * now lasts until `accessUntil`, or for good once a plan is paid off (null).
+ */
+export interface SubscriptionRenewed {
+  type: "SubscriptionRenewed";
+  schoolId: string;
+  payload: { subscriptionId: string; orderId: string; userId: string; courseIds: string[]; accessUntil: string | null };
+}
+
 /** A student completed every lesson of a course. */
 export interface CourseCompleted {
   type: "CourseCompleted";
@@ -35,7 +45,7 @@ export interface StudentErased {
 }
 
 /** Something that happened in a school, written to the outbox in the same transaction as the change itself. */
-export type DomainEvent = OrderPaid | OrderRefunded | CourseCompleted | CommentPosted | StudentErased;
+export type DomainEvent = OrderPaid | OrderRefunded | SubscriptionRenewed | CourseCompleted | CommentPosted | StudentErased;
 
 /** A domain event as the outbox stores and relays it. */
 export type OutboxEvent = DomainEvent & {

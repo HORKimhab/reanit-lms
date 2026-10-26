@@ -14,6 +14,8 @@ type AuditAction =
   | "bundle.update"
   | "bundle.price.set"
   | "order.refund"
+  | "order.payment.confirm"
+  | "order.payment.reject"
   | "lesson.media.attach"
   | "lesson.quiz.save"
   | "comment.reply"

@@ -10,18 +10,23 @@ import {
   CouponNotFoundError,
   CourseNotForSaleError,
   InvalidCouponError,
+  OfflinePaymentClosedError,
   OrderNotFoundError,
   OrderNotRefundableError,
   PaymentMethodUnavailableError,
   RefundByHandRequiredError,
+  SubscriptionNotFoundError,
+  SubscriptionNotRenewableError,
   UnknownBundleCourseError,
   UnknownPaymentError,
 } from "./errors";
 import { createCommerceService, createPaymentConfirmation, type CommerceService } from "./service";
+import { renewSubscription } from "./subscriptions";
 
 const BUYER = { userId: "user-1", email: "dara@example.com" };
 const NOW = new Date("2026-10-19T12:00:00Z");
 const SAVE20 = { code: "SAVE20", kind: "percent", percentOff: 20, expiresAt: null, maxRedemptions: null } as const;
+const ONE_TIME = { kind: "one_time" } as const;
 
 /**
  * Builds the return URLs for an order.
@@ -40,16 +45,16 @@ let commerce: CommerceService;
 
 beforeEach(() => {
   store = new FakeCommerceStore();
-  store.courses.set("c1", { id: "c1", slug: "intro", title: "Intro", isPublished: true, price: { id: "p1", amount: 4900, currency: "USD" } });
-  store.courses.set("c2", { id: "c2", slug: "riel", title: "Riel course", isPublished: true, price: { id: "p2", amount: 20000, currency: "KHR" } });
+  store.courses.set("c1", { id: "c1", slug: "intro", title: "Intro", isPublished: true, price: { id: "p1", amount: 4900, currency: "USD", billing: ONE_TIME } });
+  store.courses.set("c2", { id: "c2", slug: "riel", title: "Riel course", isPublished: true, price: { id: "p2", amount: 20000, currency: "KHR", billing: ONE_TIME } });
   store.courses.set("c3", { id: "c3", slug: "free", title: "No price", isPublished: true, price: null });
-  store.courses.set("c4", { id: "c4", slug: "draft", title: "Draft", isPublished: false, price: { id: "p4", amount: 100, currency: "USD" } });
+  store.courses.set("c4", { id: "c4", slug: "draft", title: "Draft", isPublished: false, price: { id: "p4", amount: 100, currency: "USD", billing: ONE_TIME } });
   stripe = new FakeGateway("stripe", ["USD"]);
   khqr = new AskableFakeGateway("bakong_khqr", ["USD", "KHR"]);
   commerce = createCommerceService({
     store,
     gateways: [stripe, khqr],
-    confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)),
+    confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
     clock: new FakeClock(NOW),
   });
 });
@@ -57,7 +62,7 @@ beforeEach(() => {
 describe("getOffer", () => {
   it("offers every configured method that takes the course's currency", async () => {
     expect(await commerce.getOffer("intro")).toEqual({
-      price: { id: "p1", amount: 4900, currency: "USD" },
+      price: { id: "p1", amount: 4900, currency: "USD", billing: ONE_TIME },
       methods: ["stripe", "bakong_khqr"],
       discount: null,
     });
@@ -86,11 +91,11 @@ describe("getOffer", () => {
 
 describe("setPrice", () => {
   it("sets a course's price", async () => {
-    expect(await commerce.setPrice("c3", { amount: 1500, currency: "USD" })).toMatchObject({ amount: 1500, currency: "USD" });
+    expect(await commerce.setPrice("c3", { amount: 1500, currency: "USD", billing: ONE_TIME })).toMatchObject({ amount: 1500, currency: "USD" });
   });
 
   it("throws CourseNotFoundError for another school's or a missing course", async () => {
-    await expect(commerce.setPrice("missing", { amount: 1, currency: "USD" })).rejects.toThrow(CourseNotFoundError);
+    await expect(commerce.setPrice("missing", { amount: 1, currency: "USD", billing: ONE_TIME })).rejects.toThrow(CourseNotFoundError);
   });
 });
 
@@ -127,7 +132,7 @@ describe("checkout", () => {
   });
 
   it("throws AlreadyEnrolledError when the student has the course", async () => {
-    store.enrollments.add("user-1:c1");
+    store.enroll("user-1", "c1");
 
     await expect(commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
     expect(store.orders).toEqual([]);
@@ -148,7 +153,7 @@ describe("checkout with a coupon", () => {
     await commerce.createCoupon({ ...SAVE20, maxRedemptions: 1 });
     await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
     await commerce.checkout({ userId: "user-2", email: "b@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls);
-    await createPaymentConfirmation(new FakeConfirmationStore(store)).confirm("stripe", "ref-order-1");
+    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }).confirm("stripe", "ref-order-1");
 
     await expect(
       commerce.checkout({ userId: "user-3", email: "c@example.com" }, { courseSlug: "intro", method: "stripe", couponCode: "SAVE20", locale: "en" }, urls),
@@ -201,10 +206,10 @@ describe("bundles", () => {
    * @returns The bundle's id and slug.
    */
   async function publishedBundle(price = 10_000) {
-    store.courses.set("c5", { id: "c5", slug: "advanced", title: "Advanced", isPublished: true, price: { id: "p5", amount: 7900, currency: "USD" } });
+    store.courses.set("c5", { id: "c5", slug: "advanced", title: "Advanced", isPublished: true, price: { id: "p5", amount: 7900, currency: "USD", billing: ONE_TIME } });
     const bundle = await commerce.createBundle({ title: "Design Kit", courseIds: ["c1", "c5"] });
     await commerce.updateBundle(bundle.id, { status: "published" });
-    await commerce.setBundlePrice(bundle.id, { amount: price, currency: "USD" });
+    await commerce.setBundlePrice(bundle.id, { amount: price, currency: "USD", billing: ONE_TIME });
     return bundle;
   }
 
@@ -225,7 +230,7 @@ describe("bundles", () => {
 
   it("throws BundleNotFoundError when changing or pricing a bundle the school does not have", async () => {
     await expect(commerce.updateBundle("missing", { title: "Kit" })).rejects.toThrow(BundleNotFoundError);
-    await expect(commerce.setBundlePrice("missing", { amount: 100, currency: "USD" })).rejects.toThrow(BundleNotFoundError);
+    await expect(commerce.setBundlePrice("missing", { amount: 100, currency: "USD", billing: ONE_TIME })).rejects.toThrow(BundleNotFoundError);
     await expect(commerce.getBundle("missing")).rejects.toThrow(BundleNotFoundError);
   });
 
@@ -242,7 +247,7 @@ describe("bundles", () => {
     await commerce.createCoupon(SAVE20);
 
     expect(await commerce.getBundleOffer(slug, { coupon: "SAVE20" })).toEqual({
-      price: { id: expect.any(String), amount: 10_000, currency: "USD" },
+      price: { id: expect.any(String), amount: 10_000, currency: "USD", billing: ONE_TIME },
       methods: ["stripe", "bakong_khqr"],
       discount: { code: "SAVE20", amountOff: 2000, total: 8000 },
     });
@@ -255,16 +260,16 @@ describe("bundles", () => {
 
     expect(stripe.requests[0]).toMatchObject({ amount: 10_001, description: "Design Kit" });
     expect(store.orders[0]).toMatchObject({ bundleId: id, amount: 10_001, lines: [{ courseId: "c1", amount: 5001 }, { courseId: "c5", amount: 5000 }] });
-    await createPaymentConfirmation(new FakeConfirmationStore(store)).confirm("stripe", `ref-${orderId}`);
-    expect(store.enrollments).toEqual(new Set(["user-1:c1", "user-1:c5"]));
+    await createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }).confirm("stripe", `ref-${orderId}`);
+    expect(store.enrollments).toEqual(new Map([["user-1:c1", null], ["user-1:c5", null]]));
   });
 
   it("sells a bundle to a student who has some of its courses, not all", async () => {
     const { slug } = await publishedBundle();
-    store.enrollments.add("user-1:c1");
+    store.enroll("user-1", "c1");
 
     await commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls);
-    store.enrollments.add("user-1:c5");
+    store.enroll("user-1", "c5");
 
     await expect(commerce.checkoutBundle(BUYER, { bundleSlug: slug, method: "stripe", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
   });
@@ -293,7 +298,7 @@ describe("getOrder with a gateway that can be asked", () => {
 
     expect((await commerce.getOrder(orderId, "user-1")).status).toBe("paid");
     expect(khqr.checked).toEqual([`ref-${orderId}`]);
-    expect(store.enrollments).toEqual(new Set(["user-1:c2"]));
+    expect(store.enrollments).toEqual(new Map([["user-1:c2", null]]));
   });
 
   it("fails an order the gateway says will not be paid", async () => {
@@ -332,15 +337,15 @@ describe("getOrder with a gateway that can be asked", () => {
 describe("payment confirmation", () => {
   it("marks the order paid and enrolls the buyer exactly once", async () => {
     await commerce.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
-    const confirmation = createPaymentConfirmation(new FakeConfirmationStore(store));
+    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) });
 
     expect(await confirmation.confirm("stripe", "ref-order-1")).toEqual({ orderId: "order-1", isNewlyPaid: true });
     expect(await confirmation.confirm("stripe", "ref-order-1")).toEqual({ orderId: "order-1", isNewlyPaid: false });
-    expect(store.enrollments).toEqual(new Set(["user-1:c1"]));
+    expect(store.enrollments).toEqual(new Map([["user-1:c1", null]]));
   });
 
   it("throws UnknownPaymentError for a reference no order has", async () => {
-    const confirmation = createPaymentConfirmation(new FakeConfirmationStore(store));
+    const confirmation = createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) });
 
     await expect(confirmation.confirm("stripe", "ref-nope")).rejects.toThrow(UnknownPaymentError);
   });
@@ -355,7 +360,7 @@ describe("refundOrder", () => {
     refunds = createCommerceService({
       store,
       gateways: [refundingStripe, khqr],
-      confirmation: createPaymentConfirmation(new FakeConfirmationStore(store)),
+      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
       clock: new FakeClock(NOW),
     });
   });
@@ -369,7 +374,7 @@ describe("refundOrder", () => {
    */
   async function paidOrder(courseSlug: string, method: "stripe" | "bakong_khqr") {
     const { orderId } = await refunds.checkout(BUYER, { courseSlug, method, locale: "en" }, urls);
-    await new FakeConfirmationStore(store).confirm(method, `ref-${orderId}`);
+    await new FakeConfirmationStore(store).confirm({ method, providerRef: `ref-${orderId}` }, NOW, renewSubscription);
     return orderId;
   }
 
@@ -422,3 +427,216 @@ describe("refundOrder", () => {
     await expect(refunds.refundOrder("order-404", { isRefundedByHand: true })).rejects.toThrow(OrderNotFoundError);
   });
 });
+
+describe("subscriptions and payment plans", () => {
+  const MONTHLY = { kind: "recurring", interval: "month" } as const;
+  let payway: AskableFakeGateway;
+  let plans: CommerceService;
+  let clock: FakeClock;
+
+  beforeEach(() => {
+    store.courses.set("c6", { id: "c6", slug: "club", title: "Design Club", isPublished: true, price: { id: "p6", amount: 1500, currency: "USD", billing: MONTHLY } });
+    store.courses.set("c7", {
+      id: "c7",
+      slug: "plan",
+      title: "Pro Course",
+      isPublished: true,
+      price: { id: "p7", amount: 10_000, currency: "USD", billing: { kind: "payment_plan", installments: 2 } },
+    });
+    store.hasQr = true;
+    payway = new AskableFakeGateway("aba_payway", ["USD", "KHR"]);
+    clock = new FakeClock(NOW);
+    plans = createCommerceService({
+      store,
+      gateways: [stripe, payway],
+      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock }),
+      clock,
+    });
+  });
+
+  /**
+   * Starts the student's subscription to a course and has PayWay confirm its first payment.
+   *
+   * @param courseSlug The monthly course or the payment plan course.
+   */
+  async function payFirstPeriod(courseSlug: "club" | "plan") {
+    const { orderId } = await plans.checkout(BUYER, { courseSlug, method: "aba_payway", locale: "en" }, urls);
+    payway.checkResult = "paid";
+    await plans.getOrder(orderId, "user-1");
+  }
+
+  it("offers the school's payment QR first, then the gateways that bill period by period, never Stripe", async () => {
+    expect((await plans.getOffer("club")).methods).toEqual(["offline_qr", "aba_payway"]);
+    expect((await plans.getOffer("intro")).methods).toEqual(["stripe", "aba_payway"]);
+  });
+
+  it("leaves out the payment QR until the school uploads one", async () => {
+    store.hasQr = false;
+
+    expect((await plans.getOffer("club")).methods).toEqual(["aba_payway"]);
+  });
+
+  it("refuses Stripe and coupons for a subscription", async () => {
+    await plans.createCoupon(SAVE20);
+
+    await expect(plans.checkout(BUYER, { courseSlug: "club", method: "stripe", locale: "en" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
+    await expect(plans.getOffer("club", { coupon: "SAVE20" })).rejects.toThrow(new InvalidCouponError("one_time_only"));
+    expect(store.subscriptions).toHaveLength(0);
+  });
+
+  it("starts a pending subscription whose first order pays the first period, and gives access until a week after it", async () => {
+    const { orderId } = await plans.checkout(BUYER, { courseSlug: "club", method: "aba_payway", locale: "en" }, urls);
+    expect(store.subscriptions[0]).toMatchObject({ id: "subscription-1", status: "pending", paidPeriods: 0 });
+    expect(store.orders[0]).toMatchObject({ id: orderId, subscriptionId: "subscription-1", amount: 1500 });
+
+    payway.checkResult = "paid";
+    await plans.getOrder(orderId, "user-1");
+
+    expect(store.subscriptions[0]).toMatchObject({ status: "active", paidPeriods: 1, currentPeriodEnd: new Date("2026-11-19T12:00:00Z") });
+    expect(store.enrollments.get("user-1:c6")).toEqual(new Date("2026-11-26T12:00:00Z"));
+  });
+
+  it("renews a subscription at its price, extending access from the end of the paid period", async () => {
+    await payFirstPeriod("club");
+
+    const renewal = await plans.renewSubscription(BUYER, "subscription-1", { method: "aba_payway", locale: "km" }, urls);
+    await plans.getOrder(renewal.orderId, "user-1");
+
+    expect(store.orders[1]).toMatchObject({ subscriptionId: "subscription-1", amount: 1500, locale: "km" });
+    expect(store.subscriptions[0]).toMatchObject({ paidPeriods: 2, currentPeriodEnd: new Date("2026-12-19T12:00:00Z") });
+    expect(store.enrollments.get("user-1:c6")).toEqual(new Date("2026-12-26T12:00:00Z"));
+  });
+
+  it("completes a payment plan on its last instalment and keeps the course for good", async () => {
+    await payFirstPeriod("plan");
+    const second = await plans.renewSubscription(BUYER, "subscription-1", { method: "aba_payway", locale: "en" }, urls);
+    await plans.getOrder(second.orderId, "user-1");
+
+    expect(store.subscriptions[0]?.status).toBe("completed");
+    expect(store.enrollments.get("user-1:c7")).toBeNull();
+    await expect(plans.renewSubscription(BUYER, "subscription-1", { method: "aba_payway", locale: "en" }, urls)).rejects.toThrow(SubscriptionNotRenewableError);
+  });
+
+  it("refuses to renew before the first payment, and another student's subscription", async () => {
+    await plans.checkout(BUYER, { courseSlug: "club", method: "aba_payway", locale: "en" }, urls);
+
+    await expect(plans.renewSubscription(BUYER, "subscription-1", { method: "aba_payway", locale: "en" }, urls)).rejects.toThrow(SubscriptionNotRenewableError);
+    await expect(plans.renewSubscription({ userId: "user-2", email: "x@example.com" }, "subscription-1", { method: "aba_payway", locale: "en" }, urls)).rejects.toThrow(
+      SubscriptionNotFoundError,
+    );
+  });
+
+  it("lets a student whose access lapsed subscribe again", async () => {
+    store.enroll("user-1", "c6", new Date("2026-10-01T00:00:00Z"));
+
+    await expect(plans.checkout(BUYER, { courseSlug: "club", method: "aba_payway", locale: "en" }, urls)).resolves.toMatchObject({ orderId: "order-1" });
+  });
+
+  it("refuses a new subscription while access lasts", async () => {
+    store.enroll("user-1", "c6", new Date("2026-11-01T00:00:00Z"));
+
+    await expect(plans.checkout(BUYER, { courseSlug: "club", method: "aba_payway", locale: "en" }, urls)).rejects.toThrow(AlreadyEnrolledError);
+  });
+
+  it("lists the student's paid subscriptions, showing one past its grace week as lapsed", async () => {
+    await payFirstPeriod("club");
+    await plans.checkout(BUYER, { courseSlug: "plan", method: "aba_payway", locale: "en" }, urls);
+    expect((await plans.listMySubscriptions("user-1")).map(({ id, status }) => [id, status])).toEqual([["subscription-1", "active"]]);
+
+    clock.advance(40 * 24 * 60 * 60 * 1000);
+
+    expect((await plans.listMySubscriptions("user-1"))[0]?.status).toBe("lapsed");
+  });
+});
+
+describe("offline QR payments", () => {
+  let offline: CommerceService;
+
+  beforeEach(() => {
+    store.courses.set("c6", { id: "c6", slug: "club", title: "Design Club", isPublished: true, price: { id: "p6", amount: 1500, currency: "USD", billing: { kind: "recurring", interval: "month" } } });
+    store.hasQr = true;
+    offline = createCommerceService({
+      store,
+      gateways: [stripe],
+      confirmation: createPaymentConfirmation({ store: new FakeConfirmationStore(store), clock: new FakeClock(NOW) }),
+      clock: new FakeClock(NOW),
+    });
+  });
+
+  /**
+   * Starts an offline QR order for the subscription course.
+   *
+   * @returns The order's id.
+   */
+  async function offlineOrder() {
+    const { orderId, payment } = await offline.checkout(BUYER, { courseSlug: "club", method: "offline_qr", locale: "en" }, urls);
+    expect(payment).toEqual({ kind: "offline" });
+    return orderId;
+  }
+
+  it("refuses the offline QR for a one-time price", async () => {
+    await expect(offline.checkout(BUYER, { courseSlug: "intro", method: "offline_qr", locale: "en" }, urls)).rejects.toThrow(PaymentMethodUnavailableError);
+  });
+
+  it("waits for staff once the student says they paid, and enrolls once staff confirm", async () => {
+    const orderId = await offlineOrder();
+
+    await offline.submitOfflinePayment(orderId, "user-1", { reference: "ABA-123" });
+    expect(store.orders[0]).toMatchObject({ status: "awaiting_confirmation", paymentReference: "ABA-123" });
+    expect(store.enrollments.size).toBe(0);
+
+    await offline.confirmOfflinePayment(orderId);
+
+    expect(store.orders[0]?.status).toBe("paid");
+    expect(store.subscriptions[0]).toMatchObject({ status: "active", paidPeriods: 1 });
+    expect(store.enrollments.has("user-1:c6")).toBe(true);
+  });
+
+  it("lets staff confirm a payment they found before the student said so", async () => {
+    const orderId = await offlineOrder();
+
+    await offline.confirmOfflinePayment(orderId);
+
+    expect(store.orders[0]?.status).toBe("paid");
+  });
+
+  it("fails an offline payment staff reject, enrolling nobody", async () => {
+    const orderId = await offlineOrder();
+    await offline.submitOfflinePayment(orderId, "user-1", { reference: "ABA-123" });
+
+    await offline.rejectOfflinePayment(orderId);
+
+    expect(store.orders[0]?.status).toBe("failed");
+    expect(store.enrollments.size).toBe(0);
+    await expect(offline.rejectOfflinePayment(orderId)).rejects.toThrow(OfflinePaymentClosedError);
+  });
+
+  it("refuses to mark paid an order that is not a pending offline order of the student", async () => {
+    const orderId = await offlineOrder();
+    await offline.submitOfflinePayment(orderId, "user-1", { reference: "ABA-123" });
+
+    await expect(offline.submitOfflinePayment(orderId, "user-1", { reference: "again" })).rejects.toThrow(OfflinePaymentClosedError);
+    await expect(offline.submitOfflinePayment(orderId, "user-2", { reference: "ABA-123" })).rejects.toThrow(OrderNotFoundError);
+  });
+
+  it("refuses to confirm a gateway's order or one already paid", async () => {
+    const { orderId: cardOrder } = await offline.checkout(BUYER, { courseSlug: "intro", method: "stripe", locale: "en" }, urls);
+    const orderId = await offlineOrder();
+    await offline.confirmOfflinePayment(orderId);
+
+    await expect(offline.confirmOfflinePayment(cardOrder)).rejects.toThrow(OfflinePaymentClosedError);
+    await expect(offline.confirmOfflinePayment(orderId)).rejects.toThrow(OfflinePaymentClosedError);
+    await expect(offline.confirmOfflinePayment("order-404")).rejects.toThrow(OrderNotFoundError);
+  });
+
+  it("refunds a paid offline order only once staff paid the student back", async () => {
+    const orderId = await offlineOrder();
+    await offline.confirmOfflinePayment(orderId);
+
+    await expect(offline.refundOrder(orderId, { isRefundedByHand: false })).rejects.toThrow(RefundByHandRequiredError);
+    await offline.refundOrder(orderId, { isRefundedByHand: true });
+
+    expect(store.orders[0]).toMatchObject({ status: "refunded", refund: { isRefundedByHand: true } });
+  });
+});
+

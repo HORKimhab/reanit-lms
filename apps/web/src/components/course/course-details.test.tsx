@@ -7,7 +7,7 @@ import { PUBLISHED_COURSE_WITH_OUTLINE as COURSE } from "@/test/site";
 
 import { CourseDetails } from "./course-details";
 
-const PRICE: PriceInput = { amount: 4900, currency: "USD" };
+const PRICE: PriceInput = { amount: 4900, currency: "USD", billing: { kind: "one_time" } };
 const CHECKOUT = "/s/angkor/checkout/brand-design-basics";
 
 /**
@@ -69,7 +69,7 @@ describe("CourseDetails", () => {
   });
 
   it("uses Khmer labels and riel without decimals when the locale is km", async () => {
-    renderDetails({ price: { amount: 2_000_000, currency: "KHR" }, locale: "km" });
+    renderDetails({ price: { amount: 2_000_000, currency: "KHR", billing: { kind: "one_time" } }, locale: "km" });
     expect(await screen.findAllByRole("link", { name: "ចុះឈ្មោះឥឡូវនេះ" })).toHaveLength(2);
     expect(screen.getAllByText(/20,000/)).toHaveLength(2);
   });

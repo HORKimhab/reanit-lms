@@ -128,10 +128,10 @@ function provideOrderHistoryForSchool(db: DbClient): OrderHistoryForSchool {
  * @returns The confirmation use case.
  */
 function provideConfirmation(db: DbClient) {
-  return createPaymentConfirmation(createPaymentConfirmationStore(db));
+  return createPaymentConfirmation({ store: createPaymentConfirmationStore(db), clock: systemClock });
 }
 
-/** Prices, coupons, bundles, checkout with the configured gateways, order history, refunds, and the webhooks that enroll on payment. */
+/** Prices, coupons, bundles, subscriptions and payment plans, checkout with the configured gateways and offline QR, order history, refunds, and the webhooks that enroll on payment. */
 @Module({
   imports: [SchoolsModule],
   controllers: [PriceController, CouponsController, BundlesController, CheckoutController, PurchasesController, OrdersController, StripeWebhookController, PayWayWebhookController],

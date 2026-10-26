@@ -100,7 +100,7 @@ describe("setBundlePrice", () => {
     onApi(ROUTE, Response.json({ price: { amount: minor, currency } }));
 
     expect(await setBundlePrice(BUNDLE.id, IDLE, priceForm(amount, currency))).toEqual({ status: "saved", invalidFields: [] });
-    expect(await requestTo(ROUTE)?.json()).toEqual({ amount: minor, currency });
+    expect(await requestTo(ROUTE)?.json()).toEqual({ amount: minor, currency, billing: { kind: "one_time" } });
   });
 
   it.each([

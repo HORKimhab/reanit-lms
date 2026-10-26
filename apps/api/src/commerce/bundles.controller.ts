@@ -13,6 +13,7 @@ import {
   IdParams,
   PriceBody,
   PriceResponse,
+  toPriceResponse,
   UpdateBundleBody,
 } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
@@ -27,7 +28,7 @@ type StaffSchool = NonNullable<RequestContext["school"]>;
  * @returns The bundle as the API sends it.
  */
 export function toBundleResponse(bundle: Bundle): BundleResponse["bundle"] {
-  return { ...bundle, price: bundle.price && { amount: bundle.price.amount, currency: bundle.price.currency } };
+  return { ...bundle, price: bundle.price && toPriceResponse(bundle.price) };
 }
 
 /** The bundle builder's routes: the caller's school's bundles, drafts included. */
@@ -104,7 +105,7 @@ export class BundlesController {
    *
    * @param school The caller's school.
    * @param params The bundle's id.
-   * @param body Amount in minor units and currency.
+   * @param body Amount in minor units, currency and billing.
    * @returns The price.
    * @throws {BundleNotFoundError} When the school has no such bundle (404).
    */
@@ -113,7 +114,6 @@ export class BundlesController {
   @Audited("bundle.price.set", pathParam("id"))
   @ApiOkResponse({ type: PriceResponse })
   async setPrice(@CurrentSchool() school: StaffSchool, @Param() params: IdParams, @Body() body: PriceBody): Promise<PriceResponse> {
-    const { amount, currency } = await this.commerceFor(school.id).setBundlePrice(params.id, body);
-    return { price: { amount, currency } };
+    return { price: toPriceResponse(await this.commerceFor(school.id).setBundlePrice(params.id, body)) };
   }
 }

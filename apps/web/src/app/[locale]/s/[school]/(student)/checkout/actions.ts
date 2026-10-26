@@ -24,6 +24,8 @@ export type CheckoutState =
   | { status: "form"; action: string; fields: Record<string, string> }
   /** Show this KHQR code until it expires, and wait for the order to be paid. */
   | { status: "qr"; qr: string; expiresAt: string; orderId: string }
+  /** Show the school's own payment QR image; the student then says they paid, and staff confirm it. */
+  | { status: "offline"; qrImageUrl: string; orderId: string }
   | { status: "enrolled" }
   /** The coupon stopped working between applying it and paying (expired, used up). */
   | { status: "invalidCoupon" }
@@ -103,6 +105,8 @@ export async function startCheckout(
       return { status: "form", action: payment.action, fields: payment.fields };
     case "qr":
       return { status: "qr", qr: payment.qr, expiresAt: payment.expiresAt, orderId };
+    case "offline":
+      return { status: "offline", qrImageUrl: payment.qrImageUrl, orderId };
   }
 }
 
