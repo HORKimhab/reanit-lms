@@ -48,7 +48,8 @@
     "students": "Students",
     "comments": "Comments",
     "coupons": "Coupons",
-    "settings": "Settings"
+    "settings": "Settings",
+    "plan": "Plan"
   },
   "Dashboard": {
     "revenue": "Revenue",
@@ -585,6 +586,50 @@
       "year": "{amount} / year"
     },
     "installments": "{count} payments of {amount}"
+  },
+  "Plans": {
+    "names": {
+      "free": "Free",
+      "pro": "Pro",
+      "business": "Business"
+    },
+    "currentName": "{plan} (yours)",
+    "caption": "Plans compared",
+    "feature": "Feature",
+    "price": "Price",
+    "freePrice": "Free",
+    "prices": "{month} a month, or {year} a year",
+    "fee": "Fee on each sale",
+    "limits": {
+      "publishedCourses": "Published courses",
+      "teamMembers": "Team members",
+      "customDomain": "Custom domain",
+      "offlineQr": "Your own payment QR"
+    },
+    "unlimited": "Unlimited",
+    "included": "Included",
+    "notIncluded": "Not included",
+    "currentTitle": "You're on {plan}",
+    "feeLine": "The platform takes {percent} of each sale.",
+    "paidUntil": "Paid until {date}, billed every {interval}.",
+    "intervals": {
+      "month": "month",
+      "year": "year"
+    },
+    "lapsed": "Your {plan} plan ran out on {date}. You're back on Free until you pay again; nothing you made is removed.",
+    "checkoutTitle": "Upgrade or renew",
+    "plan": "Plan",
+    "interval": "Billed every",
+    "noMethods": "No payment method can take a plan payment yet.",
+    "ownerPays": "Only the school's owner can pay for its plan.",
+    "staffOnly": "Only the school's owner and admins can see its plan.",
+    "payment": {
+      "pending": "Waiting for your plan payment…",
+      "paid": "Payment received. Your plan is updated.",
+      "failed": "Your plan payment didn't go through. Try again below."
+    },
+    "publicTitle": "Plans",
+    "publicIntro": "Start free. Upgrade when you need more courses, a team, your own domain or your own payment QR."
   },
   "Checkout": {
     "title": "Checkout",

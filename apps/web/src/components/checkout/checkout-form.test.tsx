@@ -97,7 +97,7 @@ describe("CheckoutForm", () => {
 
   it("hands over to the gateway's form after choosing PayWay", async () => {
     vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
-    const { user } = await setup({ status: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } });
+    const { user } = await setup({ status: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" }, orderId: "o1" });
 
     await user.click(screen.getByRole("button", { name: "Pay $49.00" }));
 

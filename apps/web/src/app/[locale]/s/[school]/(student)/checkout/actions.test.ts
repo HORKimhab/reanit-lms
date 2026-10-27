@@ -125,7 +125,7 @@ describe("startCheckout", () => {
   it("starts an order for the course with the chosen method", async () => {
     onApi(ROUTE, started({ kind: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } }));
 
-    expect(await pay("aba_payway")).toEqual({ status: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" } });
+    expect(await pay("aba_payway")).toEqual({ status: "form", action: "https://payway.test/purchase", fields: { tran_id: "t1" }, orderId: ORDER_ID });
     expect(await requestTo(ROUTE)?.json()).toEqual({ courseSlug: "brand", method: "aba_payway", locale: "en" });
   });
 

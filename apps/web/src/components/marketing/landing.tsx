@@ -6,6 +6,7 @@ import type * as React from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useMoney } from "@/i18n/format";
+import { PlanComparison } from "@/components/plans/plan-comparison";
 import { Link } from "@/i18n/navigation";
 import { MOCK_SCHOOL_SLUG } from "@/mocks/schools";
 
@@ -24,6 +25,7 @@ const SAMPLE_BRAND = "oklch(0.6 0.2 30)";
  */
 export function Landing() {
   const t = useTranslations("Home");
+  const plans = useTranslations("Plans");
   const brand = useTranslations("Metadata");
   const format = useFormatter();
   const money = useMoney();
@@ -69,6 +71,13 @@ export function Landing() {
       {/* A school overrides --brand on a wrapper element. */}
       <section style={{ "--brand": SAMPLE_BRAND } as React.CSSProperties} className="flex gap-3">
         <Button>{t("brandSample")}</Button>
+      </section>
+      <section aria-labelledby="pricing" className="flex flex-col gap-4">
+        <h2 id="pricing" className="text-2xl font-semibold tracking-tight">
+          {plans("publicTitle")}
+        </h2>
+        <p className="text-muted-foreground">{plans("publicIntro")}</p>
+        <PlanComparison />
       </section>
     </main>
   );

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { getApi } from "@/server/api";
 import { checkoutPath, getDiscount, getOrder, ordersPath, type ProductKind } from "@/server/commerce/checkout";
+import { gatewayStep, type GatewayStep } from "@/server/commerce/gateway-step";
 import { renewPath } from "@/server/commerce/subscriptions";
 import { checkStudentResponse } from "@/server/schools/student";
 
@@ -21,10 +22,8 @@ export type CouponCheck = { status: "applied"; discount: Discount } | { status: 
 /** Result of the last checkout submit, shown by the checkout form (WEB-14). */
 export type CheckoutState =
   | { status: "idle" }
-  /** Post these fields from the browser to the gateway's page (PayWay). */
-  | { status: "form"; action: string; fields: Record<string, string> }
-  /** Show this KHQR code until it expires, and wait for the order to be paid. */
-  | { status: "qr"; qr: string; expiresAt: string; orderId: string }
+  /** Post PayWay's form, or show a KHQR code until it expires and wait for the order to be paid. */
+  | (GatewayStep & { orderId: string })
   /** Show the school's own payment QR image; the student then says they paid, and staff confirm it. */
   | { status: "offline"; qrImageUrl: string; orderId: string }
   | { status: "enrolled" }
@@ -92,16 +91,7 @@ function nextStep({ data, error, response }: PaymentAnswer, returnPath: string):
   checkStudentResponse(response, returnPath);
   // checkStudentResponse returned, so the API answered 2xx with the order and the next step.
   const { orderId, payment } = data!;
-  switch (payment.kind) {
-    case "redirect":
-      return redirect(payment.url);
-    case "form":
-      return { status: "form", action: payment.action, fields: payment.fields };
-    case "qr":
-      return { status: "qr", qr: payment.qr, expiresAt: payment.expiresAt, orderId };
-    case "offline":
-      return { status: "offline", qrImageUrl: payment.qrImageUrl, orderId };
-  }
+  return payment.kind === "offline" ? { status: "offline", qrImageUrl: payment.qrImageUrl, orderId } : { ...gatewayStep(payment), orderId };
 }
 
 /**

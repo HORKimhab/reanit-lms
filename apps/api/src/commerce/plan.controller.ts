@@ -24,7 +24,7 @@ import { PLAN_BILLING_FOR_SCHOOL, type PlanBillingForSchool } from "./commerce.t
 type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Where a creator lands back from paying for a plan. */
-const PLAN_PAGE = "/dashboard/settings";
+const PLAN_PAGE = "/dashboard/plan";
 
 /** Creator plans: what each costs and allows, the school's plan, and paying the platform for one. */
 @Controller()

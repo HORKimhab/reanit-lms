@@ -149,13 +149,18 @@ export class CouponResponse extends createZodDto(z.object({ coupon: couponRespon
 /** A school's coupons, newest first. */
 export class CouponsResponse extends createZodDto(z.object({ coupons: z.array(couponResponseSchema) })) {}
 
-/** What the browser does next to pay: go to the gateway, post a form to it, show a KHQR code, or show the school's own payment QR image and then say the student paid. */
-const paymentStepSchema = z.discriminatedUnion("kind", [
+/** A gateway's next step for the browser: go to its page, post a form to it, or show a KHQR code. */
+const GATEWAY_STEPS = [
   z.object({ kind: z.literal("redirect"), url: z.url() }),
   z.object({ kind: z.literal("form"), action: z.url(), fields: z.record(z.string(), z.string()) }),
   z.object({ kind: z.literal("qr"), qr: z.string(), expiresAt: z.iso.datetime() }),
-  z.object({ kind: z.literal("offline"), qrImageUrl: z.url() }),
-]);
+] as const;
+
+/** What the browser does next to pay through a gateway. */
+const gatewayStepSchema = z.discriminatedUnion("kind", [...GATEWAY_STEPS]);
+
+/** What the browser does next to pay: a gateway's step, or show the school's own payment QR image and then say the student paid. */
+const paymentStepSchema = z.discriminatedUnion("kind", [...GATEWAY_STEPS, z.object({ kind: z.literal("offline"), qrImageUrl: z.url() })]);
 
 /**
  * Describes a gateway's next step for the browser, without the gateway's reference, which stays on the server.
@@ -163,7 +168,7 @@ const paymentStepSchema = z.discriminatedUnion("kind", [
  * @param payment What the gateway returned.
  * @returns The step for the response.
  */
-export function toGatewayStep(payment: GatewayPaymentStart): z.infer<typeof paymentStepSchema> {
+export function toGatewayStep(payment: GatewayPaymentStart): z.infer<typeof gatewayStepSchema> {
   switch (payment.kind) {
     case "redirect":
       return { kind: "redirect", url: payment.url };
@@ -299,7 +304,7 @@ export class SchoolPlanResponse extends createZodDto(
 
 /** The new plan payment and what the browser does next. */
 export class PlanCheckoutResponse extends createZodDto(
-  z.object({ paymentId: z.uuid(), payment: paymentStepSchema }),
+  z.object({ paymentId: z.uuid(), payment: gatewayStepSchema }),
 ) {}
 
 /** `/schools/current/plan/payments/:id` path. */

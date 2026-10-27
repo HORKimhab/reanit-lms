@@ -7051,25 +7051,6 @@
                   "qr",
                   "expiresAt"
                 ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "offline"
-                    ]
-                  },
-                  "qrImageUrl": {
-                    "type": "string",
-                    "format": "uri"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "qrImageUrl"
-                ]
               }
             ]
           }

@@ -42,7 +42,7 @@ describe("GET /schools/current/plan", () => {
 });
 
 describe("POST /schools/current/plan/checkout", () => {
-  it("lets the owner pay for a plan, coming back to the settings", async () => {
+  it("lets the owner pay for a plan, coming back to the plan page", async () => {
     setStaffRole(staff.clients, "owner");
     staff.clients.billing.checkout.mockResolvedValue({ paymentId: PAYMENT_ID, payment: { kind: "redirect", url: "https://payway.test/pay", providerRef: "tran" } });
 
@@ -52,7 +52,7 @@ describe("POST /schools/current/plan/checkout", () => {
     expect(response.json()).toEqual({ paymentId: PAYMENT_ID, payment: { kind: "redirect", url: "https://payway.test/pay" } });
     const [email, input, urls] = staff.clients.billing.checkout.mock.calls[0] ?? [];
     expect([email, input]).toEqual([TEST_USER.email, { plan: "pro", interval: "year", method: "aba_payway", locale: "en" }]);
-    expect(urls(PAYMENT_ID)).toEqual({ successUrl: `http://localhost:3000/dashboard/settings?planPayment=${PAYMENT_ID}`, cancelUrl: "http://localhost:3000/dashboard/settings" });
+    expect(urls(PAYMENT_ID)).toEqual({ successUrl: `http://localhost:3000/dashboard/plan?planPayment=${PAYMENT_ID}`, cancelUrl: "http://localhost:3000/dashboard/plan" });
   });
 
   it("refuses an admin, who does not pay for the school", async () => {

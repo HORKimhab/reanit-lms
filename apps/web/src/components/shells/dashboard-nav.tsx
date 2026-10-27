@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, LayoutDashboard, Library, MessageSquare, Receipt, Settings, TicketPercent, Users } from "lucide-react";
+import { BarChart3, BookOpen, Gem, LayoutDashboard, Library, MessageSquare, Receipt, Settings, TicketPercent, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { NavLink } from "./nav-link";
@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/dashboard/students", key: "students", icon: Users, exact: false },
   { href: "/dashboard/comments", key: "comments", icon: MessageSquare, exact: false },
   { href: "/dashboard/coupons", key: "coupons", icon: TicketPercent, exact: false },
+  { href: "/dashboard/plan", key: "plan", icon: Gem, exact: false },
   { href: "/dashboard/settings", key: "settings", icon: Settings, exact: false },
 ] as const;
 

@@ -12,8 +12,7 @@ import { Link } from "@/i18n/navigation";
 import { usePriceLabel } from "@/components/pricing/use-price-label";
 
 import { CouponField } from "./coupon-field";
-import { GatewayForm } from "./gateway-form";
-import { KhqrPayment } from "./khqr-payment";
+import { GatewayStepView } from "./gateway-step-view";
 import { OfflinePayment } from "./offline-payment";
 
 const IDLE: CheckoutState = { status: "idle" };
@@ -68,17 +67,8 @@ export function CheckoutForm({
   const formatMoney = (amount: number) => money(amount, price.currency);
   const priceLabel = formatMoney(discount?.total ?? price.amount);
 
-  if (state.status === "form") return <GatewayForm action={state.action} fields={state.fields} />;
-  if (state.status === "qr") {
-    return (
-      <KhqrPayment
-        qr={state.qr}
-        expiresAt={state.expiresAt}
-        priceLabel={priceLabel}
-        orderHref={`${ordersBase}/${state.orderId}`}
-        checkStatus={() => checkStatus(state.orderId)}
-      />
-    );
+  if (state.status === "form" || state.status === "qr") {
+    return <GatewayStepView step={state} priceLabel={priceLabel} waitHref={`${ordersBase}/${state.orderId}`} checkStatus={() => checkStatus(state.orderId)} />;
   }
   if (state.status === "offline") {
     return <OfflinePayment qrImageUrl={state.qrImageUrl} priceLabel={priceLabel} submit={submitOfflinePayment.bind(null, state.orderId)} />;
