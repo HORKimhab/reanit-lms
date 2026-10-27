@@ -20,6 +20,7 @@ describe("DashboardNav", () => {
       ["Comments", "/dashboard/comments"],
       ["Coupons", "/dashboard/coupons"],
       ["Plan", "/dashboard/plan"],
+      ["Payouts", "/dashboard/payouts"],
       ["Settings", "/dashboard/settings"],
     ]);
   });

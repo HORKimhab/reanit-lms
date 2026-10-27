@@ -11,14 +11,17 @@ export const PAYOUT_HOLD_DAYS = 7;
 export const PAYOUT_MINIMUMS: Record<Currency, number> = { USD: 1000, KHR: 4_000_000 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TEXT_MAX_LENGTH = 100;
-const ACCOUNT_MAX_LENGTH = 64;
+
+/** Longest account holder, bank name or transfer reference. */
+export const PAYOUT_TEXT_MAX_LENGTH = 100;
+/** Longest account number or Bakong ID. */
+export const PAYOUT_ACCOUNT_MAX_LENGTH = 64;
 
 /** Where a school's payouts are sent: the account holder, the bank, and the account number or Bakong ID. */
 export const payoutAccountSchema = z.object({
-  holderName: z.string().trim().min(1).max(TEXT_MAX_LENGTH),
-  bankName: z.string().trim().min(1).max(TEXT_MAX_LENGTH),
-  account: z.string().trim().min(1).max(ACCOUNT_MAX_LENGTH),
+  holderName: z.string().trim().min(1).max(PAYOUT_TEXT_MAX_LENGTH),
+  bankName: z.string().trim().min(1).max(PAYOUT_TEXT_MAX_LENGTH),
+  account: z.string().trim().min(1).max(PAYOUT_ACCOUNT_MAX_LENGTH),
 });
 
 /** A transfer a platform admin made to a school: how much, in which currency, when, and the bank's reference. */
@@ -28,7 +31,7 @@ export const recordPayoutSchema = z
     currency: z.enum(CURRENCIES),
     amount: z.number().int().positive(),
     paidAt: z.iso.datetime({ offset: true }).transform((value) => new Date(value)),
-    reference: z.string().trim().min(1).max(TEXT_MAX_LENGTH),
+    reference: z.string().trim().min(1).max(PAYOUT_TEXT_MAX_LENGTH),
   })
   .refine(({ amount, currency }) => amount % minorStep(currency) === 0, { message: "KHR amounts are whole riel", path: ["amount"] });
 

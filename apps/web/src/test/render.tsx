@@ -10,9 +10,10 @@ import { MESSAGES, TIME_ZONE } from "./messages";
  * Builds a wrapper that provides the app's i18n context, as the root layout does.
  *
  * @param locale - UI locale.
+ * @param timeZone - The viewer's time zone; defaults to UTC.
  * @returns A wrapper component for `render` or `renderHook`.
  */
-export function intlWrapper(locale: Locale = "en") {
+export function intlWrapper(locale: Locale = "en", timeZone = TIME_ZONE) {
   /**
    * Wraps children in the i18n provider.
    *
@@ -22,7 +23,7 @@ export function intlWrapper(locale: Locale = "en") {
    */
   return function IntlWrapper({ children }: { children: React.ReactNode }) {
     return (
-      <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]} timeZone={TIME_ZONE}>
+      <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]} timeZone={timeZone}>
         {children}
       </NextIntlClientProvider>
     );
@@ -30,7 +31,7 @@ export function intlWrapper(locale: Locale = "en") {
 }
 
 /** Options shared by the render helpers. */
-type RenderOptions = { locale?: Locale };
+type RenderOptions = { locale?: Locale; timeZone?: string };
 
 /**
  * Renders UI inside the app's i18n provider. Client components finish rendering on the next tick,
@@ -39,10 +40,11 @@ type RenderOptions = { locale?: Locale };
  * @param ui - The element to render.
  * @param options - Render options.
  * @param options.locale - UI locale; defaults to English.
+ * @param options.timeZone - The viewer's time zone; defaults to UTC.
  * @returns Testing Library's render result.
  */
-export function renderWithIntl(ui: React.ReactElement, { locale = "en" }: RenderOptions = {}) {
-  return render(ui, { wrapper: intlWrapper(locale) });
+export function renderWithIntl(ui: React.ReactElement, { locale = "en", timeZone }: RenderOptions = {}) {
+  return render(ui, { wrapper: intlWrapper(locale, timeZone) });
 }
 
 /**

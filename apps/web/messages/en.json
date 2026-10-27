@@ -49,7 +49,8 @@
     "comments": "Comments",
     "coupons": "Coupons",
     "settings": "Settings",
-    "plan": "Plan"
+    "plan": "Plan",
+    "payouts": "Payouts"
   },
   "Dashboard": {
     "revenue": "Revenue",
@@ -630,6 +631,35 @@
     },
     "publicTitle": "Plans",
     "publicIntro": "Start free. Upgrade when you need more courses, a team, your own domain or your own payment QR."
+  },
+  "Payouts": {
+    "balanceTitle": "Balance",
+    "noBalance": "Nothing to pay out yet. Your sales show here once they're paid.",
+    "currency": "Currency",
+    "available": "Available",
+    "onHold": "On hold",
+    "nextPayout": "Next payout: {date}, for balances of at least {minimum}.",
+    "holdNote": "Card and bank app sales are held for {days} days in case of refunds, then become available.",
+    "negativeNote": "A negative balance is the platform's fee on sales paid to your own QR. It comes out of your next sales.",
+    "accountTitle": "Payout details",
+    "accountIntro": "We send your payouts by bank or Bakong transfer to this account.",
+    "accountMissing": "Add where to send your payouts. We can't pay you until you do.",
+    "holderName": "Account holder",
+    "bankName": "Bank",
+    "bankHint": "For example: ABA, ACLEDA, or Bakong.",
+    "account": "Account number or Bakong ID",
+    "invalid": "Fill in every field. Keep the holder and bank to {max} characters, and the account to {accountMax}.",
+    "save": "Save payout details",
+    "saving": "Saving…",
+    "saved": "Payout details saved.",
+    "ownerOnly": "Only the school's owner can change where payouts are sent.",
+    "noAccount": "The owner hasn't added payout details yet.",
+    "historyTitle": "Payout history",
+    "noPayouts": "No payouts yet.",
+    "paidAt": "Paid on",
+    "amount": "Amount",
+    "reference": "Reference",
+    "staffOnly": "Only the school's owner and admins can see its payouts."
   },
   "Checkout": {
     "title": "Checkout",
