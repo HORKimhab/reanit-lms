@@ -3,8 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { Bundle } from "@reanit/core/commerce";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import {
   BundleResponse,
   BundleSlugParams,
@@ -17,9 +16,6 @@ import {
   UpdateBundleBody,
 } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /**
  * Shapes a bundle for the response, without its price's id.

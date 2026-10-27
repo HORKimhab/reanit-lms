@@ -9,14 +9,19 @@ import {
   myOrdersQuerySchema,
   offerQuerySchema,
   offlinePaymentSchema,
+  payoutAccountSchema,
   ORDER_STATUSES,
   orderListQuerySchema,
   PAYMENT_METHODS,
   priceSchema,
+  recordPayoutSchema,
   refundSchema,
   renewSchema,
   updateBundleSchema,
+  type CurrencyBalance,
+  type DuePayout,
   type GatewayPaymentStart,
+  type Payout,
   type OrderDetail,
   type PaymentMethod,
   type Price,
@@ -321,4 +326,75 @@ export class PlanPaymentResponse extends createZodDto(z.object({ status: z.enum(
  */
 export function toPlanTermsResponse(terms: PlanTerms): z.infer<typeof planTermsSchema> {
   return { prices: terms.prices, feeBasisPoints: terms.feeBasisPoints, limits: terms.limits };
+}
+
+/** `PUT /schools/current/payout-account` body: where the school's payouts are sent. */
+export class PayoutAccountBody extends createZodDto(payoutAccountSchema) {}
+
+/** `POST /admin/payouts` body: a transfer made to a school. */
+export class RecordPayoutBody extends createZodDto(recordPayoutSchema) {}
+
+const payoutAccountResponseSchema = z.object({ holderName: z.string(), bankName: z.string(), account: z.string() });
+
+const payoutSchema = z.object({ id: z.uuid(), currency: z.enum(CURRENCIES), amount: z.number().int(), paidAt: z.iso.datetime(), reference: z.string() });
+
+/** The school's payout details. */
+export class PayoutAccountResponse extends createZodDto(z.object({ account: payoutAccountResponseSchema })) {}
+
+/** What the platform owes the school, when and above what it pays out, where it sends it, and what it paid. */
+export class SchoolPayoutsResponse extends createZodDto(
+  z.object({
+    balances: z.array(z.object({ currency: z.enum(CURRENCIES), available: z.number().int(), onHold: z.number().int() })),
+    nextPayoutDate: z.iso.datetime(),
+    minimums: z.object({ USD: z.number().int(), KHR: z.number().int() }),
+    account: payoutAccountResponseSchema.nullable(),
+    payouts: z.array(payoutSchema),
+  }),
+) {}
+
+/** The payouts due: each school's available balance that reaches the minimum, with where to send it. */
+export class DuePayoutsResponse extends createZodDto(
+  z.object({
+    payouts: z.array(
+      z.object({
+        school: z.object({ id: z.uuid(), name: z.string(), subdomain: z.string() }),
+        account: payoutAccountResponseSchema.nullable(),
+        currency: z.enum(CURRENCIES),
+        amount: z.number().int(),
+      }),
+    ),
+  }),
+) {}
+
+/** The payout just recorded, with its school. */
+export class RecordedPayoutResponse extends createZodDto(z.object({ payout: payoutSchema.extend({ schoolId: z.uuid() }) })) {}
+
+/**
+ * Shapes a payout for a response.
+ *
+ * @param payout The payout.
+ * @returns The payout with its date as an ISO string.
+ */
+export function toPayoutResponse(payout: Payout): z.infer<typeof payoutSchema> {
+  return { ...payout, paidAt: payout.paidAt.toISOString() };
+}
+
+/**
+ * Shapes the balances for a response, in a stable order.
+ *
+ * @param balances The balances.
+ * @returns The balances.
+ */
+export function toBalancesResponse(balances: CurrencyBalance[]): SchoolPayoutsResponse["balances"] {
+  return balances.map(({ currency, available, onHold }) => ({ currency, available, onHold }));
+}
+
+/**
+ * Shapes a payout due for a response.
+ *
+ * @param due The payout due.
+ * @returns It as the API sends it.
+ */
+export function toDuePayoutResponse(due: DuePayout): DuePayoutsResponse["payouts"][number] {
+  return { school: due.school, account: due.account, currency: due.currency, amount: due.amount };
 }

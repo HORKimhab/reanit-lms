@@ -4,13 +4,9 @@ import type { DomainService } from "@reanit/core/schools";
 
 import { Audited, currentSchool } from "../audit/audit.decorator";
 import { Public } from "../auth/auth.decorators";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "./schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "./schools.decorators";
 import { CustomDomainBody, CustomDomainResponse, CustomDomainSettingsResponse, DomainSiteResponse, HostnameParams } from "./schools.dto";
 import { DOMAIN_SERVICE } from "./schools.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** A school's custom domain: set it up, verify it, remove it, and find the school a domain serves, over `@reanit/core/schools`. */
 @Controller("schools")

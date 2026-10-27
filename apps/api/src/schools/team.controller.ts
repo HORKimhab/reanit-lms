@@ -8,8 +8,7 @@ import { ENV } from "@reanit/nest";
 import { Audited, pathParam } from "../audit/audit.decorator";
 import { CurrentUser } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "./schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "./schools.decorators";
 import {
   ChangeRoleBody,
   InviteBody,
@@ -21,9 +20,6 @@ import {
   toTeamMemberResponse,
 } from "./schools.dto";
 import { TEAM_FOR_SCHOOL, type TeamForSchool } from "./schools.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /**
  * Builds the web app's page that accepts an invite.

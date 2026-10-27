@@ -4,13 +4,9 @@ import type { AuthUser } from "@reanit/core/auth";
 import type { NotificationPreferenceService } from "@reanit/core/notifications";
 
 import { CurrentUser, Public } from "../auth/auth.decorators";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { NotificationPreferencesBody, NotificationPreferencesResponse, UnsubscribeBody, UnsubscribeResponse } from "./notifications.dto";
 import { NOTIFICATION_PREFERENCES } from "./notifications.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Staff members' email settings, and the unsubscribe link every staff email carries, over `@reanit/core/notifications`. */
 @Controller("notifications")

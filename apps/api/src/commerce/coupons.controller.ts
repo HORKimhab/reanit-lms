@@ -3,13 +3,9 @@ import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { Coupon } from "@reanit/core/commerce";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { IdParams, CouponResponse, CouponsResponse, CreateCouponBody } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /**
  * Shapes a coupon for the response, with its expiry as an ISO date.

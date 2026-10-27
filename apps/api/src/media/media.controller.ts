@@ -2,13 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Put }
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { AttachMediaBody, LessonParams, PlaybackResponse, UploadRequestBody, UploadResponse } from "./media.dto";
 import { MEDIA_FOR_SCHOOL, type MediaForSchool } from "./media.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** A lesson's video or PDF: upload straight to storage, attach, and preview. Students play it through the learning routes. */
 @Controller("lessons/:lessonId/media")

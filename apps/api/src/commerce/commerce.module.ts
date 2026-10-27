@@ -1,10 +1,20 @@
 import { Module } from "@nestjs/common";
-import { createCommerceService, createOrderHistory, createPaymentConfirmation, type PaymentConfirmation, type PaymentGateway } from "@reanit/core/commerce";
+import {
+  createCommerceService,
+  createOrderHistory,
+  createPaymentConfirmation,
+  createPayoutAdmin,
+  createPayouts,
+  type PaymentConfirmation,
+  type PaymentGateway,
+} from "@reanit/core/commerce";
 import { createPlanBilling } from "@reanit/core/schools";
 import {
   createCommerceStore,
   createOrderHistoryStore,
   createPaymentConfirmationStore,
+  createPayoutAdminStore,
+  createPayoutStore,
   createPlanBillingStore,
   createPlanConfirmationStore,
   type DbClient,
@@ -16,6 +26,7 @@ import type { Env } from "../config/env";
 import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
 import { PLAN_GUARD_FOR, type PlanGuardFor } from "../schools/schools.tokens";
+import { AdminPayoutsController } from "./admin-payouts.controller";
 import { BundlesController } from "./bundles.controller";
 import { CheckoutController } from "./checkout.controller";
 import { CouponsController } from "./coupons.controller";
@@ -28,14 +39,18 @@ import {
   ORDER_HISTORY_FOR_SCHOOL,
   PAYMENT_CONFIRMATION,
   PAYMENT_GATEWAYS,
+  PAYOUT_ADMIN,
+  PAYOUTS_FOR_SCHOOL,
   PAYWAY,
   PLAN_BILLING_FOR_SCHOOL,
   STRIPE,
   type CommerceForSchool,
   type OrderHistoryForSchool,
+  type PayoutsForSchool,
   type PlanBillingForSchool,
 } from "./commerce.tokens";
 import { createPayWayGateway } from "./payway-gateway";
+import { PayoutsController } from "./payouts.controller";
 import { PayWayWebhookController } from "./payway-webhook.controller";
 import { PlanController } from "./plan.controller";
 import { OrdersController } from "./orders.controller";
@@ -147,6 +162,26 @@ function provideOrderHistoryForSchool(db: DbClient): OrderHistoryForSchool {
 }
 
 /**
+ * Wires per-school payouts to Postgres through the tenant client and the clock.
+ *
+ * @param db The shared database client.
+ * @returns A factory of payouts limited to one school.
+ */
+function providePayoutsForSchool(db: DbClient): PayoutsForSchool {
+  return (schoolId) => createPayouts({ store: createPayoutStore(db, schoolId), clock: systemClock });
+}
+
+/**
+ * Wires the platform admins' payouts to Postgres across schools and the clock.
+ *
+ * @param db The shared database client.
+ * @returns The admins' payout use cases.
+ */
+function providePayoutAdmin(db: DbClient) {
+  return createPayoutAdmin({ store: createPayoutAdminStore(db), clock: systemClock });
+}
+
+/**
  * Wires the confirmation use case that enrolls from confirmed payments and moves plans on from creators' plan payments.
  *
  * @param db The shared database client.
@@ -156,7 +191,7 @@ function provideConfirmation(db: DbClient) {
   return createPaymentConfirmation({ store: createPaymentConfirmationStore(db), plans: createPlanConfirmationStore(db), clock: systemClock });
 }
 
-/** Prices, coupons, bundles, subscriptions and payment plans, checkout with the configured gateways and offline QR, order history, refunds, creators' plan billing, and the webhooks that confirm payments. */
+/** Prices, coupons, bundles, subscriptions and payment plans, checkout with the configured gateways and offline QR, order history, refunds, creators' plan billing and payouts, and the webhooks that confirm payments. */
 @Module({
   imports: [SchoolsModule],
   controllers: [
@@ -167,6 +202,8 @@ function provideConfirmation(db: DbClient) {
     PurchasesController,
     OrdersController,
     PlanController,
+    PayoutsController,
+    AdminPayoutsController,
     StripeWebhookController,
     PayWayWebhookController,
   ],
@@ -177,6 +214,8 @@ function provideConfirmation(db: DbClient) {
     { provide: CARD, inject: [ENV, STRIPE], useFactory: provideCardGateway },
     { provide: PAYMENT_GATEWAYS, inject: [PAYWAY, BAKONG, CARD], useFactory: provideGateways },
     { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION, PLAN_GUARD_FOR], useFactory: provideCommerceForSchool },
+    { provide: PAYOUTS_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: providePayoutsForSchool },
+    { provide: PAYOUT_ADMIN, inject: [DB_CLIENT], useFactory: providePayoutAdmin },
     { provide: PLAN_BILLING_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: providePlanBillingForSchool },
     { provide: PAYMENT_CONFIRMATION, inject: [DB_CLIENT], useFactory: provideConfirmation },
     { provide: ORDER_HISTORY_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideOrderHistoryForSchool },

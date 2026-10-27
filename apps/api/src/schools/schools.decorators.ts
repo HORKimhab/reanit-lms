@@ -27,3 +27,6 @@ function readCurrentSchool(): RequestContext["school"] {
 
 /** Injects the caller's school into a handler parameter on a `@Roles(...)` route. */
 export const CurrentSchool = createParamDecorator(readCurrentSchool);
+
+/** The school `@CurrentSchool()` injects on a `@Roles(...)` route, where it is always set. */
+export type StaffSchool = NonNullable<RequestContext["school"]>;

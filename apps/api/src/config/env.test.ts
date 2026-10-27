@@ -29,7 +29,12 @@ describe("parseEnv", () => {
       BAKONG_MERCHANT_CITY: "Phnom Penh",
       BAKONG_BASE_URL: "https://sit-api-bakong.nbc.gov.kh",
       FAKE_PAYMENTS: false,
+      PLATFORM_ADMIN_EMAILS: [],
     });
+  });
+
+  it("reads the platform admins' emails, trimmed and lower-cased", () => {
+    expect(parseEnv({ ...REQUIRED, PLATFORM_ADMIN_EMAILS: " Ops@Reanit.com, dara@reanit.com ," }).PLATFORM_ADMIN_EMAILS).toEqual(["ops@reanit.com", "dara@reanit.com"]);
   });
 
   it("reads S3_FORCE_PATH_STYLE as a boolean", () => {

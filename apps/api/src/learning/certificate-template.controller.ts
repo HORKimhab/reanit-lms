@@ -2,13 +2,9 @@ import { Body, Controller, Get, Inject, Put } from "@nestjs/common";
 import { ApiOkResponse } from "@nestjs/swagger";
 
 import { Audited, currentSchool } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { CertificateTemplateBody, CertificateTemplateResponse } from "./learning.dto";
 import { CERTIFICATES_FOR_SCHOOL, type CertificatesForSchool } from "./learning.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Who signs the school's certificates, for its owner and admins. */
 @Controller("certificates/template")

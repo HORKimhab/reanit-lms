@@ -2388,6 +2388,110 @@
         ]
       }
     },
+    "/schools/current/payouts": {
+      "get": {
+        "operationId": "PayoutsController_payouts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolPayoutsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payouts"
+        ]
+      }
+    },
+    "/schools/current/payout-account": {
+      "put": {
+        "operationId": "PayoutsController_saveAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutAccountBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutAccountResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payouts"
+        ]
+      }
+    },
+    "/admin/payouts/due": {
+      "get": {
+        "operationId": "AdminPayoutsController_due",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuePayoutsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminPayouts"
+        ]
+      }
+    },
+    "/admin/payouts": {
+      "post": {
+        "operationId": "AdminPayoutsController_record",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPayoutBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordedPayoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminPayouts"
+        ]
+      }
+    },
     "/schools/by-subdomain/{subdomain}/learn/{slug}": {
       "get": {
         "operationId": "LearningController_course",
@@ -7076,6 +7180,350 @@
           "status"
         ]
       },
+      "SchoolPayoutsResponse": {
+        "type": "object",
+        "properties": {
+          "balances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "type": "string",
+                  "enum": [
+                    "USD",
+                    "KHR"
+                  ]
+                },
+                "available": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "onHold": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "currency",
+                "available",
+                "onHold"
+              ]
+            }
+          },
+          "nextPayoutDate": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "minimums": {
+            "type": "object",
+            "properties": {
+              "USD": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "KHR": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "USD",
+              "KHR"
+            ]
+          },
+          "account": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "holderName": {
+                "type": "string"
+              },
+              "bankName": {
+                "type": "string"
+              },
+              "account": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "holderName",
+              "bankName",
+              "account"
+            ]
+          },
+          "payouts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "currency": {
+                  "type": "string",
+                  "enum": [
+                    "USD",
+                    "KHR"
+                  ]
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "reference": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "currency",
+                "amount",
+                "paidAt",
+                "reference"
+              ]
+            }
+          }
+        },
+        "required": [
+          "balances",
+          "nextPayoutDate",
+          "minimums",
+          "account",
+          "payouts"
+        ]
+      },
+      "PayoutAccountBody": {
+        "type": "object",
+        "properties": {
+          "holderName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "bankName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "account": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "holderName",
+          "bankName",
+          "account"
+        ]
+      },
+      "PayoutAccountResponse": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "properties": {
+              "holderName": {
+                "type": "string"
+              },
+              "bankName": {
+                "type": "string"
+              },
+              "account": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "holderName",
+              "bankName",
+              "account"
+            ]
+          }
+        },
+        "required": [
+          "account"
+        ]
+      },
+      "DuePayoutsResponse": {
+        "type": "object",
+        "properties": {
+          "payouts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "school": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "subdomain": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "subdomain"
+                  ]
+                },
+                "account": {
+                  "nullable": true,
+                  "type": "object",
+                  "properties": {
+                    "holderName": {
+                      "type": "string"
+                    },
+                    "bankName": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "holderName",
+                    "bankName",
+                    "account"
+                  ]
+                },
+                "currency": {
+                  "type": "string",
+                  "enum": [
+                    "USD",
+                    "KHR"
+                  ]
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "school",
+                "account",
+                "currency",
+                "amount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "payouts"
+        ]
+      },
+      "RecordPayoutBody": {
+        "type": "object",
+        "properties": {
+          "schoolId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "KHR"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "schoolId",
+          "currency",
+          "amount",
+          "paidAt",
+          "reference"
+        ]
+      },
+      "RecordedPayoutResponse": {
+        "type": "object",
+        "properties": {
+          "payout": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "USD",
+                  "KHR"
+                ]
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "paidAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "reference": {
+                "type": "string"
+              },
+              "schoolId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "id",
+              "currency",
+              "amount",
+              "paidAt",
+              "reference",
+              "schoolId"
+            ]
+          }
+        },
+        "required": [
+          "payout"
+        ]
+      },
       "PlayerCourseResponse": {
         "type": "object",
         "properties": {
@@ -8418,6 +8866,7 @@
                     "order.refund",
                     "order.payment.confirm",
                     "order.payment.reject",
+                    "payout.record",
                     "lesson.media.attach",
                     "lesson.quiz.save",
                     "comment.reply",
@@ -8426,6 +8875,7 @@
                     "school.domain.add",
                     "school.domain.verify",
                     "school.domain.remove",
+                    "school.payout_account.update",
                     "certificate.template.update",
                     "team.invite",
                     "team.invite.accept",

@@ -6,8 +6,7 @@ import { ENV } from "@reanit/nest";
 
 import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import {
   PlanCheckoutBody,
   PlanCheckoutResponse,
@@ -19,9 +18,6 @@ import {
   toPlanTermsResponse,
 } from "./commerce.dto";
 import { PLAN_BILLING_FOR_SCHOOL, type PlanBillingForSchool } from "./commerce.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Where a creator lands back from paying for a plan. */
 const PLAN_PAGE = "/dashboard/plan";

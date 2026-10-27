@@ -4,9 +4,8 @@ import type { AuthUser } from "@reanit/core/auth";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
 import { CurrentUser } from "../auth/auth.decorators";
-import type { RequestContext } from "../context/request-context";
 import { RateLimit } from "../rate-limit/rate-limit";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import {
   CommentInboxQuery,
   CommentInboxResponse,
@@ -20,9 +19,6 @@ import {
   toThreadResponse,
 } from "./learning.dto";
 import { COMMENT_MODERATION_FOR_SCHOOL, type CommentModerationForSchool } from "./learning.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Staff side of lesson comments: the inbox, a lesson's threads, replies and moderation. */
 @Controller()

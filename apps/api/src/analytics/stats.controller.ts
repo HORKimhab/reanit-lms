@@ -1,13 +1,9 @@
 import { Controller, Get, Inject, Query } from "@nestjs/common";
 import { ApiOkResponse } from "@nestjs/swagger";
 
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { CourseStatsResponse, SalesQuery, SalesReportResponse } from "./analytics.dto";
 import { ANALYTICS_FOR_SCHOOL, type AnalyticsForSchool } from "./analytics.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Length of `YYYY-MM-DD`, the start of an ISO date-time. */
 const ISO_DAY_LENGTH = 10;

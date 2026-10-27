@@ -3,8 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { CatalogService } from "@reanit/core/catalog";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import {
   CourseIdParams,
   CourseResponse,
@@ -16,9 +15,6 @@ import {
   UpdateCourseBody,
 } from "./catalog.dto";
 import { CATALOG_FOR_SCHOOL, type CatalogForSchool } from "./catalog.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** The course builder's routes: the caller's school's courses, drafts included, over the tenant client. */
 @Controller("courses")

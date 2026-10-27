@@ -2,13 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Put } from 
 import { ApiOkResponse } from "@nestjs/swagger";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { QuizBody, QuizLessonParams, QuizResponse } from "./learning.dto";
 import { LEARNING_FOR_SCHOOL, type LearningForSchool } from "./learning.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** The quiz builder's routes: a quiz lesson's pass mark and questions, with the right answers. */
 @Controller("lessons/:lessonId/quiz")

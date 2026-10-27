@@ -1,8 +1,7 @@
 import { Controller, Get, Inject, Query } from "@nestjs/common";
 import { ApiOkResponse } from "@nestjs/swagger";
 
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "./schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "./schools.decorators";
 import { StudentsQuery, StudentsResponse } from "./schools.dto";
 import { STUDENTS_FOR_SCHOOL, type StudentsForSchool } from "./schools.tokens";
 
@@ -26,7 +25,7 @@ export class StudentsController {
    */
   @Get()
   @ApiOkResponse({ type: StudentsResponse })
-  async list(@CurrentSchool() school: NonNullable<RequestContext["school"]>, @Query() query: StudentsQuery): Promise<StudentsResponse> {
+  async list(@CurrentSchool() school: StaffSchool, @Query() query: StudentsQuery): Promise<StudentsResponse> {
     const page = await this.studentsFor(school.id).searchStudents(query);
     return { ...page, students: page.students.map((student) => ({ ...student, joinedAt: student.joinedAt.toISOString() })) };
   }

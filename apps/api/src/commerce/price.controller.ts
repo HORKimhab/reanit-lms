@@ -3,8 +3,7 @@ import { ApiOkResponse } from "@nestjs/swagger";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
 import { CourseIdParams } from "../catalog/catalog.dto";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { CurrentPriceResponse, PriceBody, PriceResponse, toPriceResponse } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, type CommerceForSchool } from "./commerce.tokens";
 
@@ -29,7 +28,7 @@ export class PriceController {
    */
   @Get()
   @ApiOkResponse({ type: CurrentPriceResponse })
-  async get(@CurrentSchool() school: NonNullable<RequestContext["school"]>, @Param() params: CourseIdParams): Promise<CurrentPriceResponse> {
+  async get(@CurrentSchool() school: StaffSchool, @Param() params: CourseIdParams): Promise<CurrentPriceResponse> {
     const price = await this.commerceFor(school.id).getPrice(params.id);
     return { price: price && toPriceResponse(price) };
   }
@@ -47,7 +46,7 @@ export class PriceController {
   @Audited("course.price.set", pathParam("id"))
   @ApiOkResponse({ type: PriceResponse })
   async set(
-    @CurrentSchool() school: NonNullable<RequestContext["school"]>,
+    @CurrentSchool() school: StaffSchool,
     @Param() params: CourseIdParams,
     @Body() body: PriceBody,
   ): Promise<PriceResponse> {

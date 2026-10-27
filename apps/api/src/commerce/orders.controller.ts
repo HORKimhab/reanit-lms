@@ -2,13 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Query
 import { ApiOkResponse } from "@nestjs/swagger";
 
 import { Audited, pathParam } from "../audit/audit.decorator";
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { IdParams, OrderDetailResponse, OrderListQuery, OrdersResponse, RefundBody, toOrderDetailResponse } from "./commerce.dto";
 import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, type CommerceForSchool, type OrderHistoryForSchool } from "./commerce.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** The school's orders for its owner and admins: the list with filters, one order, its refund, and confirming or rejecting offline QR payments. */
 @Controller("orders")

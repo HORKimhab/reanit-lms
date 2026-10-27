@@ -5,9 +5,8 @@ import type { SchoolImage, SchoolService } from "@reanit/core/schools";
 
 import { Audited, currentSchool } from "../audit/audit.decorator";
 import { CurrentUser, Public } from "../auth/auth.decorators";
-import type { RequestContext } from "../context/request-context";
 import { UploadResponse } from "../media/media.dto";
-import { CurrentSchool, Roles } from "./schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "./schools.decorators";
 import {
   CreateSchoolBody,
   ImageUploadBody,
@@ -18,9 +17,6 @@ import {
   SubdomainParams,
 } from "./schools.dto";
 import { SCHOOL_SERVICE } from "./schools.tokens";
-
-/** The staff school `@Roles` resolved for the request. */
-type StaffSchool = NonNullable<RequestContext["school"]>;
 
 /** Opening schools, finding them by subdomain and editing their settings, over `@reanit/core/schools`. */
 @Controller("schools")

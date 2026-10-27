@@ -1,8 +1,7 @@
 import { Controller, Get, Inject, Query } from "@nestjs/common";
 import { ApiOkResponse } from "@nestjs/swagger";
 
-import type { RequestContext } from "../context/request-context";
-import { CurrentSchool, Roles } from "../schools/schools.decorators";
+import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import { AuditEventsResponse, AuditQuery } from "./audit.dto";
 import { AUDIT_FOR_SCHOOL, type AuditFor } from "./audit.tokens";
 
@@ -26,7 +25,7 @@ export class AuditController {
    */
   @Get()
   @ApiOkResponse({ type: AuditEventsResponse })
-  async list(@CurrentSchool() school: NonNullable<RequestContext["school"]>, @Query() query: AuditQuery): Promise<AuditEventsResponse> {
+  async list(@CurrentSchool() school: StaffSchool, @Query() query: AuditQuery): Promise<AuditEventsResponse> {
     const page = await this.auditFor(school.id).listEntries(query);
     return { ...page, entries: page.entries.map((entry) => ({ ...entry, createdAt: entry.createdAt.toISOString() })) };
   }

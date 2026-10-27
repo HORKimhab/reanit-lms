@@ -6,7 +6,7 @@ import type { AnalyticsService } from "@reanit/core/analytics";
 import type { AuditLog } from "@reanit/core/audit";
 import type { AccountService, AuthService } from "@reanit/core/auth";
 import type { CatalogService } from "@reanit/core/catalog";
-import type { CommerceService, OrderHistory } from "@reanit/core/commerce";
+import type { CommerceService, OrderHistory, PayoutAdmin, Payouts } from "@reanit/core/commerce";
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { NotificationPreferenceService } from "@reanit/core/notifications";
@@ -20,7 +20,7 @@ import { AppModule } from "../app.module";
 import { AUDIT_FOR_SCHOOL } from "../audit/audit.tokens";
 import { ACCOUNT_SERVICE, AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
-import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, PAYMENT_CONFIRMATION, PLAN_BILLING_FOR_SCHOOL } from "../commerce/commerce.tokens";
+import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYOUT_ADMIN, PAYOUTS_FOR_SCHOOL, PLAN_BILLING_FOR_SCHOOL } from "../commerce/commerce.tokens";
 import { setupApp } from "../app.setup";
 import { ENV } from "@reanit/nest";
 
@@ -34,6 +34,9 @@ import { NOTIFICATION_PREFERENCES } from "../notifications/notifications.tokens"
 import { REDIS } from "../redis/redis.module";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
 import { DOMAIN_SERVICE, INVITE_ACCEPTANCE, SCHOOL_SERVICE, STUDENTS_FOR_SCHOOL, TEAM_FOR_SCHOOL } from "../schools/schools.tokens";
+
+/** The one platform admin the test app knows. */
+export const PLATFORM_ADMIN_EMAIL = "ops@reanit.test";
 
 /** Environment the test app boots with; nothing connects to these URLs (e2e tests swap in a real database). */
 export const TEST_ENV: Env = {
@@ -55,6 +58,7 @@ export const TEST_ENV: Env = {
   BAKONG_MERCHANT_CITY: "Phnom Penh",
   BAKONG_BASE_URL: "https://bakong.test",
   FAKE_PAYMENTS: false,
+  PLATFORM_ADMIN_EMAILS: [PLATFORM_ADMIN_EMAIL],
   PORT: 4000,
   HOST: "127.0.0.1",
   TRUST_PROXY_HOPS: 0,
@@ -95,6 +99,10 @@ export type FakeClients = {
   /** Stands in for every school's plan billing; `billingFor` records which school was asked for. */
   billing: Record<keyof PlanBilling, Mock>;
   billingFor: Mock<(schoolId: string) => PlanBilling>;
+  /** Stands in for every school's payouts; `payoutsFor` records which school was asked for. */
+  payouts: Record<keyof Payouts, Mock>;
+  payoutsFor: Mock<(schoolId: string) => Payouts>;
+  payoutAdmin: Record<keyof PayoutAdmin, Mock>;
   /** Stands in for the payment confirmation that enrolls. */
   confirmation: { confirm: Mock };
   /** Stands in for every school's learning service; `learningFor` records which school was asked for. */
@@ -187,6 +195,8 @@ const COMMERCE_METHODS = [
 ] as const satisfies readonly (keyof CommerceService)[];
 const HISTORY_METHODS = ["listMyOrders", "listOrders", "getOrder"] as const satisfies readonly (keyof OrderHistory)[];
 const BILLING_METHODS = ["getPlan", "checkout", "getPlanPayment"] as const satisfies readonly (keyof PlanBilling)[];
+const PAYOUT_METHODS = ["getBalance", "getAccount", "saveAccount", "listPayouts"] as const satisfies readonly (keyof Payouts)[];
+const PAYOUT_ADMIN_METHODS = ["listDuePayouts", "recordPayout"] as const satisfies readonly (keyof PayoutAdmin)[];
 const LEARNING_METHODS = [
   "getCourse",
   "getLessonMedia",
@@ -218,7 +228,7 @@ function fakeService<Method extends string>(methods: readonly Method[]): Record<
 /**
  * Creates fakes for the clients the app holds; they answer until a test says otherwise.
  *
- * @returns A fake Prisma client, Redis connection, and auth, account, school, domain, students, team, invite, catalog, media, commerce, order history, plan billing, learning, moderation, certificate, stats, audit and email settings services.
+ * @returns A fake Prisma client, Redis connection, and auth, account, school, domain, students, team, invite, catalog, media, commerce, order history, plan billing, payouts, learning, moderation, certificate, stats, audit and email settings services.
  */
 export function createFakeClients(): FakeClients {
   const auth = fakeService(AUTH_METHODS);
@@ -228,6 +238,7 @@ export function createFakeClients(): FakeClients {
   const commerce = fakeService(COMMERCE_METHODS);
   const history = fakeService(HISTORY_METHODS);
   const billing = fakeService(BILLING_METHODS);
+  const payouts = fakeService(PAYOUT_METHODS);
   const learning = fakeService(LEARNING_METHODS);
   const moderation = fakeService(MODERATION_METHODS);
   const certificates = fakeService(CERTIFICATE_METHODS);
@@ -257,6 +268,9 @@ export function createFakeClients(): FakeClients {
     historyFor: vi.fn(() => history as unknown as OrderHistory),
     billing,
     billingFor: vi.fn(() => billing as unknown as PlanBilling),
+    payouts,
+    payoutsFor: vi.fn(() => payouts as unknown as Payouts),
+    payoutAdmin: fakeService(PAYOUT_ADMIN_METHODS),
     confirmation: { confirm: vi.fn() },
     learning,
     learningFor: vi.fn(() => learning as unknown as LearningService),
@@ -316,6 +330,10 @@ export async function createTestApp(
     .useValue(clients.historyFor)
     .overrideProvider(PLAN_BILLING_FOR_SCHOOL)
     .useValue(clients.billingFor)
+    .overrideProvider(PAYOUTS_FOR_SCHOOL)
+    .useValue(clients.payoutsFor)
+    .overrideProvider(PAYOUT_ADMIN)
+    .useValue(clients.payoutAdmin)
     .overrideProvider(PAYMENT_CONFIRMATION)
     .useValue(clients.confirmation)
     .overrideProvider(LEARNING_FOR_SCHOOL)

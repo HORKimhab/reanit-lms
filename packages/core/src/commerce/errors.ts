@@ -84,3 +84,8 @@ export class SubscriptionNotRenewableError extends Error {
 export class OfflinePaymentClosedError extends Error {
   override readonly name = "OfflinePaymentClosedError";
 }
+
+/** A payout would be more than the school's available balance in its currency. */
+export class PayoutExceedsBalanceError extends Error {
+  override readonly name = "PayoutExceedsBalanceError";
+}

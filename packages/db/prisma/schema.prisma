@@ -118,6 +118,7 @@ model User {
   comments                LessonComment[]
   notificationPreferences NotificationPreference[]
   subscriptions           Subscription[]
+  recordedPayouts         Payout[]
 
   @@map("users")
 }
@@ -192,6 +193,8 @@ model School {
   teamInvites             TeamInvite[]
   subscriptions           Subscription[]
   planPayments            PlanPayment[]
+  payoutAccount           PayoutAccount?
+  payouts                 Payout[]
 
   @@map("schools")
 }
@@ -763,4 +766,40 @@ model PlanPayment {
 
   @@index([schoolId])
   @@map("plan_payments")
+}
+
+/// Where a school's payouts are sent (API-27): the account holder, the bank, and the account number or Bakong ID.
+model PayoutAccount {
+  id         String   @id @default(uuid()) @db.Uuid
+  schoolId   String   @unique @map("school_id") @db.Uuid
+  holderName String   @map("holder_name")
+  bankName   String   @map("bank_name")
+  /// The account number, or the Bakong ID.
+  account    String
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("payout_accounts")
+}
+
+/// A transfer a platform admin made to a school (API-27); it comes off the school's available balance.
+model Payout {
+  id           String   @id @default(uuid()) @db.Uuid
+  schoolId     String   @map("school_id") @db.Uuid
+  currency     String   @db.Char(3)
+  /// Integer minor units of `currency`.
+  amount       Int
+  paidAt       DateTime @map("paid_at")
+  /// The bank's or Bakong's reference for the transfer.
+  reference    String
+  /// The platform admin who recorded it; null once their account is gone.
+  recordedById String?  @map("recorded_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  school     School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  recordedBy User?  @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([schoolId])
+  @@map("payouts")
 }
