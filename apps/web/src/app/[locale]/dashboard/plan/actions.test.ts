@@ -7,7 +7,7 @@ import { setTestLocale } from "@/test/intl-server";
 import { RedirectError } from "@/test/navigation";
 import { signIn } from "@/test/session";
 
-import { checkPlanPayment, startPlanCheckout } from "./actions";
+import { checkPlanPayment, startPlanCheckout, submitPlanTransfer } from "./actions";
 
 vi.mock("next/headers", () => import("@/test/headers"));
 vi.mock("next-intl/server", () => import("@/test/intl-server"));
@@ -48,6 +48,32 @@ describe("startPlanCheckout", () => {
     onApi(ROUTE, problem(400, "urn:reanit:problem:plan-payment-method-unavailable"));
 
     expect(await startPlanCheckout(IDLE, form({ ...PRO_MONTHLY, method: "stripe" }))).toEqual({ status: "unavailable" });
+  });
+});
+
+describe("platform QR transfers", () => {
+  const TRANSFER_ROUTE = `POST /schools/current/plan/payments/${PAYMENT_ID}/offline-payment`;
+
+  it("shows the platform's QR for a payment by transfer", async () => {
+    onApi(ROUTE, Response.json({ paymentId: PAYMENT_ID, payment: { kind: "offline", qrImageUrl: "https://cdn.reanit.test/platform-qr.png" } }, { status: 201 }));
+
+    expect(await startPlanCheckout(IDLE, form({ ...PRO_MONTHLY, method: "offline_qr" }))).toEqual({ status: "offline", qrImageUrl: "https://cdn.reanit.test/platform-qr.png", paymentId: PAYMENT_ID });
+  });
+
+  it("sends the trimmed reference, then shows the plan page waiting on the payment", async () => {
+    onApi(TRANSFER_ROUTE, new Response(null, { status: 204 }));
+
+    await expect(submitPlanTransfer(PAYMENT_ID, IDLE, form({ reference: " ABA-123 " }))).rejects.toThrow(new RedirectError(`/dashboard/plan?planPayment=${PAYMENT_ID}`));
+    expect(await requestTo(TRANSFER_ROUTE)?.json()).toEqual({ reference: "ABA-123" });
+  });
+
+  it("needs a reference, and says when the payment no longer waits for a transfer", async () => {
+    expect(await submitPlanTransfer(PAYMENT_ID, IDLE, form({ reference: " " }))).toEqual({ status: "invalid" });
+    expect(requestTo(TRANSFER_ROUTE)).toBeUndefined();
+
+    onApi(TRANSFER_ROUTE, problem(409, "urn:reanit:problem:plan-payment-closed"));
+
+    expect(await submitPlanTransfer(PAYMENT_ID, IDLE, form({ reference: "ABA-123" }))).toEqual({ status: "closed" });
   });
 });
 

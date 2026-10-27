@@ -621,7 +621,7 @@ export function createCommerceService({ store, gateways, confirmation, clock, pl
 /**
  * Builds the one path to enrollment: a confirmed payment marks the order paid and enrolls the buyer,
  * exactly once however often it is repeated. Gateways confirm their own payments; staff confirm the
- * offline QR payments they found in the school's account. A subscription's payment also moves its
+ * offline QR payments they found in the school's account, and platform admins those made to the platform's QR for a plan. A subscription's payment also moves its
  * period on (`renewSubscription`) and its enrollments' access with it. A gateway payment that is no
  * student's order may be a creator paying for their plan, which moves the school's plan on.
  *
@@ -673,6 +673,20 @@ export function createPaymentConfirmation({ store, plans, clock }: { store: Paym
      */
     confirmOffline(orderId: string) {
       return confirmPayment({ offlineOrderId: orderId });
+    },
+
+    /**
+     * Records a creator's payment to the platform's QR that a platform admin found in the platform's
+     * account; the plan moves on once, however often it is repeated.
+     *
+     * @param paymentId The plan payment.
+     * @returns The payment and whether this call is the one that marked it paid.
+     * @throws {UnknownPaymentError} When no payment to the platform's QR has the id.
+     */
+    async confirmOfflinePlan(paymentId: string) {
+      const result = await plans.confirm({ offlinePaymentId: paymentId }, clock.now(), renewSubscription);
+      if (!result) throw new UnknownPaymentError();
+      return result;
     },
   };
 }

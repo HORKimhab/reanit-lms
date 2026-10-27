@@ -10,7 +10,7 @@ import type { CommerceService, OrderHistory, PayoutAdmin, Payouts } from "@reani
 import type { CertificateService, CommentModeration, LearningService } from "@reanit/core/learning";
 import type { MediaService } from "@reanit/core/media";
 import type { NotificationPreferenceService } from "@reanit/core/notifications";
-import type { DomainService, InviteAcceptance, PlanBilling, SchoolService, StudentService, TeamService } from "@reanit/core/schools";
+import type { DomainService, InviteAcceptance, PlanBilling, PlatformAdmin, SchoolService, StudentService, TeamService } from "@reanit/core/schools";
 import { PARAMS_PROVIDER_TOKEN } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
@@ -20,7 +20,7 @@ import { AppModule } from "../app.module";
 import { AUDIT_FOR_SCHOOL } from "../audit/audit.tokens";
 import { ACCOUNT_SERVICE, AUTH_SERVICE } from "../auth/auth.tokens";
 import { CATALOG_FOR_SCHOOL } from "../catalog/catalog.tokens";
-import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYOUT_ADMIN, PAYOUTS_FOR_SCHOOL, PLAN_BILLING_FOR_SCHOOL } from "../commerce/commerce.tokens";
+import { COMMERCE_FOR_SCHOOL, ORDER_HISTORY_FOR_SCHOOL, PAYMENT_CONFIRMATION, PAYOUT_ADMIN, PAYOUTS_FOR_SCHOOL, PLAN_BILLING_FOR_SCHOOL, PLATFORM_ADMIN } from "../commerce/commerce.tokens";
 import { setupApp } from "../app.setup";
 import { ENV } from "@reanit/nest";
 
@@ -59,6 +59,7 @@ export const TEST_ENV: Env = {
   BAKONG_BASE_URL: "https://bakong.test",
   FAKE_PAYMENTS: false,
   PLATFORM_ADMIN_EMAILS: [PLATFORM_ADMIN_EMAIL],
+  PLATFORM_PAYMENT_QR_URL: "https://cdn.reanit.test/platform-qr.png",
   PORT: 4000,
   HOST: "127.0.0.1",
   TRUST_PROXY_HOPS: 0,
@@ -103,6 +104,8 @@ export type FakeClients = {
   payouts: Record<keyof Payouts, Mock>;
   payoutsFor: Mock<(schoolId: string) => Payouts>;
   payoutAdmin: Record<keyof PayoutAdmin, Mock>;
+  /** Stands in for the platform admins' schools and plan payments. */
+  platformAdmin: Record<keyof PlatformAdmin, Mock>;
   /** Stands in for the payment confirmation that enrolls. */
   confirmation: { confirm: Mock };
   /** Stands in for every school's learning service; `learningFor` records which school was asked for. */
@@ -194,9 +197,17 @@ const COMMERCE_METHODS = [
   "refundOrder",
 ] as const satisfies readonly (keyof CommerceService)[];
 const HISTORY_METHODS = ["listMyOrders", "listOrders", "getOrder"] as const satisfies readonly (keyof OrderHistory)[];
-const BILLING_METHODS = ["getPlan", "checkout", "getPlanPayment"] as const satisfies readonly (keyof PlanBilling)[];
+const BILLING_METHODS = ["getPlan", "checkout", "getPlanPayment", "submitOfflinePayment"] as const satisfies readonly (keyof PlanBilling)[];
 const PAYOUT_METHODS = ["getBalance", "getAccount", "saveAccount", "listPayouts"] as const satisfies readonly (keyof Payouts)[];
 const PAYOUT_ADMIN_METHODS = ["listDuePayouts", "recordPayout"] as const satisfies readonly (keyof PayoutAdmin)[];
+const PLATFORM_ADMIN_METHODS = [
+  "listSchools",
+  "suspendSchool",
+  "unsuspendSchool",
+  "listPlanPayments",
+  "confirmPlanPayment",
+  "rejectPlanPayment",
+] as const satisfies readonly (keyof PlatformAdmin)[];
 const LEARNING_METHODS = [
   "getCourse",
   "getLessonMedia",
@@ -271,6 +282,7 @@ export function createFakeClients(): FakeClients {
     payouts,
     payoutsFor: vi.fn(() => payouts as unknown as Payouts),
     payoutAdmin: fakeService(PAYOUT_ADMIN_METHODS),
+    platformAdmin: fakeService(PLATFORM_ADMIN_METHODS),
     confirmation: { confirm: vi.fn() },
     learning,
     learningFor: vi.fn(() => learning as unknown as LearningService),
@@ -334,6 +346,8 @@ export async function createTestApp(
     .useValue(clients.payoutsFor)
     .overrideProvider(PAYOUT_ADMIN)
     .useValue(clients.payoutAdmin)
+    .overrideProvider(PLATFORM_ADMIN)
+    .useValue(clients.platformAdmin)
     .overrideProvider(PAYMENT_CONFIRMATION)
     .useValue(clients.confirmation)
     .overrideProvider(LEARNING_FOR_SCHOOL)

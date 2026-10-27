@@ -7,7 +7,7 @@ import { PlanPaymentNotice } from "@/components/plans/plan-payment-notice";
 import { getPlanPaymentStatus, getSchoolPlan, PLAN_PATH, planPaymentFrom } from "@/server/schools/plan";
 import { canManageSchool, getStaffSchool } from "@/server/schools/staff";
 
-import { checkPlanPayment, startPlanCheckout } from "./actions";
+import { checkPlanPayment, startPlanCheckout, submitPlanTransfer } from "./actions";
 
 /**
  * The school's creator plan: the plan in force, how a payment the owner came back from went, every plan
@@ -41,6 +41,7 @@ export default async function DashboardPlan({ searchParams }: PageProps<"/[local
           current={plan.paid?.plan ?? null}
           action={startPlanCheckout}
           checkStatus={checkPlanPayment}
+          submitTransfer={submitPlanTransfer}
           paymentHref={(id) => `${PLAN_PATH}?planPayment=${id}`}
         />
       ) : (

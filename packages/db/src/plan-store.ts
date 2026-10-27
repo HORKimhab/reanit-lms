@@ -9,7 +9,10 @@ const PLAN_FIELDS = { plan: true, planInterval: true, planPeriodEnd: true } as c
 type PaidPlan = Exclude<CreatorPlan, "free">;
 
 /** A plan payment's columns. */
-const PAYMENT_FIELDS = { id: true, plan: true, interval: true, amount: true, method: true, status: true, providerRef: true } as const;
+const PAYMENT_FIELDS = { id: true, plan: true, interval: true, amount: true, method: true, status: true, providerRef: true, reference: true } as const;
+
+/** How a confirmation finds a plan payment; matches `PlanPaymentMatch` in `@reanit/core/schools`. */
+type PlanPaymentMatch = { method: Exclude<PaymentMethod, "offline_qr">; providerRef: string } | { offlinePaymentId: string };
 
 /** One paid period's change; matches `RenewSubscription` in `@reanit/core/commerce`. */
 type RenewSubscription = (
@@ -122,12 +125,28 @@ export function createPlanBillingStore(db: DbClient, schoolId: string) {
     async failPlanPayment(paymentId: string) {
       await tenant.planPayment.updateMany({ where: { id: paymentId, status: "pending" }, data: { status: "failed" } });
     },
+
+    /**
+     * Records the creator's reference on a pending payment to the platform's QR, and when they gave it.
+     *
+     * @param paymentId The payment.
+     * @param reference As the creator's banking app showed it.
+     * @returns Whether the school had such a payment.
+     */
+    async submitOfflinePayment(paymentId: string, reference: string) {
+      const { count } = await tenant.planPayment.updateMany({
+        where: { id: paymentId, method: "offline_qr", status: "pending" },
+        data: { reference, submittedAt: new Date() },
+      });
+      return count > 0;
+    },
   };
 }
 
 /**
  * Confirms creators' plan payments across schools: finds the payment by the gateway's reference (which
- * is unique), then marks it paid and moves the school's plan on inside that school's transaction. It
+ * is unique) or, for a payment to the platform's QR, by id, then marks it paid and moves the school's
+ * plan on inside that school's transaction. It
  * satisfies `PlanConfirmationStore` from `@reanit/core/schools`.
  *
  * @param db Unscoped client from `createDbClient`.
@@ -141,16 +160,18 @@ export function createPlanConfirmationStore(db: DbClient) {
      * Marks a plan payment paid and moves the school's plan on, once. Paying the plan and period the
      * school is on continues from its paid period's end; any other plan starts at the payment.
      *
-     * @param payment The gateway and its reference.
-     * @param payment.method The gateway.
-     * @param payment.providerRef Its reference.
+     * @param match The gateway and its reference, or the id of a payment to the platform's QR.
      * @param at When the payment was confirmed.
      * @param renew Computes the new period end.
      * @returns The payment and whether this call paid it, or null when no plan payment matches.
      */
-    async confirm({ method, providerRef }: { method: Exclude<PaymentMethod, "offline_qr">; providerRef: string }, at: Date, renew: RenewSubscription) {
-      const payment = await db.planPayment.findUnique({ where: { providerRef }, select: { id: true, schoolId: true, method: true, plan: true, interval: true } });
-      if (!payment || payment.method !== method) return null;
+    async confirm(match: PlanPaymentMatch, at: Date, renew: RenewSubscription) {
+      const select = { id: true, schoolId: true, method: true, plan: true, interval: true } as const;
+      const payment =
+        "offlinePaymentId" in match
+          ? await db.planPayment.findFirst({ where: { id: match.offlinePaymentId, method: "offline_qr" }, select })
+          : await db.planPayment.findUnique({ where: { providerRef: match.providerRef }, select });
+      if (!payment || ("method" in match && payment.method !== match.method)) return null;
       return inSchoolTransaction(db, payment.schoolId, async (tx) => {
         const { count } = await tx.planPayment.updateMany({ where: { id: payment.id, status: { in: ["pending", "failed"] } }, data: { status: "paid", paidAt: at } });
         if (count === 0) return { paymentId: payment.id, isNewlyPaid: false };

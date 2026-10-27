@@ -1,11 +1,9 @@
 import type { StudentPage } from "@reanit/core/schools";
-import { Button } from "@reanit/ui/components/button";
-import { cn } from "@reanit/ui/lib/utils";
 import { useTranslations } from "next-intl";
 
-import { INPUT_CLASS } from "@/components/form/field";
 import { EmptyState } from "@/components/shells/empty-state";
 import { Pager } from "@/components/shells/pager";
+import { SearchForm } from "@/components/shells/search-form";
 
 import { StudentTable } from "./student-table";
 
@@ -36,22 +34,7 @@ export function StudentList({ result, q }: { result: StudentPage; q?: string }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <form role="search" className="flex gap-2">
-        <label htmlFor="student-search" className="sr-only">
-          {t("search")}
-        </label>
-        <input
-          id="student-search"
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder={t("search")}
-          className={cn(INPUT_CLASS, "w-full max-w-sm")}
-        />
-        <Button type="submit" variant="outline">
-          {t("searchButton")}
-        </Button>
-      </form>
+      <SearchForm id="student-search" label={t("search")} button={t("searchButton")} q={q} />
       {result.students.length === 0 ? (
         <EmptyState title={t(q ? "noMatchTitle" : "emptyTitle")} text={q ? t("noMatchText", { q }) : t("emptyText")} />
       ) : (

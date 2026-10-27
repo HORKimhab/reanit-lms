@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import type { AuthUser } from "@reanit/core/auth";
 import { CREATOR_PLANS, PLAN_TERMS } from "@reanit/core/schools";
@@ -6,15 +6,17 @@ import { ENV } from "@reanit/nest";
 
 import { CurrentUser, Public } from "../auth/auth.decorators";
 import type { Env } from "../config/env";
+import { RateLimit } from "../rate-limit/rate-limit";
 import { CurrentSchool, Roles, type StaffSchool } from "../schools/schools.decorators";
 import {
+  OfflinePaymentBody,
   PlanCheckoutBody,
   PlanCheckoutResponse,
   PlanPaymentParams,
   PlanPaymentResponse,
   PlansResponse,
   SchoolPlanResponse,
-  toGatewayStep,
+  toPlanPaymentStep,
   toPlanTermsResponse,
 } from "./commerce.dto";
 import { PLAN_BILLING_FOR_SCHOOL, type PlanBillingForSchool } from "./commerce.tokens";
@@ -63,7 +65,7 @@ export class PlanController {
   }
 
   /**
-   * Starts paying the platform for a period of a plan. Only the owner pays for the school's plan.
+   * Starts paying the platform for a period of a plan, through a gateway or the platform's QR. Only the owner pays for the school's plan.
    *
    * @param school The caller's school.
    * @param user The owner.
@@ -77,7 +79,7 @@ export class PlanController {
   async checkout(@CurrentSchool() school: StaffSchool, @CurrentUser() user: AuthUser, @Body() body: PlanCheckoutBody): Promise<PlanCheckoutResponse> {
     const page = new URL(PLAN_PAGE, this.env.APP_URL).href;
     const { paymentId, payment } = await this.billingFor(school.id).checkout(user.email, body, (id) => ({ successUrl: `${page}?planPayment=${id}`, cancelUrl: page }));
-    return { paymentId, payment: toGatewayStep(payment) };
+    return { paymentId, payment: toPlanPaymentStep(payment) };
   }
 
   /**
@@ -93,5 +95,22 @@ export class PlanController {
   @ApiOkResponse({ type: PlanPaymentResponse })
   async payment(@CurrentSchool() school: StaffSchool, @Param() params: PlanPaymentParams): Promise<PlanPaymentResponse> {
     return { status: await this.billingFor(school.id).getPlanPayment(params.id) };
+  }
+
+  /**
+   * Records that the owner paid the platform's QR, with their transaction reference; a platform admin then confirms it.
+   *
+   * @param school The caller's school.
+   * @param params The payment's id.
+   * @param body The transaction reference.
+   * @throws {PlanPaymentNotFoundError} When the school has no such payment (404).
+   * @throws {PlanPaymentClosedError} When it is not a pending payment to the platform's QR (409).
+   */
+  @Post("schools/current/plan/payments/:id/offline-payment")
+  @Roles("owner")
+  @RateLimit("checkout")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async submitOfflinePayment(@CurrentSchool() school: StaffSchool, @Param() params: PlanPaymentParams, @Body() body: OfflinePaymentBody): Promise<void> {
+    await this.billingFor(school.id).submitOfflinePayment(params.id, body);
   }
 }

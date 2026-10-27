@@ -1,4 +1,4 @@
-import { PlanPaymentMethodUnavailableError, PlanPaymentNotFoundError, PLAN_TERMS } from "@reanit/core/schools";
+import { PlanPaymentClosedError, PlanPaymentMethodUnavailableError, PlanPaymentNotFoundError, PLAN_TERMS } from "@reanit/core/schools";
 import { describe, expect, it } from "vitest";
 
 import { setStaffRole, TEST_SCHOOL, TEST_USER, useStaffApp } from "../test/session";
@@ -55,6 +55,15 @@ describe("POST /schools/current/plan/checkout", () => {
     expect(urls(PAYMENT_ID)).toEqual({ successUrl: `http://localhost:3000/dashboard/plan?planPayment=${PAYMENT_ID}`, cancelUrl: "http://localhost:3000/dashboard/plan" });
   });
 
+  it("shows the platform's QR for a payment by QR transfer", async () => {
+    setStaffRole(staff.clients, "owner");
+    staff.clients.billing.checkout.mockResolvedValue({ paymentId: PAYMENT_ID, payment: { kind: "offline", qrImageUrl: "https://cdn.reanit.test/platform-qr.png" } });
+
+    const response = await staff.app.inject({ method: "POST", url: "/schools/current/plan/checkout", headers: staff.headers, payload: { plan: "pro", interval: "month", method: "offline_qr" } });
+
+    expect(response.json()).toEqual({ paymentId: PAYMENT_ID, payment: { kind: "offline", qrImageUrl: "https://cdn.reanit.test/platform-qr.png" } });
+  });
+
   it("refuses an admin, who does not pay for the school", async () => {
     setStaffRole(staff.clients, "admin");
 
@@ -93,5 +102,30 @@ describe("GET /schools/current/plan/payments/:id", () => {
     const response = await staff.app.inject({ method: "GET", url: `/schools/current/plan/payments/${PAYMENT_ID}`, headers: staff.headers });
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe("POST /schools/current/plan/payments/:id/offline-payment", () => {
+  const url = `/schools/current/plan/payments/${PAYMENT_ID}/offline-payment`;
+
+  it("records the owner's reference for a payment to the platform's QR", async () => {
+    setStaffRole(staff.clients, "owner");
+
+    const response = await staff.app.inject({ method: "POST", url, headers: staff.headers, payload: { reference: " ABA-123 " } });
+
+    expect(response.statusCode).toBe(204);
+    expect(staff.clients.billing.submitOfflinePayment).toHaveBeenCalledWith(PAYMENT_ID, { reference: "ABA-123" });
+  });
+
+  it("answers 409 for a payment no longer waiting for a transfer, and refuses an admin", async () => {
+    setStaffRole(staff.clients, "owner");
+    staff.clients.billing.submitOfflinePayment.mockRejectedValue(new PlanPaymentClosedError());
+
+    const closed = await staff.app.inject({ method: "POST", url, headers: staff.headers, payload: { reference: "ABA-123" } });
+    setStaffRole(staff.clients, "admin");
+    const admin = await staff.app.inject({ method: "POST", url, headers: staff.headers, payload: { reference: "ABA-123" } });
+
+    expect(closed.json()).toMatchObject({ status: 409, type: "urn:reanit:problem:plan-payment-closed" });
+    expect(admin.statusCode).toBe(403);
   });
 });

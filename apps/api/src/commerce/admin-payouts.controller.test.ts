@@ -1,11 +1,10 @@
 import { PayoutExceedsBalanceError } from "@reanit/core/commerce";
 import { describe, expect, it } from "vitest";
 
-import { PLATFORM_ADMIN_EMAIL, useTestApp } from "../test/app";
-import { signInAs, TEST_SCHOOL, TEST_USER } from "../test/session";
+import { useTestApp } from "../test/app";
+import { PLATFORM_ADMIN_USER as ADMIN, signInAs, TEST_SCHOOL } from "../test/session";
 
 const test = useTestApp();
-const ADMIN = { ...TEST_USER, email: PLATFORM_ADMIN_EMAIL };
 const PAYOUT = { schoolId: TEST_SCHOOL.id, currency: "USD", amount: 4655, paidAt: "2026-11-01T09:00:00+07:00", reference: "ABA-TRX-1" };
 
 describe("GET /admin/payouts/due", () => {

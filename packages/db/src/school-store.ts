@@ -16,13 +16,13 @@ const SCHOOL_FIELDS = { id: true, name: true, subdomain: true, brandColor: true,
 export function createSchoolStore(db: DbClient) {
   return {
     /**
-     * Finds a school by subdomain.
+     * Finds an online school by subdomain; a school a platform admin suspended is not found.
      *
      * @param subdomain Normalized subdomain.
      * @returns The school or null.
      */
     findSchoolBySubdomain(subdomain: string) {
-      return db.school.findUnique({ where: { subdomain }, select: SCHOOL_FIELDS });
+      return db.school.findUnique({ where: { subdomain, suspendedAt: null }, select: SCHOOL_FIELDS });
     },
 
     /**

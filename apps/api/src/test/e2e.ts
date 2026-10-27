@@ -22,7 +22,7 @@ import { PAYMENT_GATEWAYS } from "../commerce/commerce.tokens";
 import { REDIS } from "../redis/redis.module";
 import { DNS_LOOKUP, DOMAIN_EDGE } from "../schools/schools.tokens";
 import { RATE_LIMIT_STORAGE, UNLIMITED_RATE } from "./rate-limit";
-import { bootTestApp, createFakeClients, TEST_ENV } from "./app";
+import { bootTestApp, createFakeClients, PLATFORM_ADMIN_EMAIL, TEST_ENV } from "./app";
 
 /** A supertest agent: keeps the cookies the API sets, like a browser. */
 export type Agent = ReturnType<typeof request.agent>;
@@ -290,6 +290,20 @@ export async function signUp(app: NestFastifyApplication, name: string): Promise
   const email = `${name}@example.com`;
   await agent.post("/auth/sign-up").send({ name, email, password: "correct horse battery" }).expect(201);
   return { agent, email };
+}
+
+/**
+ * Signs the platform admin in, signing them up the first time any test asks.
+ *
+ * @param app The app under test.
+ * @returns An agent carrying the platform admin's session cookie.
+ */
+export async function signInAsPlatformAdmin(app: NestFastifyApplication): Promise<Agent> {
+  const agent = request.agent(app.getHttpServer());
+  const credentials = { email: PLATFORM_ADMIN_EMAIL, password: "correct horse battery" };
+  const signedUp = await agent.post("/auth/sign-up").send({ name: "Ops", ...credentials });
+  if (signedUp.status !== 201) await agent.post("/auth/login").send(credentials).expect(200);
+  return agent;
 }
 
 /**

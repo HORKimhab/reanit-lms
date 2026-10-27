@@ -45,3 +45,6 @@ export type PayoutsForSchool = (schoolId: string) => Payouts;
 
 /** Injection token for the `PayoutAdmin` from `@reanit/core/commerce`. */
 export const PAYOUT_ADMIN = Symbol("PAYOUT_ADMIN");
+
+/** Injection token for the `PlatformAdmin` from `@reanit/core/schools`. */
+export const PLATFORM_ADMIN = Symbol("PLATFORM_ADMIN");

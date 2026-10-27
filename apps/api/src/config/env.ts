@@ -47,11 +47,13 @@ const envSchema = baseEnvSchema
   CLOUDFLARE_ZONE_ID: z.string().min(1).optional(),
   /** The zone's fallback origin, which every custom domain CNAMEs to, e.g. `customers.reanit.com`. */
   CUSTOM_DOMAIN_TARGET: z.hostname().optional(),
-  /** Emails of the platform's admins, comma-separated: they see every school's payouts due and record the transfers made. */
+  /** Emails of the platform's admins, comma-separated: they run the admin console (schools, plan payments to the platform's QR, payouts). */
   PLATFORM_ADMIN_EMAILS: z
     .string()
     .default("")
     .transform((value) => value.split(",").map((email) => email.trim().toLowerCase()).filter(Boolean)),
+  /** Public URL of the platform's own payment QR image; when set, creators can pay for a plan by scanning it and a platform admin confirms the transfer. */
+  PLATFORM_PAYMENT_QR_URL: z.url().optional(),
   /**
    * End-to-end tests only: card payments go to a fake that pays every order as soon as it is checked.
    * Refused unless APP_URL is a localhost address, so it can never take orders on a real deployment.

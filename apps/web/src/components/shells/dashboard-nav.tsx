@@ -1,7 +1,7 @@
 import { Banknote, BarChart3, BookOpen, Gem, LayoutDashboard, Library, MessageSquare, Receipt, Settings, TicketPercent, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { NavLink } from "./nav-link";
+import { SectionNav } from "./section-nav";
 
 const ITEMS = [
   { href: "/dashboard", key: "overview", icon: LayoutDashboard, exact: true },
@@ -24,20 +24,5 @@ const ITEMS = [
  */
 export function DashboardNav() {
   const t = useTranslations("DashboardNav");
-  return (
-    <nav className="flex gap-1 overflow-x-auto text-sm md:flex-col">
-      {ITEMS.map(({ href, key, icon: Icon, exact }) => (
-        <NavLink
-          key={href}
-          href={href}
-          exact={exact}
-          className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
-          activeClassName="bg-accent text-foreground font-medium"
-        >
-          <Icon aria-hidden className="size-4" />
-          {t(key)}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  return <SectionNav items={ITEMS.map(({ key, ...item }) => ({ ...item, label: t(key) }))} />;
 }

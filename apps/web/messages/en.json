@@ -630,7 +630,12 @@
       "failed": "Your plan payment didn't go through. Try again below."
     },
     "publicTitle": "Plans",
-    "publicIntro": "Start free. Upgrade when you need more courses, a team, your own domain or your own payment QR."
+    "publicIntro": "Start free. Upgrade when you need more courses, a team, your own domain or your own payment QR.",
+    "transfer": {
+      "qrLabel": "The platform's payment QR, to pay {price}",
+      "steps": "Scan this code in your banking app and pay the amount above. Then enter the transaction reference your app shows. We'll confirm your payment within one business day, and your plan updates then.",
+      "closed": "This plan payment no longer waits for a transfer. Start again below."
+    }
   },
   "Payouts": {
     "balanceTitle": "Balance",
@@ -660,6 +665,79 @@
     "amount": "Amount",
     "reference": "Reference",
     "staffOnly": "Only the school's owner and admins can see its payouts."
+  },
+  "Admin": {
+    "title": "Reanit admin",
+    "nav": {
+      "schools": "Schools",
+      "planPayments": "Plan payments",
+      "payouts": "Payouts"
+    },
+    "schools": {
+      "search": "Search by school, subdomain or owner's email",
+      "searchButton": "Search",
+      "caption": "Schools",
+      "pages": "Schools pages",
+      "emptyTitle": "No schools",
+      "empty": "No school has signed up yet.",
+      "noMatch": "No school matches \"{q}\".",
+      "school": "School",
+      "owner": "Owner",
+      "plan": "Plan",
+      "created": "Created",
+      "status": "Status",
+      "actions": "Actions",
+      "planUntil": "{plan} until {date}",
+      "online": "Online",
+      "suspended": "Suspended on {date}: {reason}",
+      "suspend": "Suspend…",
+      "reason": "Reason",
+      "reasonHint": "Kept in the school's audit log. Its site, checkout and courses go offline; its staff keep the dashboard.",
+      "reasonError": "Say why the school is suspended.",
+      "suspendYes": "Suspend school",
+      "unsuspend": "Bring back online",
+      "unsuspendWarning": "The school's site, checkout and courses come back for everyone.",
+      "unsuspendYes": "Yes, bring it back",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "planPayments": {
+      "intro": "Creators who paid for a plan by scanning the platform's QR. Find each reference in the platform's account before confirming.",
+      "caption": "Plan payments waiting",
+      "emptyTitle": "Nothing to check",
+      "empty": "No creator is waiting on a plan payment by QR.",
+      "school": "School",
+      "plan": "Plan",
+      "amount": "Amount",
+      "reference": "Reference",
+      "submitted": "Sent",
+      "actions": "Actions",
+      "planFor": "{plan}, every {interval}",
+      "confirm": "Confirm",
+      "confirmWarning": "Only confirm once {amount} with reference {reference} is in the platform's account. The school's plan moves on at once.",
+      "confirmYes": "Yes, it arrived",
+      "reject": "Reject",
+      "rejectWarning": "The creator's plan stays as it is, and they will have to pay again.",
+      "rejectYes": "Yes, it never arrived",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "payouts": {
+      "intro": "Balances that reached the minimum. Send each by bank or Bakong transfer, then record it here; it comes off the school's balance.",
+      "emptyTitle": "No payouts due",
+      "empty": "No school's available balance has reached the minimum.",
+      "due": "{school}: {amount}",
+      "sendTo": "Send to {holder}, {bank}, {account}",
+      "noAccount": "The owner hasn't added payout details yet. Wait for them before sending anything.",
+      "amountIn": "Amount ({currency})",
+      "paidOn": "Sent on",
+      "reference": "Bank reference",
+      "record": "Record payout",
+      "saving": "Saving…",
+      "recorded": "Payout recorded.",
+      "invalid": "Check the amount, the date and the reference.",
+      "exceeds": "That's more than the school's available balance."
+    }
   },
   "Checkout": {
     "title": "Checkout",

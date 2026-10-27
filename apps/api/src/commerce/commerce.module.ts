@@ -8,7 +8,7 @@ import {
   type PaymentConfirmation,
   type PaymentGateway,
 } from "@reanit/core/commerce";
-import { createPlanBilling } from "@reanit/core/schools";
+import { createPlanBilling, createPlatformAdmin } from "@reanit/core/schools";
 import {
   createCommerceStore,
   createOrderHistoryStore,
@@ -17,6 +17,7 @@ import {
   createPayoutStore,
   createPlanBillingStore,
   createPlanConfirmationStore,
+  createPlatformAdminStore,
   type DbClient,
 } from "@reanit/db";
 import { DB_CLIENT, ENV } from "@reanit/nest";
@@ -27,6 +28,8 @@ import { systemClock } from "../context/clock";
 import { SchoolsModule } from "../schools/schools.module";
 import { PLAN_GUARD_FOR, type PlanGuardFor } from "../schools/schools.tokens";
 import { AdminPayoutsController } from "./admin-payouts.controller";
+import { AdminPlanPaymentsController } from "./admin-plan-payments.controller";
+import { AdminSchoolsController } from "./admin-schools.controller";
 import { BundlesController } from "./bundles.controller";
 import { CheckoutController } from "./checkout.controller";
 import { CouponsController } from "./coupons.controller";
@@ -40,6 +43,7 @@ import {
   PAYMENT_CONFIRMATION,
   PAYMENT_GATEWAYS,
   PAYOUT_ADMIN,
+  PLATFORM_ADMIN,
   PAYOUTS_FOR_SCHOOL,
   PAYWAY,
   PLAN_BILLING_FOR_SCHOOL,
@@ -145,10 +149,12 @@ function provideCommerceForSchool(db: DbClient, gateways: PaymentGateway[], conf
  * @param db The shared database client.
  * @param gateways The configured gateways.
  * @param confirmation Confirms gateway payments, plan payments included.
+ * @param env Validated environment, for the platform's payment QR.
  * @returns A factory of plan billings limited to one school.
  */
-function providePlanBillingForSchool(db: DbClient, gateways: PaymentGateway[], confirmation: PaymentConfirmation): PlanBillingForSchool {
-  return (schoolId) => createPlanBilling({ store: createPlanBillingStore(db, schoolId), gateways, confirmPlanPayment: confirmation.confirm, clock: systemClock });
+function providePlanBillingForSchool(db: DbClient, gateways: PaymentGateway[], confirmation: PaymentConfirmation, env: Env): PlanBillingForSchool {
+  const platformQrUrl = env.PLATFORM_PAYMENT_QR_URL ?? null;
+  return (schoolId) => createPlanBilling({ store: createPlanBillingStore(db, schoolId), gateways, platformQrUrl, confirmPlanPayment: confirmation.confirm, clock: systemClock });
 }
 
 /**
@@ -182,6 +188,17 @@ function providePayoutAdmin(db: DbClient) {
 }
 
 /**
+ * Builds the platform admins' school and plan payment use cases.
+ *
+ * @param db Unscoped client.
+ * @param confirmation The payment confirmation, which confirms plan payments to the platform's QR.
+ * @returns The use cases.
+ */
+function providePlatformAdmin(db: DbClient, confirmation: PaymentConfirmation) {
+  return createPlatformAdmin({ store: createPlatformAdminStore(db), confirmOfflinePlan: confirmation.confirmOfflinePlan, clock: systemClock });
+}
+
+/**
  * Wires the confirmation use case that enrolls from confirmed payments and moves plans on from creators' plan payments.
  *
  * @param db The shared database client.
@@ -204,6 +221,8 @@ function provideConfirmation(db: DbClient) {
     PlanController,
     PayoutsController,
     AdminPayoutsController,
+    AdminSchoolsController,
+    AdminPlanPaymentsController,
     StripeWebhookController,
     PayWayWebhookController,
   ],
@@ -216,7 +235,8 @@ function provideConfirmation(db: DbClient) {
     { provide: COMMERCE_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION, PLAN_GUARD_FOR], useFactory: provideCommerceForSchool },
     { provide: PAYOUTS_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: providePayoutsForSchool },
     { provide: PAYOUT_ADMIN, inject: [DB_CLIENT], useFactory: providePayoutAdmin },
-    { provide: PLAN_BILLING_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION], useFactory: providePlanBillingForSchool },
+    { provide: PLATFORM_ADMIN, inject: [DB_CLIENT, PAYMENT_CONFIRMATION], useFactory: providePlatformAdmin },
+    { provide: PLAN_BILLING_FOR_SCHOOL, inject: [DB_CLIENT, PAYMENT_GATEWAYS, PAYMENT_CONFIRMATION, ENV], useFactory: providePlanBillingForSchool },
     { provide: PAYMENT_CONFIRMATION, inject: [DB_CLIENT], useFactory: provideConfirmation },
     { provide: ORDER_HISTORY_FOR_SCHOOL, inject: [DB_CLIENT], useFactory: provideOrderHistoryForSchool },
   ],

@@ -15,6 +15,7 @@ export { createOrderHistoryStore } from "./order-history-store";
 export { createOutboxStore } from "./outbox";
 export { createPayoutAdminStore, createPayoutStore } from "./payout-store";
 export { createPlanBillingStore, createPlanConfirmationStore, createSchoolPlanStore } from "./plan-store";
+export { createPlatformAdminStore } from "./platform-admin-store";
 export { createQuizStore } from "./quiz-store";
 export { createReceiptStore } from "./receipt-store";
 export { createRenewalNoticeStore, createRenewalSweepStore } from "./renewal-store";

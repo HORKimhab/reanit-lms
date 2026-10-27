@@ -150,22 +150,27 @@ model MagicLinkToken {
 
 /// A tenant: one creator's branded school.
 model School {
-  id            String           @id @default(uuid()) @db.Uuid
-  name          String
-  subdomain     String           @unique
-  brandColor    String?          @map("brand_color")
+  id               String           @id @default(uuid()) @db.Uuid
+  name             String
+  subdomain        String           @unique
+  brandColor       String?          @map("brand_color")
   /// Object-storage key of the logo; the API signs it into a URL.
-  logoKey       String?          @map("logo_key")
+  logoKey          String?          @map("logo_key")
   /// Object-storage key of the school's own payment QR image, for offline payments (API-25).
-  paymentQrKey  String?          @map("payment_qr_key")
+  paymentQrKey     String?          @map("payment_qr_key")
   /// The creator plan last paid for (API-26); the school is back on Free a week past `plan_period_end`.
-  plan          CreatorPlan      @default(free)
+  plan             CreatorPlan      @default(free)
   /// The paid plan's period; null on Free.
-  planInterval  BillingInterval? @map("plan_interval")
+  planInterval     BillingInterval? @map("plan_interval")
   /// The end of the paid plan period; null on Free.
-  planPeriodEnd DateTime?        @map("plan_period_end")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
+  planPeriodEnd    DateTime?        @map("plan_period_end")
+  /// When a platform admin took the school offline (WEB-31); null while it is online. Its site, catalog,
+  /// checkout and player answer 404; its staff keep the dashboard.
+  suspendedAt      DateTime?        @map("suspended_at")
+  /// Why the school was taken offline; set with `suspended_at`.
+  suspensionReason String?          @map("suspension_reason")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
 
   memberships             Membership[]
   courses                 Course[]
@@ -757,8 +762,11 @@ model PlanPayment {
   currency    String            @default("USD") @db.Char(3)
   method      PaymentMethod
   status      PlanPaymentStatus @default(pending)
-  /// The gateway's id for this payment; set once payment starts.
+  /// The gateway's id for this payment; set once payment starts. Null for payments to the platform's QR.
   providerRef String?           @unique @map("provider_ref")
+  /// For a payment to the platform's QR (WEB-31): the reference the creator's banking app showed, and when they said they paid.
+  reference   String?
+  submittedAt DateTime?         @map("submitted_at")
   paidAt      DateTime?         @map("paid_at")
   createdAt   DateTime          @default(now()) @map("created_at")
 

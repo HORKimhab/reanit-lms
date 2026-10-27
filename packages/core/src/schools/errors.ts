@@ -99,3 +99,8 @@ export class PlanPaymentNotFoundError extends Error {
 export class PlanPaymentMethodUnavailableError extends Error {
   override readonly name = "PlanPaymentMethodUnavailableError";
 }
+
+/** The plan payment is not a pending payment to the platform's QR, so it cannot be submitted, confirmed or rejected. */
+export class PlanPaymentClosedError extends Error {
+  override readonly name = "PlanPaymentClosedError";
+}

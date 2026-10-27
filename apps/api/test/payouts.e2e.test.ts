@@ -1,8 +1,6 @@
-import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { PLATFORM_ADMIN_EMAIL } from "../src/test/app";
-import { buyCourse, openSchool, signUp, uniqueName, useE2eApp } from "../src/test/e2e";
+import { buyCourse, openSchool, signInAsPlatformAdmin, signUp, uniqueName, useE2eApp } from "../src/test/e2e";
 
 const e2e = useE2eApp();
 
@@ -20,8 +18,7 @@ describe("payouts", () => {
     expect((await owner.get("/schools/current/payouts").expect(200)).body.account).toEqual({ holderName: "Sokha Chan", bankName: "ABA Bank", account: "000 123 456" });
 
     await owner.get("/admin/payouts/due").expect(403);
-    const admin = request.agent(e2e().app.getHttpServer());
-    await admin.post("/auth/sign-up").send({ name: "Ops", email: PLATFORM_ADMIN_EMAIL, password: "correct horse battery" }).expect(201);
+    const admin = await signInAsPlatformAdmin(e2e().app);
     expect((await admin.get("/admin/payouts/due").expect(200)).body.payouts.some(({ school: due }: { school: { id: string } }) => due.id === school.id)).toBe(false);
     const refused = await admin.post("/admin/payouts").send({ schoolId: school.id, currency: "USD", amount: 100, paidAt: "2026-11-01T02:00:00Z", reference: "ABA-TRX-1" }).expect(409);
     expect(refused.body.type).toBe("urn:reanit:problem:payout-exceeds-balance");

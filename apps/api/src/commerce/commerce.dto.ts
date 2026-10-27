@@ -27,7 +27,19 @@ import {
   type Price,
   type SubscriptionRecord,
 } from "@reanit/core/commerce";
-import { CREATOR_PLANS, PAID_PLANS, planCheckoutSchema, subdomainSchema, type PlanTerms } from "@reanit/core/schools";
+import {
+  CREATOR_PLANS,
+  PAID_PLANS,
+  planCheckoutSchema,
+  platformSchoolsQuerySchema,
+  subdomainSchema,
+  suspendSchoolSchema,
+  type PlanPaymentStart,
+  type PlanTerms,
+  type PlatformSchool,
+  type SchoolSuspension,
+  type SubmittedPlanPayment,
+} from "@reanit/core/schools";
 import { z } from "zod";
 
 import { courseSchema } from "../catalog/catalog.dto";
@@ -161,10 +173,7 @@ const GATEWAY_STEPS = [
   z.object({ kind: z.literal("qr"), qr: z.string(), expiresAt: z.iso.datetime() }),
 ] as const;
 
-/** What the browser does next to pay through a gateway. */
-const gatewayStepSchema = z.discriminatedUnion("kind", [...GATEWAY_STEPS]);
-
-/** What the browser does next to pay: a gateway's step, or show the school's own payment QR image and then say the student paid. */
+/** What the browser does next to pay: a gateway's step, or show a payment QR image (the school's, or the platform's for a plan) and then say the payment was made. */
 const paymentStepSchema = z.discriminatedUnion("kind", [...GATEWAY_STEPS, z.object({ kind: z.literal("offline"), qrImageUrl: z.url() })]);
 
 /**
@@ -173,7 +182,7 @@ const paymentStepSchema = z.discriminatedUnion("kind", [...GATEWAY_STEPS, z.obje
  * @param payment What the gateway returned.
  * @returns The step for the response.
  */
-export function toGatewayStep(payment: GatewayPaymentStart): z.infer<typeof gatewayStepSchema> {
+export function toGatewayStep(payment: GatewayPaymentStart): z.infer<(typeof GATEWAY_STEPS)[number]> {
   switch (payment.kind) {
     case "redirect":
       return { kind: "redirect", url: payment.url };
@@ -307,10 +316,20 @@ export class SchoolPlanResponse extends createZodDto(
   }),
 ) {}
 
-/** The new plan payment and what the browser does next. */
+/** The new plan payment and what the browser does next: a gateway's step, or the platform's QR to scan and then say the creator paid. */
 export class PlanCheckoutResponse extends createZodDto(
-  z.object({ paymentId: z.uuid(), payment: gatewayStepSchema }),
+  z.object({ paymentId: z.uuid(), payment: paymentStepSchema }),
 ) {}
+
+/**
+ * Describes a plan payment's next step for the browser.
+ *
+ * @param payment The gateway's step, or the platform's QR.
+ * @returns The step for the response.
+ */
+export function toPlanPaymentStep(payment: PlanPaymentStart): z.infer<typeof paymentStepSchema> {
+  return payment.kind === "offline" ? payment : toGatewayStep(payment);
+}
 
 /** `/schools/current/plan/payments/:id` path. */
 export class PlanPaymentParams extends createZodDto(z.object({ id: z.uuid() })) {}
@@ -397,4 +416,82 @@ export function toBalancesResponse(balances: CurrencyBalance[]): SchoolPayoutsRe
  */
 export function toDuePayoutResponse(due: DuePayout): DuePayoutsResponse["payouts"][number] {
   return { school: due.school, account: due.account, currency: due.currency, amount: due.amount };
+}
+
+/** `GET /admin/schools` query: a search and a page. */
+export class PlatformSchoolsQuery extends createZodDto(platformSchoolsQuerySchema) {}
+
+/** `PUT /admin/schools/:id/suspension` body: why the school is taken offline. */
+export class SuspendSchoolBody extends createZodDto(suspendSchoolSchema) {}
+
+/** `/admin/schools/:id` and `/admin/plan-payments/:id` paths. */
+export class AdminIdParams extends createZodDto(z.object({ id: z.uuid() })) {}
+
+const suspensionSchema = z.object({ at: z.iso.datetime(), reason: z.string() }).nullable();
+
+const platformSchoolSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  subdomain: z.string(),
+  createdAt: z.iso.datetime(),
+  ownerEmail: z.string().nullable(),
+  plan: z.enum(CREATOR_PLANS),
+  paidUntil: z.iso.datetime().nullable(),
+  suspension: suspensionSchema,
+});
+
+/** One page of schools, newest first, for platform admins. */
+export class PlatformSchoolsResponse extends createZodDto(pageResponseSchema("schools", platformSchoolSchema)) {}
+
+/** A school's suspension after a platform admin changed it; null once it is back online. */
+export class SchoolSuspensionResponse extends createZodDto(z.object({ schoolId: z.uuid(), suspension: suspensionSchema })) {}
+
+/** Payments to the platform's QR whose creators say they paid, oldest first. */
+export class SubmittedPlanPaymentsResponse extends createZodDto(
+  z.object({
+    payments: z.array(
+      z.object({
+        id: z.uuid(),
+        school: z.object({ id: z.uuid(), name: z.string(), subdomain: z.string() }),
+        plan: z.enum(PAID_PLANS),
+        interval: z.enum(BILLING_INTERVALS),
+        amount: z.number().int(),
+        reference: z.string(),
+        submittedAt: z.iso.datetime(),
+      }),
+    ),
+  }),
+) {}
+
+/** A plan payment a platform admin confirmed or rejected, with its school. */
+export class PlanPaymentDecisionResponse extends createZodDto(z.object({ payment: z.object({ id: z.uuid(), schoolId: z.uuid(), status: z.enum(["paid", "failed"]) }) })) {}
+
+/**
+ * Shapes a suspension for a response.
+ *
+ * @param suspension The suspension, or null.
+ * @returns It with its time as an ISO string.
+ */
+export function toSuspensionResponse(suspension: SchoolSuspension | null): z.infer<typeof suspensionSchema> {
+  return suspension && { at: suspension.at.toISOString(), reason: suspension.reason };
+}
+
+/**
+ * Shapes a school for platform admins.
+ *
+ * @param school The school.
+ * @returns It with its times as ISO strings.
+ */
+export function toPlatformSchoolResponse(school: PlatformSchool): z.infer<typeof platformSchoolSchema> {
+  return { ...school, createdAt: school.createdAt.toISOString(), paidUntil: school.paidUntil?.toISOString() ?? null, suspension: toSuspensionResponse(school.suspension) };
+}
+
+/**
+ * Shapes a submitted plan payment for platform admins.
+ *
+ * @param payment The payment.
+ * @returns It with its time as an ISO string.
+ */
+export function toSubmittedPlanPaymentResponse(payment: SubmittedPlanPayment): SubmittedPlanPaymentsResponse["payments"][number] {
+  return { ...payment, submittedAt: payment.submittedAt.toISOString() };
 }

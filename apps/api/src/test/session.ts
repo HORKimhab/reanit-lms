@@ -2,10 +2,13 @@
 import { SESSION_COOKIE, type AuthUser } from "@reanit/core/auth";
 import type { MembershipRole, School } from "@reanit/core/schools";
 
-import { useTestApp, type FakeClients, type TestApp } from "./app";
+import { PLATFORM_ADMIN_EMAIL, useTestApp, type FakeClients, type TestApp } from "./app";
 
 /** The user test requests are signed in as. */
 export const TEST_USER: AuthUser = { id: "0b9a6d1e-5c3f-4a2b-9e8d-7c6b5a4f3e2d", email: "dara@example.com", name: "Dara" };
+
+/** The test user, signed in with an email in `PLATFORM_ADMIN_EMAILS`. */
+export const PLATFORM_ADMIN_USER: AuthUser = { ...TEST_USER, email: PLATFORM_ADMIN_EMAIL };
 
 /** A school test users run. */
 export const TEST_SCHOOL: School = {
